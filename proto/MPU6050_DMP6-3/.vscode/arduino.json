@@ -1,0 +1,6 @@
+{
+    "board": "arduino:avr:nano",
+    "configuration": "cpu=atmega328old",
+    "sketch": "MPU6050_DMP6-3.ino",
+    "port": "/dev/ttyUSB0"
+}

@@ -1,0 +1,350 @@
+https://www.itead.cc/wiki/Serial_Port_Bluetooth_Module_(Master/Slave)_:_HC-05#6._Set.2FCheck_module_name:
+https://www.faranux.com/product/bluetooth-module/
+http://www.circuitstoday.com/bluetooth-module-interfacing
+
+AT command Default
+
+How to set the mode to server (master):
+
+1. Connect PIO11 to high level.
+
+2. Power on, module into command state.
+
+3. Using baud rate 38400, sent the “AT+ROLE=1\r\n” to module, with “OK\r\n” means setting successes.
+
+4. Connect the PIO11 to low level, repower the module, the module work as server (master).
+
+AT commands: (all end with \r\n)
+1. Test command:
+Command 	Respond 	Parameter
+AT 	OK 	-
+2. Reset
+Command 	Respond 	Parameter
+AT+RESET 	OK 	-
+3. Get firmware version
+Command 	Respond 	Parameter
+AT+VERSION? 	+VERSION:<Param> OK 	Param : firmware version
+
+Example:
+
+AT+VERSION?\r\n
+
++VERSION:2.0-20100601
+
+OK
+4. Restore default
+Command 	Respond 	Parameter
+AT+ORGL 	OK 	-
+
+Default state:
+
+Slave mode, pin code :1234, device name: H-C-2010-06-01 ,Baud 38400bits/s.
+5. Get module address
+Command 	Respond 	Parameter
+AT+ADDR? 	+ADDR:<Param> OK 	Param: address of Bluetooth module
+
+Bluetooth address: NAP: UAP : LAP
+
+Example:
+
+AT+ADDR?\r\n
+
++ADDR:1234:56:abcdef
+
+OK
+6. Set/Check module name:
+Command 	Respond 	Parameter
+AT+NAME=<Param> 	OK 	Param: Bluetooth module name (Default :HC-05)
+AT+NAME? 	+NAME:<Param> OK (/FAIL) 	Param: Bluetooth module name (Default :HC-05)
+
+Example:
+
+AT+NAME=HC-05\r\n set the module name to HC-05
+
+OK
+
+AT+NAME=ITeadStudio\r\n
+
+OK
+
+AT+NAME?\r\n
+
++NAME: ITeadStudio
+
+OK
+7. Get the Bluetooth device name:
+Command 	Respond 	Parameter
+AT+RNAME?<Param1> 	1. +NAME:<Param2> OK 2. FAIL 	Param1,Param 2 : the address of Bluetooth device
+
+Example: (Device address 00:02:72:od:22:24，name：ITead)
+
+AT+RNAME? 0002，72，od2224\r\n
+
++RNAME:ITead
+
+OK
+8. Set/Check module mode:
+Command 	Respond 	Parameter
+AT+ROLE=<Param> 	OK 	Param: 0- Slave 1-Master 2-Slave-Loop
+AT+ ROLE? 	+ROLE:<Param> OK 	Param: 0- Slave 1-Master 2-Slave-Loop
+9. Set/Check device class
+Command 	Respond 	Parameter
+AT+CLASS=<Param> 	OK 	Param: Device Class
+AT+ CLASS? 	1. +CLASS:<Param> OK 2. FAIL 	Param: Device Class
+10. Set/Check GIAC (General Inquire Access Code)
+Command 	Respond 	Parameter
+AT+IAC=<Param> 	1.OK 2. FAIL 	Param: GIAC (Default : 9e8b33)
+AT+IAC 	+IAC:<Param> OK 	Param: GIAC (Default : 9e8b33)
+
+Example:
+
+AT+IAC=9e8b3f\r\n
+
+OK
+
+AT+IAC?\r\n
+
++IAC: 9e8b3f
+
+OK
+11. Set/Check -- Query access patterns
+Command 	Respond 	Parameter
+AT+INQM=<Param>,<Param2>, <Param3> 	1.OK 2. FAIL 	Param: 0——inquiry_mode_standard 1——inquiry_mode_rssi Param2: Maximum number of Bluetooth devices to respond to Param3: Timeout (1-48 : 1.28s to 61.44s)
+AT+ INQM? 	+INQM ：<Param>,<Param2>, <Param3> OK 	Param: 0——inquiry_mode_standard 1——inquiry_mode_rssi Param2: Maximum number of Bluetooth devices to respond to Param3: Timeout (1-48 : 1.28s to 61.44s)
+
+Example:
+
+AT+INQM=1,9,48\r\n
+
+OK
+
+AT+INQM\r\n
+
++INQM:1, 9, 48
+
+OK
+12. Set/Check PIN code:
+Command 	Respond 	Parameter
+AT+PSWD=<Param> 	OK 	Param: PIN code (Default 1234)
+AT+ PSWD? 	+ PSWD ：<Param> OK 	Param: PIN code (Default 1234)
+13. Set/Check serial parameter:
+Command 	Respond 	Parameter
+AT+UART=<Param>,<Param2>,<Param3> 	OK 	Param1: Baud Param2: Stop bit Param3: Parity
+AT+UART? 	+UART=<Param>,<Param2>, <Param3> OK 	Param1: Baud Param2: Stop bit Param3: Parity
+
+Example:
+
+AT+UART=115200，1,2,\r\n
+
+OK
+
+AT+UART?
+
++UART:115200,1,2
+
+OK
+14. Set/Check connect mode:
+Command 	Respond 	Parameter
+AT+CMODE=<Param> 	OK 	Param: 0 - connect fixed address 1 - connect any
+
+address 2 - slave-Loop
+AT+ CMODE? 	+ CMODE:<Param> OK 	Param: 0 - connect fixed address 1 - connect any address 2 - slave-Loop
+15. Set/Check fixed address:
+Command 	Respond 	Parameter
+AT+BIND=<Param> 	OK 	Param: Fixed address (Default 00:00:00:00:00:00)
+AT+ BIND? 	+ BIND:<Param> OK 	Param: Fixed address (Default 00:00:00:00:00:00)
+
+Example:
+
+AT+BIND=1234，56，abcdef\r\n
+
+OK
+
+AT+BIND?\r\n
+
++BIND:1234:56:abcdef
+
+OK
+16. Set/Check LED I/O
+Command 	Respond 	Parameter
+AT+POLAR=<Param1,<Param2> 	OK 	Param1: 0- PIO8 low drive LED 1- PIO8 high drive
+
+LED Param2: 0- PIO9 low drive LED 1- PIO9 high drive LED
+AT+ POLAR? 	+ POLAR=<Param1>,<Param2> OK 	Param1: 0- PIO8 low drive LED 1- PIO8 high drive LED Param2: 0- PIO9 low drive LED 1- PIO9 high drive LED
+17. Set PIO output
+Command 	Respond 	Parameter
+AT+PIO=<Param1>,<Param2> 	OK 	Param1: PIO number Param2: PIO level 0- low 1- high
+
+Example:
+
+1. PIO10 output high level
+
+AT+PI0=10，1\r\n
+
+OK
+18. Set/Check – scan parameter
+Command 	Respond 	Parameter
+AT+IPSCAN=<Param1>,<Param2>,<Param3>,<Param4> 	OK 	Param1: Query time interval
+
+Param2 ： Query duration Param3 ： Paging interval Param4 ： Call duration
+AT+IPSCAN? 	+IPSCAN:<Param1>,<Param2>,<Param3>,<Param4> OK 	Param1: Query time interval Param2 ： Query duration Param3 ： Paging interval Param4 ： Call duration
+
+Example:
+
+AT+IPSCAN =1234,500,1200,250\r\n
+
+OK
+
+AT+IPSCAN?
+
++IPSCAN:1234,500,1200,250
+19. Set/Check – SHIFF parameter
+Command 	Respond 	Parameter
+AT+SNIFF=<Param1>,<Param2>,<Param3>,<Param4> 	OK 	Param1: Max time Param2: Min time Param3: Retry time Param4: Time out
+AT+ SNIFF? 	+SNIFF:<Param1>,<Param2>,<Param3>,<Param4> OK 	Param1: Max time Param2: Min time Param3: Retry time Param4: Time out
+20. Set/Check security mode
+Command 	Respond 	Parameter
+AT+SENM=<Param1>,<Param2> 	1. OK 2. FAIL 	Param1:
+
+0——sec_mode0+off
+
+1——sec_mode1+ non_secure
+
+2——sec_mode2_ service
+
+3——sec_mode3_l ink
+
+4——sec_mode_u nknown
+
+Param2:
+
+0——hci_enc_mod e_off
+
+1——hci_enc_mod e_pt_to_pt
+
+2——hci_enc_mod e_pt_to_pt_and_b cast
+AT+ SENM? 	+ SENM:<Param1>,<Param2> OK 	Param1:
+
+0——sec_mode0+off
+
+1——sec_mode1+ non_secure
+
+2——sec_mode2_ service
+
+3——sec_mode3_l ink
+
+4——sec_mode_u nknown
+
+Param2:
+
+0——hci_enc_mod e_off
+
+1——hci_enc_mod e_pt_to_pt
+
+2——hci_enc_mod e_pt_to_pt_and_b cast
+21. Delete Authenticated Device
+Command 	Respond 	Parameter
+AT+PMSAD=<Param> 	OK 	Param: Authenticated Device Address
+
+Example:
+
+AT+PMSAD =1234,56,abcdef\r\n
+
+OK
+22. Delete All Authenticated Device
+Command 	Respond 	Parameter
+AT+ RMAAD 	OK 	-
+23. Search Authenticated Device
+Command 	Respond 	Parameter
+AT+FSAD=<Param> 	1. OK 2. FAIL 	Param: Device address
+24. Get Authenticated Device Count
+Command 	Respond 	Parameter
+AT+ADCN? 	+ADCN：<Param> OK 	Param: Device Count
+25. Most Recently Used Authenticated Device
+Command 	Respond 	Parameter
+AT+MRAD? 	+ MRAD：<Param> OK 	Param: Recently Authenticated Device Address
+26. Get the module working state
+Command 	Respond 	Parameter
+AT+ STATE? 	+ STATE：<Param> OK 	Param: "INITIALIZED" "READY" "PAIRABLE" "PAIRED" "INQUIRING" "CONNECTING" "CONNECTED""DISCONNECTED" "NUKNOW"
+27. Initialize the SPP profile lib
+Command 	Respond 	Parameter
+AT+INIT 	1. OK 2. FAIL 	-
+28. Inquiry Bluetooth Device
+Command 	Respond 	Parameter
+AT+INQ 	+INQ: <Param1>, <Param2>, <Param3> …. OK 	Param1：Address Param2 ： Device Class Param3 ： RSSI Signal strength
+
+Example:
+
+AT+INIT\r\n
+
+OK
+
+AT+IAC=9e8b33\r\n
+
+OK
+
+AT+CLASS=0\r\n
+
+AT+INQM=1,9,48\r\n
+
+At+INQ\r\n
+
++INQ:2:72:D2224,3E0104,FFBC
+
++INQ:1234:56:0,1F1F,FFC1
+
++INQ:1234:56:0,1F1F,FFC0
+
++INQ:1234:56:0,1F1F,FFC1
+
++INQ:2:72:D2224,3F0104,FFAD
+
++INQ:1234:56:0,1F1F,FFBE
+
++INQ:1234:56:0,1F1F,FFC2
+
++INQ:1234:56:0,1F1F,FFBE
+
++INQ:2:72:D2224,3F0104,FFBC
+
+OK
+29. Cancel Inquiring Bluetooth Device
+Command 	Respond 	Parameter
+AT+ INQC 	OK 	-
+30. Equipment Matching
+Command 	Respond 	Parameter
+AT+PAIR=<Param1>,<Param2> 	1. OK 2. FAIL 	Param1 ：Device Address Param2：Time out
+31. Connect Device
+Command 	Respond 	Parameter
+AT+LINK=<Param> 	1. OK 2. FAIL 	Param ： Device Address
+
+Example:
+
+AT+FSAD=1234,56,abcdef\r\n
+
+OK
+
+AT+LINK=1234,56,abcdef\r\n
+
+OK
+32. Disconnect
+Command 	Respond 	Parameter
+AT+DISC 	1. +DISC:SUCCESS OK 2. +DISC:LINK_LOSS OK 3. +DISC:NO_SLC OK 4. +DISC:TIMEOUT OK 5. +DISC:ERROR OK 	Param ： Device Address
+33. Energy-saving mode
+Command 	Respond 	Parameter
+AT+ENSNIFF=<Param> 	OK 	Param ： Device Address
+34. Exerts Energy-saving mode
+Command 	Respond 	Parameter
+AT+ EXSNIFF =<Param> 	OK 	Param ： Device Address
+
+Application Example
+
+This is a demo that HC-05 is a master device and communicates to hc-06.
+
+Step 1. Push the mode switch to CMD
+
+Step 2. Power on, module enter command state
+
+Step 3. Using baud rate 38400, send the ―AT+ROLE=1\r\n‖ to module, with ―OK\r\n‖ means setting successes.
+
+Step 4. Send ―AT+CMODE=1\r\n‖, set HC-05 connect to any address, with ―OK\r\n‖ means setting successes.
