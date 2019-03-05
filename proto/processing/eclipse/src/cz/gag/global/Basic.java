@@ -731,20 +731,19 @@ public class Basic extends PApplet {
                                     if (teapotPacket != null) {
                                         if (teapotPacket[0] == '*') {
                                             dl = new LineData(Calendar.getInstance().getTime(), localQuat, localAcc,
-                                                    sensor, Hand.LEFT);
+                                                    Sensor.values()[sensor], Hand.LEFT);
                                             // println("Left: " + dl.toString());
                                             if (Configuration.useFilter && (dl.quatO.w > 1 || dl.quatO.x > 1
                                                     || dl.quatO.y > 1 || dl.quatO.z > 1 || dl.quatO.w < -1
                                                     || dl.quatO.x < -1 || dl.quatO.y < -1 || dl.quatO.z < -1)) {
                                                 dl = null;
                                                 // println("Left: " + dl.toString());
-
                                             } else {
                                                 leftHandData.setSensorData(dl);
                                             }
                                         } else if (teapotPacket[0] == '$') {
                                             dl = new LineData(Calendar.getInstance().getTime(), localQuat, localAcc,
-                                                    sensor, Hand.RIGHT);
+                                                    Sensor.values()[sensor], Hand.RIGHT);
                                             // println("Right: " + dl.toString());
                                             if (Configuration.useFilter && (dl.quatO.w > 1 || dl.quatO.x > 1
                                                     || dl.quatO.y > 1 || dl.quatO.z > 1 || dl.quatO.w < -1
