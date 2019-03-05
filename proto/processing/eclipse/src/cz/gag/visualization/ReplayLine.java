@@ -6,11 +6,12 @@ package cz.gag.visualization;
 import java.util.Date;
 
 import cz.gag.global.Hand;
+import cz.gag.recognition.Sensor;
 
 class ReplayLine extends LineData {
     char[] fakeTeapotPacket = new char[21];
 
-    ReplayLine(Date date, float[] quat, int sensor, Hand hand) {
+    ReplayLine(Date date, float[] quat, Sensor sensor, Hand hand) {
         super(date, quat, sensor, hand);
         fakeTeapotPacket[0] = '*';
         fakeTeapotPacket[1] = 0x02;

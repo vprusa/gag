@@ -3,13 +3,24 @@ Copyright (c) 2018 Vojtěch Průša
 */
 package cz.gag.recognition;
 
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
 import cz.gag.global.Hand;
 import cz.gag.visualization.DataFileParser;
+import cz.gag.visualization.GestLineData;
 
 public class SensorOnHandGestureI extends SensorOnHandGestureA {
 
     SensorOnHandGestureI(Hand hand, Sensor sensor, DataFileParser parser) {
         super(hand, sensor, parser);
+    }
+
+    @Override
+    public float matchesBy(Map<Date, GestLineData> data) {
+        // TODO Auto-generated method stub
+        return 0;
     }
 
     /**

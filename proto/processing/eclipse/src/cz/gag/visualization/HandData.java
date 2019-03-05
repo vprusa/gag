@@ -17,7 +17,7 @@ public class HandData {
 
     public HandData(Hand hand) {
         for (int i = 0; i < Sensor.values().length; i++) {
-            sensors[i] = new LineData(Calendar.getInstance().getTime(), new float[] { 1f, 0f, 0f, 0f }, i, hand);
+            sensors[i] = new LineData(Calendar.getInstance().getTime(), new float[] { 1f, 0f, 0f, 0f }, Sensor.values()[i], hand);
             points[i] = new ArrayList<Point3D>();
             // points[i].add(new Point3D(0, 0, 0));
         }

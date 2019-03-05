@@ -3,9 +3,11 @@ package cz.gag.recognition;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Map;
 
 import cz.gag.global.Hand;
 import cz.gag.visualization.DataFileParser;
+import cz.gag.visualization.GestLineData;
 import toxi.geom.Quaternion;
 
 public class WholeHandGestureI extends HandGestureA {
@@ -29,7 +31,7 @@ public class WholeHandGestureI extends HandGestureA {
      * @see processingTest.Basic.Gesture#matchesBy(java.util.HashMap)
      */
     @Override
-    public float matchesBy(HashMap<Date, Quaternion> data) {
+    public float matchesBy(Map<Date, GestLineData> data) {
         // because I have not used lambda in some time..
         // for (SensorOnHandGestureI sensorGesture : sensoresGestrues) {
         // float sensorMatch = sensorGesture.matches(data);

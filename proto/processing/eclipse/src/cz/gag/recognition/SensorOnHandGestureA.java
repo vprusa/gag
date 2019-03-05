@@ -3,6 +3,7 @@ package cz.gag.recognition;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Map;
 
 import cz.gag.global.Hand;
 import cz.gag.visualization.DataFileParser;
@@ -44,9 +45,10 @@ public abstract class SensorOnHandGestureA implements SensorGesture, HandGesture
     }
 
     @Override
-    public float matchesBy(HashMap<Date, Quaternion> data) {
+    public float matchesBy(Map<Date, GestLineData> data) {
         // actually i should read from all values just those related to current
         // sensor...
+        //data.
         return 0.5f;
     }
     

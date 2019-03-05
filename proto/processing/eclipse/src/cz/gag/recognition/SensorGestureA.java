@@ -5,8 +5,10 @@ package cz.gag.recognition;
 
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Map;
 
 import cz.gag.visualization.DataFileParser;
+import cz.gag.visualization.GestLineData;
 import toxi.geom.Quaternion;
 
 public abstract class SensorGestureA implements SensorGesture {
@@ -23,7 +25,7 @@ public abstract class SensorGestureA implements SensorGesture {
     }
 
     @Override
-    public float matchesBy(HashMap<Date, Quaternion> data) {
+    public float matchesBy(Map<Date, GestLineData> data) {
         return 0.5f;
     }
     

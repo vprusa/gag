@@ -15,7 +15,7 @@ public class Configuration {
     static public boolean logToFile = System.getProperty("logToFile") == null ? true
             : Boolean.valueOf(System.getProperty("logToFile"));
 
-    static public String gestureName = System.getProperty("gestureName") == null ? "g" : System.getProperty("gestureName");
+    static public String gestureName = System.getProperty("gestureName", "g");
 
     static public boolean useSerial = System.getProperty("replayPath") == null ? true : false;
 
@@ -29,8 +29,7 @@ public class Configuration {
 
     static public String prefixPath = "/dev/";
     static public String deviceRight = "ttyUSB1";
-    static public String portNameRight = System.getProperty("portNameRight") == null ? prefixPath + deviceRight
-            : System.getProperty("portNameRight");
+    static public String portNameRight = System.getProperty("portNameRight", prefixPath + deviceRight);
     static public int baudRateRight = System.getProperty("baudRateRight") == null ? 57600 // 115200 38400 57600
             : Integer.valueOf(System.getProperty("baudRateRight"));
     // 38400 9600 115200 57600
@@ -39,8 +38,7 @@ public class Configuration {
     // static String portNameLeft = prefixPath + deviceLeft;
     // static int baudRateLeft = 115200; // 38400 9600 115200 57600
 
-    static public String portNameLeft = System.getProperty("portNameLeft") == null ? prefixPath + deviceLeft
-            : System.getProperty("portNameLeft");
+    static public String portNameLeft = System.getProperty("portNameLeft",prefixPath + deviceLeft);
     static public int baudRateLeft = System.getProperty("baudRateLeft") == null ? 57600 // 115200 38400
             : Integer.valueOf(System.getProperty("baudRateLeft"));
 

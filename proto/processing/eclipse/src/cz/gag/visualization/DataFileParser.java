@@ -11,6 +11,7 @@ import java.text.ParseException;
 import java.util.Date;
 
 import cz.gag.global.Hand;
+import cz.gag.recognition.Sensor;
 
 public class DataFileParser<T extends LineData> {
     FileReader fr;
@@ -76,11 +77,11 @@ public class DataFileParser<T extends LineData> {
 
                 if (c.equals(ReplayLine.class)) {
 
-                    return (T) new ReplayLine(fakeDate, fakequaternionODataArr, sensor, thisHand);
+                    return (T) new ReplayLine(fakeDate, fakequaternionODataArr, Sensor.values()[sensor], thisHand);
                 }else if (c.equals(GestLineData.class)) {
-                    return (T) new GestLineData(fakequaternionODataArr, sensor, thisHand);
+                    return (T) new GestLineData(fakequaternionODataArr, Sensor.values()[sensor], thisHand);
                 }
-                return (T)  new LineData(fakeDate, fakequaternionODataArr, sensor, thisHand);
+                return (T)  new LineData(fakeDate, fakequaternionODataArr, Sensor.values()[sensor], thisHand);
             } else {
                 return null;
             }

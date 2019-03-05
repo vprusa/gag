@@ -14,17 +14,17 @@ public class LineData {
     public final Sensor sensor;
     public final Hand hand;
 
-    public LineData(Date date, float[] quat, float[] acc, int sensor, Hand hand) {
+    public LineData(Date date, float[] quat, float[] acc, Sensor sensor, Hand hand) {
         this.date = date;
         this.quat = quat;
         // TODO check array size == 4
         this.quatO = new Quaternion(quat[0], quat[1], quat[2], quat[3]);
         this.acc = acc;
         this.hand = hand;
-        this.sensor = Sensor.values()[sensor];
+        this.sensor = sensor;
     }
 
-    public LineData(Date date, float[] quat, int sensor, Hand hand) {
+    public LineData(Date date, float[] quat, Sensor sensor, Hand hand) {
         this(date, quat, new float[] { 0, 0, 0 }, sensor, hand);
     }
 
