@@ -6,7 +6,7 @@ package cz.gag.visualization;
 import java.util.ArrayList;
 import java.util.Calendar;
 
-import cz.gag.global.Hand;
+import cz.gag.common.Hand;
 import cz.gag.recognition.Sensor;
 
 public class HandData {

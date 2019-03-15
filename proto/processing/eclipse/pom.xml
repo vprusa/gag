@@ -6,56 +6,59 @@
 	<artifactId>gagProcessing</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>jar</packaging>
-	
+
+	<properties>
+		<jdk.version>1.8</jdk.version>
+		<!-- <jodatime.version>2.5</jodatime.version> <junit.version>4.11</junit.version> 
+			<log4j.version>1.2.17</log4j.version> -->
+	</properties>
+
 	<build>
-        <finalName>gag</finalName>
-        <plugins>
+		<finalName>gag</finalName>
+		<plugins>
 
-            <!-- download source code in Eclipse, best practice -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-eclipse-plugin</artifactId>
-                <version>2.9</version>
-                <configuration>
-                    <downloadSources>true</downloadSources>
-                    <downloadJavadocs>false</downloadJavadocs>
-                </configuration>
-            </plugin>
+			<!-- download source code in Eclipse, best practice -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-eclipse-plugin</artifactId>
+				<version>2.9</version>
+				<configuration>
+					<downloadSources>true</downloadSources>
+					<downloadJavadocs>false</downloadJavadocs>
+				</configuration>
+			</plugin>
 
-            <!-- Set a JDK compiler level -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>2.3.2</version>
-                <configuration>
-                    <source>${jdk.version}</source>
-                    <target>${jdk.version}</target>
-                </configuration>
-            </plugin>
+			<!-- Set a JDK compiler level -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>2.3.2</version>
+				<configuration>
+					<source>${jdk.version}</source>
+					<target>${jdk.version}</target>
+				</configuration>
+			</plugin>
 
-            <!-- Make this jar executable -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <configuration>
-                  <!-- DO NOT include log4j.properties file in your Jar -->
-                  <excludes>
-                    <exclude>**/log4j.properties</exclude>
-                  </excludes>
-                  <archive>
-                    <manifest>
-                        <!-- Jar file entry point -->
-                        <mainClass>cz.gag.global.ProcessingApplet</mainClass>
-                    </manifest>
-                  </archive>
-                </configuration>
-            </plugin>
+			<!-- Make this jar executable -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<configuration>
+					<!-- DO NOT include log4j.properties file in your Jar -->
+					<excludes>
+						<exclude>**/log4j.properties</exclude>
+					</excludes>
+					<archive>
+						<manifest>
+							<!-- Jar file entry point -->
+							<mainClass>cz.gag.common.ProcessingApplet</mainClass>
+						</manifest>
+					</archive>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
 
-        </plugins>
-    </build>
-	
-	
-	
 	<dependencies>
 		<dependency>
 			<groupId>org.processing</groupId>
@@ -63,12 +66,27 @@
 			<version>3.3.6</version>
 			<scope />
 		</dependency>
-		<!-- <dependency> <groupId>org.clojars.hozumi</groupId> <artifactId>toxiclibscore</artifactId> 
-			<version>0022</version> <scope/> </dependency> -->
+		<dependency>
+			<groupId>org.clojars.hozumi</groupId>
+			<artifactId>toxiclibscore</artifactId>
+			<version>0022</version>
+		</dependency>
 		<dependency>
 			<groupId>org.processing</groupId>
 			<artifactId>serial</artifactId>
 			<version>3.3.6</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/org.jogamp.jogl/jogl-all -->
+		<dependency>
+			<groupId>org.jogamp.jogl</groupId>
+			<artifactId>jogl-all</artifactId>
+			<version>2.3.2</version>
+		</dependency>
+		<dependency>
+			<groupId>org.jogamp.jogl</groupId>
+			<artifactId>jogl-all-main</artifactId>
+			<version>2.3.2</version>
 		</dependency>
 		<dependency>
 			<groupId>org.jogamp.gluegen</groupId>
@@ -92,8 +110,6 @@
 			<artifactId>ardulink-core-serial-jssc</artifactId>
 			<version>2.1.0</version>
 		</dependency>
-		<!-- <dependency> <groupId>quil</groupId> <artifactId>processing-dxf</artifactId> 
-			<version>3.3.6</version> <scope/> </dependency> -->
 		<dependency>
 			<groupId>org.jogamp.joal</groupId>
 			<artifactId>joal-main</artifactId>
@@ -121,4 +137,12 @@
 			<version>2.3.2</version>
 		</dependency>
 	</dependencies>
+
+	<repositories>
+		<repository>
+			<id>clojars</id>
+			<name>clojars</name>
+			<url>http://clojars.org/repo/</url>
+		</repository>
+	</repositories>
 </project>

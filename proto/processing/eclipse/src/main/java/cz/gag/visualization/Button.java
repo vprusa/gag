@@ -3,7 +3,7 @@ Copyright (c) 2018 Vojtěch Průša
 */
 package cz.gag.visualization;
 
-import cz.gag.global.ProcessingApplet;
+import cz.gag.common.ProcessingApplet;
 
 public class Button {
     int x;

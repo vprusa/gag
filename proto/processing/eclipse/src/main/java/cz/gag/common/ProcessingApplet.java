@@ -1,17 +1,17 @@
 /*
 Copyright (c) 2018 Vojtěch Průša, Lukrécia Mertová
 */
-package cz.gag.global;
+package cz.gag.common;
 
-import peasy.*;
+//import peasy.*;
 import processing.serial.*;
 import processing.*;
 import processing.core.PApplet;
-import processing.opengl.*;
-import toxi.color.RGBAccessor;
+//import processing.opengl.*;
+//import toxi.color.RGBAccessor;
 
 import toxi.geom.*;
-import toxi.processing.*;
+//import toxi.processing.*;
 
 import java.awt.Color;
 import java.io.*;
@@ -52,7 +52,6 @@ import cz.gag.visualization.RePlayer;
 
 import java.nio.file.Paths;
 
-import jogamp.graph.font.typecast.ot.table.Table;
 import jssc.SerialPortEvent;
 
 /**
@@ -65,7 +64,7 @@ import jssc.SerialPortEvent;
 public class ProcessingApplet extends PApplet {
 
     public static void main(String[] args) {
-        PApplet.main("cz.gag.global.ProcessingApplet");
+        PApplet.main("cz.gag.common.ProcessingApplet");
 
         for (int i = 0; i < args.length; i++) {
             String arg = args[i];
@@ -134,7 +133,7 @@ public class ProcessingApplet extends PApplet {
     // TODO
     // HandData rightHandData = new HandData();
 
-    ToxiclibsSupport gfx;
+    //ToxiclibsSupport gfx;
 
     Serial portRight; // The serial port
     Serial portLeft; // The serial port
@@ -154,10 +153,9 @@ public class ProcessingApplet extends PApplet {
 
     // lukrecia -start
 
-    PeasyCam cam;
+    //PeasyCam cam;
     float dim = 0;
     // ArrayList<Point3D>[] points = new ArrayList[5];
-    Table table;
     // float[][] axis = new float[5][4];
     // Point3D newP;
     int scale = 300;
@@ -170,7 +168,7 @@ public class ProcessingApplet extends PApplet {
     BothHandsGesture refHandsGesture;
     public void setup() {
         // 300px square viewport using OpenGL rendering
-        gfx = new ToxiclibsSupport(this);
+        //gfx = new ToxiclibsSupport(this);
 
         // Create an instance of SimpleDateFormat used for formatting
         // the string representation of date (month/day/year)
@@ -366,9 +364,9 @@ public class ProcessingApplet extends PApplet {
 
     public void draw() {
 
-        if (gfx != null) {
+        /*if (gfx != null) {
             translate(width / 2f, height / 6);
-        }
+        }*/
         // draw the button in the window
         on_button.draw();
 

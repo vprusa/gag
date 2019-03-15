@@ -7,7 +7,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-import cz.gag.global.Hand;
+import cz.gag.common.Hand;
 import cz.gag.visualization.GestLineData;
 import toxi.geom.Quaternion;
 

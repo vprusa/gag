@@ -3,7 +3,7 @@ Copyright (c) 2018 Vojtěch Průša
 */
 package cz.gag.visualization;
 
-import cz.gag.global.Hand;
+import cz.gag.common.Hand;
 import cz.gag.recognition.Sensor;
 
 public class GestLineData extends LineData {

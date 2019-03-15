@@ -8,7 +8,7 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 
-import cz.gag.global.ProcessingApplet;
+import cz.gag.common.ProcessingApplet;
 
 public class Configuration {
 

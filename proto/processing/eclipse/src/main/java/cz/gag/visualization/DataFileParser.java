@@ -10,7 +10,7 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.util.Date;
 
-import cz.gag.global.Hand;
+import cz.gag.common.Hand;
 import cz.gag.recognition.Sensor;
 
 public class DataFileParser<T extends LineData> {

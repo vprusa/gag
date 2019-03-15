@@ -5,8 +5,8 @@ package cz.gag.visualization;
 
 import java.io.BufferedReader;
 
-import cz.gag.global.ProcessingApplet;
-import cz.gag.global.Hand;
+import cz.gag.common.Hand;
+import cz.gag.common.ProcessingApplet;
 
 public class RePlayer extends DataFileParser<ReplayLine> implements Runnable {
 

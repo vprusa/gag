@@ -5,7 +5,7 @@ package cz.gag.visualization;
 
 import java.util.Date;
 
-import cz.gag.global.Hand;
+import cz.gag.common.Hand;
 import cz.gag.recognition.Sensor;
 
 class ReplayLine extends LineData {
