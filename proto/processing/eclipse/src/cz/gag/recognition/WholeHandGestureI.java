@@ -28,7 +28,7 @@ public class WholeHandGestureI extends HandGestureA {
      * 
      * (non-Javadoc)
      * 
-     * @see processingTest.Basic.Gesture#matchesBy(java.util.HashMap)
+     * @see ProcessingApplet.Basic.Gesture#matchesBy(java.util.HashMap)
      */
     @Override
     public float matchesBy(Map<Date, GestLineData> data) {

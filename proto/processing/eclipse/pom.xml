@@ -1,81 +1,124 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-  <groupId>gagProcessing</groupId>
-  <artifactId>gagProcessing</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
-  <packaging>pom</packaging>
-  <dependencies>
-    <dependency>
-      <groupId>org.processing</groupId>
-      <artifactId>core</artifactId>
-      <version>3.3.6</version>
-      <scope/>
-    </dependency>
-    <!-- <dependency>
-      <groupId>org.clojars.hozumi</groupId>
-      <artifactId>toxiclibscore</artifactId>
-      <version>0022</version>
-      <scope/>
-    </dependency>
-     -->
-    <dependency>
-      <groupId>org.processing</groupId>
-      <artifactId>serial</artifactId>
-      <version>3.3.6</version>
-    </dependency>
-    <dependency>
-      <groupId>org.jogamp.gluegen</groupId>
-      <artifactId>gluegen-rt</artifactId>
-      <version>2.3.2</version>
-    </dependency>
-    <dependency>
-      <groupId>org.jogamp.jogl</groupId>
-      <artifactId>jogl-all-noawt</artifactId>
-      <version>2.3.2</version>
-      <classifier>natives-linux-amd64</classifier>
-    </dependency>
-    <dependency>
-      <groupId>org.jogamp.gluegen</groupId>
-      <artifactId>gluegen-rt-android</artifactId>
-      <version>2.3.2</version>
-      <classifier>natives-linux-amd64</classifier>
-    </dependency>
-    <dependency>
-      <groupId>org.ardulink</groupId>
-      <artifactId>ardulink-core-serial-jssc</artifactId>
-      <version>2.1.0</version>
-    </dependency>
-    <!-- <dependency>
-      <groupId>quil</groupId>
-      <artifactId>processing-dxf</artifactId>
-      <version>3.3.6</version>
-      <scope/>
-    </dependency> -->
-    <dependency>
-      <groupId>org.jogamp.joal</groupId>
-      <artifactId>joal-main</artifactId>
-      <version>2.3.2</version>
-      <scope/>
-    </dependency>
-    <dependency>
-      <groupId>javax.xml</groupId>
-      <artifactId>jsr173</artifactId>
-      <version>1.0</version>
-    </dependency>
-    <dependency>
-      <groupId>args4j</groupId>
-      <artifactId>args4j</artifactId>
-      <version>2.33</version>
-    </dependency>
-    <dependency>
-      <groupId>org.jboss.apiviz</groupId>
-      <artifactId>apiviz</artifactId>
-      <version>1.3.1.GA</version>
-    </dependency>
-    <dependency>
-      <groupId>org.jogamp.joal</groupId>
-      <artifactId>joal</artifactId>
-      <version>2.3.2</version>
-    </dependency>
-  </dependencies>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>gagProcessing</groupId>
+	<artifactId>gagProcessing</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>jar</packaging>
+	
+	<build>
+        <finalName>gag</finalName>
+        <plugins>
+
+            <!-- download source code in Eclipse, best practice -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-eclipse-plugin</artifactId>
+                <version>2.9</version>
+                <configuration>
+                    <downloadSources>true</downloadSources>
+                    <downloadJavadocs>false</downloadJavadocs>
+                </configuration>
+            </plugin>
+
+            <!-- Set a JDK compiler level -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.3.2</version>
+                <configuration>
+                    <source>${jdk.version}</source>
+                    <target>${jdk.version}</target>
+                </configuration>
+            </plugin>
+
+            <!-- Make this jar executable -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                  <!-- DO NOT include log4j.properties file in your Jar -->
+                  <excludes>
+                    <exclude>**/log4j.properties</exclude>
+                  </excludes>
+                  <archive>
+                    <manifest>
+                        <!-- Jar file entry point -->
+                        <mainClass>cz.gag.global.ProcessingApplet</mainClass>
+                    </manifest>
+                  </archive>
+                </configuration>
+            </plugin>
+
+        </plugins>
+    </build>
+	
+	
+	
+	<dependencies>
+		<dependency>
+			<groupId>org.processing</groupId>
+			<artifactId>core</artifactId>
+			<version>3.3.6</version>
+			<scope />
+		</dependency>
+		<!-- <dependency> <groupId>org.clojars.hozumi</groupId> <artifactId>toxiclibscore</artifactId> 
+			<version>0022</version> <scope/> </dependency> -->
+		<dependency>
+			<groupId>org.processing</groupId>
+			<artifactId>serial</artifactId>
+			<version>3.3.6</version>
+		</dependency>
+		<dependency>
+			<groupId>org.jogamp.gluegen</groupId>
+			<artifactId>gluegen-rt</artifactId>
+			<version>2.3.2</version>
+		</dependency>
+		<dependency>
+			<groupId>org.jogamp.jogl</groupId>
+			<artifactId>jogl-all-noawt</artifactId>
+			<version>2.3.2</version>
+			<classifier>natives-linux-amd64</classifier>
+		</dependency>
+		<dependency>
+			<groupId>org.jogamp.gluegen</groupId>
+			<artifactId>gluegen-rt-android</artifactId>
+			<version>2.3.2</version>
+			<classifier>natives-linux-amd64</classifier>
+		</dependency>
+		<dependency>
+			<groupId>org.ardulink</groupId>
+			<artifactId>ardulink-core-serial-jssc</artifactId>
+			<version>2.1.0</version>
+		</dependency>
+		<!-- <dependency> <groupId>quil</groupId> <artifactId>processing-dxf</artifactId> 
+			<version>3.3.6</version> <scope/> </dependency> -->
+		<dependency>
+			<groupId>org.jogamp.joal</groupId>
+			<artifactId>joal-main</artifactId>
+			<version>2.3.2</version>
+			<scope />
+		</dependency>
+		<dependency>
+			<groupId>javax.xml</groupId>
+			<artifactId>jsr173</artifactId>
+			<version>1.0</version>
+		</dependency>
+		<dependency>
+			<groupId>args4j</groupId>
+			<artifactId>args4j</artifactId>
+			<version>2.33</version>
+		</dependency>
+		<dependency>
+			<groupId>org.jboss.apiviz</groupId>
+			<artifactId>apiviz</artifactId>
+			<version>1.3.1.GA</version>
+		</dependency>
+		<dependency>
+			<groupId>org.jogamp.joal</groupId>
+			<artifactId>joal</artifactId>
+			<version>2.3.2</version>
+		</dependency>
+	</dependencies>
 </project>

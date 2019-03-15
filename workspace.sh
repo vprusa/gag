@@ -1,7 +1,7 @@
 #!/bin/bash
 
 PROCESSING_IDE_PATH=~/IDE/processing-3.4-linux64/processing-3.4/processing
-ECLIPSE_IDE_PATH=~/ws/eclipse
+ECLIPSE_IDE_PATH=~/workspace/devstudio/latestDevstudio
 ECLIPSE_GAG_WORKSPACE=~/ws
 THIS_DIR_PATH=$(dirname `realpath "$0"`)
 echo "BASH_SOURCE[0]: ${BASH_SOURCE[0]}"

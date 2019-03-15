@@ -62,10 +62,10 @@ import jssc.SerialPortEvent;
  *         prototyping having shared variables and no need to change whole
  *         classes structures every brainstorm happens
  */
-public class Basic extends PApplet {
+public class ProcessingApplet extends PApplet {
 
     public static void main(String[] args) {
-        PApplet.main("cz.gag.global.Basic");
+        PApplet.main("cz.gag.global.ProcessingApplet");
 
         for (int i = 0; i < args.length; i++) {
             String arg = args[i];

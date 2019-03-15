@@ -8,7 +8,7 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 
-import cz.gag.global.Basic;
+import cz.gag.global.ProcessingApplet;
 
 public class Configuration {
 
@@ -91,5 +91,5 @@ public class Configuration {
 
     static public int refSensorValueDistanceLimit = 50;
     
-    static public Basic app;
+    static public ProcessingApplet app;
 }

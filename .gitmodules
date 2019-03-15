@@ -1,0 +1,3 @@
+[submodule "proto/esp32/arduino-esp32"]
+	path = proto/esp32/arduino-esp32
+	url = https://github.com/espressif/arduino-esp32

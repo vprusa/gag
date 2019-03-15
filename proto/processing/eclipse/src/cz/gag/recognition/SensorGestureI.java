@@ -3,6 +3,11 @@ Copyright (c) 2018 Vojtěch Průša
 */
 package cz.gag.recognition;
 
+import java.util.Date;
+import java.util.Map;
+
+import cz.gag.visualization.GestLineData;
+
 public class SensorGestureI extends SensorGestureA {
 
     SensorGestureI(Sensor sensor) {
@@ -10,7 +15,13 @@ public class SensorGestureI extends SensorGestureA {
     }
 
     /*
-     * public float matches(HashMap<Date, Quaternion> data, Sensor sensor) { if
-     * (sensor != this.getSensor()) return 0; return matches(data); }
+      public float matches(HashMap<Date, Quaternion> data, Sensor sensor) { if
+      (sensor != this.getSensor()) return 0; return matches(data); }
      */
+  
+
+    @Override
+    public float matchesBy(Map<Date, GestLineData> data) {
+        return 0.5f;
+    }
 }

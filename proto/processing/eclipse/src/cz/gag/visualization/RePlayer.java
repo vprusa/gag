@@ -5,7 +5,7 @@ package cz.gag.visualization;
 
 import java.io.BufferedReader;
 
-import cz.gag.global.Basic;
+import cz.gag.global.ProcessingApplet;
 import cz.gag.global.Hand;
 
 public class RePlayer extends DataFileParser<ReplayLine> implements Runnable {
@@ -48,9 +48,9 @@ public class RePlayer extends DataFileParser<ReplayLine> implements Runnable {
             // hand.getSensorData(flNew.sensor.ordinal()).quatO.set(flNew.quat[0],
             // flNew.quat[1], flNew.quat[2],flNew.quat[3]);
             if (flNew.hand == Hand.LEFT) {
-                Basic.leftHandData.setSensorData(flNew);
+                ProcessingApplet.leftHandData.setSensorData(flNew);
             } else {
-                Basic.rightHandData.setSensorData(flNew);
+                ProcessingApplet.rightHandData.setSensorData(flNew);
             }
             // quaternionObj[flNew.sensor.ordinal()].set(flNew.quat[0], flNew.quat[1],
             // flNew.quat[2], flNew.quat[3]);
