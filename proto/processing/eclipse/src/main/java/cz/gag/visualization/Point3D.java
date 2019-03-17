@@ -2,7 +2,13 @@
 Copyright (c) 2018 Lukrécia Mertová
 */
 package cz.gag.visualization;
+
+/**
+ * @author Lukrecia Mertová
+ *
+ */
 public class Point3D {
+
     public Point3D(float x, float y, float z) {
         this.x = x;
         this.y = y;

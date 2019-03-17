@@ -1,15 +1,21 @@
+/*
+  Blink
+*/
 
+// ledPin refers to ESP32 GPIO 23
+const int ledPin = 23;
 
-#define LED_BUILTIN 2
-
+// the setup function runs once when you press reset or power the board
 void setup() {
-  pinMode (LED_BUILTIN, OUTPUT);
+  // initialize digital pin ledPin as an output.
+  pinMode(ledPin, OUTPUT);
 }
 
+// the loop function runs over and over again forever
 void loop() {
-  digitalWrite(LED_BUILTIN, HIGH);
-  delay(1000);
-  digitalWrite(LED_BUILTIN, LOW);
-  delay(1000);
+  digitalWrite(ledPin, HIGH);   // turn the LED on (HIGH is the voltage level)
+  delay(1000);                  // wait for a second
+  digitalWrite(ledPin, LOW);    // turn the LED off by making the voltage LOW
+  delay(1000);                  // wait for a second
 }
 

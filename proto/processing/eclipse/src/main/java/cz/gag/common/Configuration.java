@@ -1,14 +1,12 @@
 /*
 Copyright (c) 2018 Vojtěch Průša
 */
-package cz.gag.visualization;
+package cz.gag.common;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
-
-import cz.gag.common.ProcessingApplet;
 
 public class Configuration {
 
@@ -30,7 +28,7 @@ public class Configuration {
     static public String prefixPath = "/dev/";
     static public String deviceRight = "ttyUSB1";
     static public String portNameRight = System.getProperty("portNameRight", prefixPath + deviceRight);
-    static public int baudRateRight = System.getProperty("baudRateRight") == null ? 57600 // 115200 38400 57600
+    static public int baudRateRight = System.getProperty("baudRateRight") == null ? 115200 // 115200 38400 57600
             : Integer.valueOf(System.getProperty("baudRateRight"));
     // 38400 9600 115200 57600
 
@@ -39,7 +37,7 @@ public class Configuration {
     // static int baudRateLeft = 115200; // 38400 9600 115200 57600
 
     static public String portNameLeft = System.getProperty("portNameLeft",prefixPath + deviceLeft);
-    static public int baudRateLeft = System.getProperty("baudRateLeft") == null ? 57600 // 115200 38400
+    static public int baudRateLeft = System.getProperty("baudRateLeft") == null ? 115200 // 115200 38400
             : Integer.valueOf(System.getProperty("baudRateLeft"));
 
     // output-ttyUSB1-2018-12-01_23:26:10.882.log

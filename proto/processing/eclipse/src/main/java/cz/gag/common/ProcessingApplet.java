@@ -42,7 +42,6 @@ import java.util.TreeSet;
 import cz.gag.recognition.BothHandsGesture;
 import cz.gag.recognition.Sensor;
 import cz.gag.visualization.Button;
-import cz.gag.visualization.Configuration;
 import cz.gag.visualization.GestLineData;
 import cz.gag.visualization.HandData;
 import cz.gag.visualization.KeyboardRecorder;
@@ -249,16 +248,17 @@ public class ProcessingApplet extends PApplet {
 
         new Thread() {
             public void run() {
+                System.out.println("Started data requester");
                 while(true) {
                     try {
-                        Serial p = null;//portLeft;//portRight; // portLeft;
+                        Serial p = null; //portRight;//portLeft;//portRight; // portLeft;
                     if(p != null && p.active()) {
                         //portRight.write(new byte[] { '$', (byte) 0x99, (byte) rightHandSensorIndex });
                         for(int i = 0; i < 10; i++) { 
                             p.write(new byte[] { '$', /*(byte) 0x99,*/ (byte) rightHandSensorIndex });
                             Thread.sleep(1);
                         }
-                        p.write(new byte[] { '$', (byte) 0x99, (byte) rightHandSensorIndex++ });
+                        p.write(new byte[] { '$', /*(byte) 0x99,*/ (byte) rightHandSensorIndex++ });
                         if (rightHandSensorIndex >= Sensor.values().length) {
                             rightHandSensorIndex = 0;
                         }

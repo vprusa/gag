@@ -2,10 +2,20 @@ package cz.gag.visualization;
 
 import java.util.Date;
 
+import cz.gag.common.Configuration;
 import cz.gag.common.Hand;
 import cz.gag.recognition.Sensor;
 import toxi.geom.Quaternion;
 
+/**
+ * @author Vojtech Prusa
+ *
+ * Used for storing information about sensor records (on speific hand)
+ * 
+ * TODO 
+ *  - should also contain smth about MPU90** magnetometer
+ *  - should also contain smth about vibration feedback? -> brainstorm
+ */
 public class LineData {
     public final Date date;
     public final float[] quat;

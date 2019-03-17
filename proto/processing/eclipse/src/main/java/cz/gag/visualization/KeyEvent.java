@@ -5,6 +5,14 @@ package cz.gag.visualization;
 
 import java.util.Date;
 
+import cz.gag.common.Configuration;
+
+/**
+ * @author Vojtech Prusa
+ * 
+ * TODO used in keyboard recognition learning alg. 
+ * @KeyboardRecorder
+ */
 class KeyEvent {
     int key;
     Date time;

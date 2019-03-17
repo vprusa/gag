@@ -9,6 +9,12 @@ import java.util.Calendar;
 import cz.gag.common.Hand;
 import cz.gag.recognition.Sensor;
 
+/**
+ * @author Vojtech Prusa
+ *
+ *  Stores information about line data of hand, hand id. and 
+ *
+ */
 public class HandData {
     LineData[] sensors = new LineData[Sensor.values().length];
     Hand hand;

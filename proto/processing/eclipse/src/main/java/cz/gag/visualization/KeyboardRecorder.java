@@ -10,6 +10,13 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
+import cz.gag.common.Configuration;
+
+/**
+ * @author Vojtech Prusa
+ *
+ * TODO used in keyboard recognition learning alg.
+ */
 public class KeyboardRecorder {
     List<KeyEvent> keys = new ArrayList<KeyEvent>();
     PrintWriter kout;

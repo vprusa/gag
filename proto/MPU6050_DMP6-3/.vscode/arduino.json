@@ -1,6 +1,6 @@
 {
-    "board": "arduino:avr:nano",
-    "configuration": "cpu=atmega328old",
+    "board": "esp32:esp32:esp32",
+    "configuration": "PSRAM=disabled,PartitionScheme=default,CPUFreq=240,FlashMode=qio,FlashFreq=80,FlashSize=4M,UploadSpeed=115200,DebugLevel=error",
     "sketch": "MPU6050_DMP6-3.ino",
     "port": "/dev/ttyUSB0"
 }

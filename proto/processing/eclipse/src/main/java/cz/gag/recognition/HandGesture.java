@@ -6,6 +6,7 @@ package cz.gag.recognition;
 import cz.gag.common.Hand;
 
 public interface HandGesture extends Gesture {
+    
     /**
      * returns hand for which gesture matches
      * 

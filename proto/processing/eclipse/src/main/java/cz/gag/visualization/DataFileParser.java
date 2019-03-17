@@ -10,17 +10,33 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.util.Date;
 
+import cz.gag.common.Configuration;
 import cz.gag.common.Hand;
 import cz.gag.recognition.Sensor;
 
+/**
+ * @author Vojtech Prusa
+ *
+ * @param <T> todo fix?
+ * 
+ *        This class is used to handle parsing data files of row format
+ * 
+ *        <YYYY-MM-DD_HH:mm:ss.SSS> <handId> <sensorId> <q0> <q1> <q2> <q3> <a0>
+ *        <a1> <a2>
+ * 
+ *        into LineData class base for further operations line replaying file,
+ *        etc.
+ * 
+ */
 public class DataFileParser<T extends LineData> {
     FileReader fr;
     BufferedReader br;
-    
+
     String line;
     int replayChar = 0;
     boolean EOL = false;
-     String file;
+    String file;
+
     public DataFileParser(String file) {
         this.file = file;
         System.out.println(file);
@@ -30,17 +46,11 @@ public class DataFileParser<T extends LineData> {
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
-        // uint8_t teapotPacket[21] = {'*', 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        // 0,0,0,0,0,0,0x00, 0x00 , '\r', '\n'};
     }
 
-
-    public T parseLine(Class c) {
+    public T parseLine() {
         try {
             if ((line = br.readLine()) != null) {
-                //System.out.println(line);
-                // replayChar;
-                // <HH:mm:ss.SSS> <sensor> <q0> <q1> <q2> <q3> <a0> <a1> <a2>
                 String[] words = line.split(" ");
                 String startDateString = words[0];
                 Date fakeDate = Configuration.dfDate.parse(startDateString);
@@ -64,24 +74,24 @@ public class DataFileParser<T extends LineData> {
 
                 Hand thisHand = hand == '*' ? Hand.LEFT : Hand.RIGHT;
                 // TODO fix hand
-                //System.out.println( (this.getClass()
-                //        .getGenericSuperclass()).getTypeName());
-               /* try {
-                    java.lang.reflect.Method foo = this.getClass().getMethod("parseLine");
-                    Class<?> type = foo.getReturnType();
-                    System.out.println("Return Type: " + type.getName());
-                  } catch (NoSuchMethodException | SecurityException e) {
-                    e.printStackTrace();
-                  }*/
-                //System.out.println("Return Type: " + c.getName());
+                // System.out.println( (this.getClass()
+                // .getGenericSuperclass()).getTypeName());
+                /*
+                 * try { java.lang.reflect.Method foo = this.getClass().getMethod("parseLine");
+                 * Class<?> type = foo.getReturnType(); System.out.println("Return Type: " +
+                 * type.getName()); } catch (NoSuchMethodException | Sec urityException e) {
+                 * e.printStackTrace(); }
+                 */
+                // System.out.println("Return Type: " + c.getName());
 
-                if (c.equals(ReplayLine.class)) {
-
-                    return (T) new ReplayLine(fakeDate, fakequaternionODataArr, Sensor.values()[sensor], thisHand);
-                }else if (c.equals(GestLineData.class)) {
-                    return (T) new GestLineData(fakequaternionODataArr, Sensor.values()[sensor], thisHand);
-                }
-                return (T)  new LineData(fakeDate, fakequaternionODataArr, Sensor.values()[sensor], thisHand);
+                /*
+                 * if (ReplayLine.class.equals(Class.forName(T))) { return (T) new
+                 * ReplayLine(fakeDate, fakequaternionODataArr, Sensor.values()[sensor],
+                 * thisHand); } else if (c.equals(GestLineData.class)) { return (T) new
+                 * GestLineData(fakeDate, fakequaternionODataArr, Sensor.values()[sensor],
+                 * thisHand); }
+                 */
+                return (T) new LineData(fakeDate, fakequaternionODataArr, Sensor.values()[sensor], thisHand);
             } else {
                 return null;
             }
@@ -93,12 +103,10 @@ public class DataFileParser<T extends LineData> {
         return null;
     }
 
-
     public void reset() {
         try {
             fr = new FileReader(file);
         } catch (FileNotFoundException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
         br = new BufferedReader(fr);

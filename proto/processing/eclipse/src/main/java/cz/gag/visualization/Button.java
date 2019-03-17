@@ -3,6 +3,7 @@ Copyright (c) 2018 Vojtěch Průša
 */
 package cz.gag.visualization;
 
+import cz.gag.common.Configuration;
 import cz.gag.common.ProcessingApplet;
 
 public class Button {

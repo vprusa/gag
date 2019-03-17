@@ -5,9 +5,15 @@ package cz.gag.visualization;
 
 import java.io.BufferedReader;
 
+import cz.gag.common.Configuration;
 import cz.gag.common.Hand;
 import cz.gag.common.ProcessingApplet;
 
+/**
+ * @author Vojtech Prusa
+ * 
+ * This class instance replays data to view
+ */
 public class RePlayer extends DataFileParser<ReplayLine> implements Runnable {
 
     public RePlayer(String file) {
@@ -17,13 +23,10 @@ public class RePlayer extends DataFileParser<ReplayLine> implements Runnable {
     @Override
     public void run() {
         System.out.println("Player running");
-        // serialEvent(mySerial);
         ReplayLine flNew = null;
         ReplayLine flOld = null;
 
         while (true) {
-            // System.out.println(".");
-
             if (Configuration.paused) {
                 try {
                     Thread.sleep(500);
@@ -32,7 +35,7 @@ public class RePlayer extends DataFileParser<ReplayLine> implements Runnable {
                 }
                 continue;
             }
-            flNew = (ReplayLine) parseLine(ReplayLine.class);
+            flNew = (ReplayLine) parseLine();
 
             if (flNew == null) {
                 br = new BufferedReader(fr);
@@ -43,17 +46,11 @@ public class RePlayer extends DataFileParser<ReplayLine> implements Runnable {
                     || flNew.quatO.z < -1))
                 continue;
 
-            //System.out.println(flNew.toString());
-            // System.out.println(flNew.toFileString());
-            // hand.getSensorData(flNew.sensor.ordinal()).quatO.set(flNew.quat[0],
-            // flNew.quat[1], flNew.quat[2],flNew.quat[3]);
             if (flNew.hand == Hand.LEFT) {
                 ProcessingApplet.leftHandData.setSensorData(flNew);
             } else {
                 ProcessingApplet.rightHandData.setSensorData(flNew);
             }
-            // quaternionObj[flNew.sensor.ordinal()].set(flNew.quat[0], flNew.quat[1],
-            // flNew.quat[2], flNew.quat[3]);
             long timeDifference = flOld == null ? 1 : flNew.date.getTime() - flOld.date.getTime();
             System.out.println(line);
 

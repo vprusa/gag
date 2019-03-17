@@ -5,17 +5,22 @@ Copyright (c) 2018 Vojtěch Průša
 // Based on example of MPU6050 from https://github.com/jrowberg/i2cdevlib
 // from 6/21/2012 by Jeff Rowberg <jeff@rowberg.net>
 // 
+#define ESP32_RIGHT // master to left, slave to pc
 
 // I2Cdev and MPU6050 must be installed as libraries, or else the .cpp/.h files
 // for both classes must be in the include path of your project
 #include "I2Cdev.h"
 #include "MPU6050_6Axis_MotionApps20.h"
-//#include "MPU6050.h" // not necessary if using MotionApps include file
+//#include "MPU6050.h" // not necessary iq using MotionApps include file
 
 // Arduino Wire library is required if I2Cdev I2CDEV_ARDUINO_WIRE implementation
 // is used in I2Cdev.h
+#ifdef ESP32_RIGHT
+#include "/home/vprusa/.arduino15/packages/esp32/hardware/esp32/1.0.1/libraries/Wire/src/Wire.h"
+#else
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
 #include "Wire.h"
+#endif
 #endif
 
 // class default I2C address is 0x68
@@ -77,9 +82,15 @@ Copyright (c) 2018 Vojtěch Průša
 // TODO switch usage usage of pins for BT_BAUD and USB_BAUD so communication between hands would go over usb and communication to pc/ntb would use AltSoftSerial
 
 
+//#define A_NANO_RIGHT
+//#define ESP32_RIGHT // master to left, slave to pc
+
 // Hand Switch: 
 // uncomment for using left hand or comment for using right hand
+#ifdef  ESP32_RIGHT
+#else
 #define LEFT_HAND
+#endif
 
 // uncomment "OUTPUT_TEAPOT" if you want output that matches the
 // format used for the InvenSense teapot demo
@@ -95,27 +106,73 @@ Copyright (c) 2018 Vojtěch Průša
 #define PACKET_LENGTH 15
 #define PACKET_COUNTER_POSITION 10
 #endif
+#ifdef ESP32_RIGHT
 
-#define FINGERS_COUNT 6
-// fingers <0,4>
-#define FIRST_FINGER 0
-// or set LAST_FINGER to 4
-#define LAST_FINGER 5
+#define SENSORS_COUNT 5
+// SENSORs <0,4>
+#define FIRST_SENSOR 0
+// or set LAST_SENSOR to 4
+#define LAST_SENSOR 4
 // time for internal interrupt to trigger in loop - working up to 50 ms but freezes may occure - so reset MPU's FIFO more ften (20ms each?)
-#define SWITCH_FINGERS_MS 0
-#define FINGER_PIN_TU TU
-#define FINGER_PIN_SU SU
-#define FINGER_PIN_FU FU
-#define FINGER_PIN_MU MU
-#define FINGER_PIN_EU EU
-#define FINGER_PIN_HP HP
-#define FINGER_PIN_HP_COMPENSATION 13
-#define FINGER_PIN_NF NF
+#define SWITCH_SENSORS_MS 0
+#define SENSOR_PIN_TU TU
+#define SENSOR_PIN_TU_COMPENSATION 34 
+#define SENSOR_PIN_SU SU
+#define SENSOR_PIN_SU_COMPENSATION 35
+#define SENSOR_PIN_FU FU
+#define SENSOR_PIN_FU_COMPENSATION 32
+#define SENSOR_PIN_MU MU
+#define SENSOR_PIN_MU_COMPENSATION 33
+#define SENSOR_PIN_EU EU
+#define SENSOR_PIN_EU_COMPENSATION 25
+#define SENSOR_PIN_HP HP // HAND PALM
+//#define SENSOR_PIN_HP_COMPENSATION 13
+#define SENSOR_PIN_NF NF
 
-//#define FINGER_PIN_OFFSET 3
-#define FINGER_PIN_OFFSET 3
+
+#define SENSOR_PIN_TU TU
+#define SENSOR_PIN_TU_COMPENSATION 34 
+#define SENSOR_PIN_SU SU
+#define SENSOR_PIN_SU_COMPENSATION 35
+#define SENSOR_PIN_FU FU
+#define SENSOR_PIN_FU_COMPENSATION 32
+#define SENSOR_PIN_MU MU
+#define SENSOR_PIN_MU_COMPENSATION 33
+#define SENSOR_PIN_EU EU
+#define SENSOR_PIN_EU_COMPENSATION 25
+#define SENSOR_PIN_HP HP // HAND PALM
+//#define SENSOR_PIN_HP_COMPENSATION 13
+#define SENSOR_PIN_NF NF
+
+//#define SENSOR_PIN_OFFSET 3
+#define SENSOR_PIN_OFFSET 0
+// 57600 115200
+//#define BT_BAUD 57600
+
+#else
+#define SENSORS_COUNT 6
+// SENSORs <0,4>
+#define FIRST_SENSOR 0
+// or set LAST_SENSOR to 4
+#define LAST_SENSOR 5
+// time for internal interrupt to trigger in loop - working up to 50 ms but freezes may occure - so reset MPU's FIFO more ften (20ms each?)
+#define SWITCH_SENSORS_MS 0
+#define SENSOR_PIN_TU TU
+#define SENSOR_PIN_SU SU
+#define SENSOR_PIN_FU FU
+#define SENSOR_PIN_MU MU
+#define SENSOR_PIN_EU EU
+#define SENSOR_PIN_HP HP
+#define SENSOR_PIN_HP_COMPENSATION 13
+#define SENSOR_PIN_NF NF
+
+//#define SENSOR_PIN_OFFSET 3
+#define SENSOR_PIN_OFFSET 3
 // 57600 115200
 #define BT_BAUD 57600
+
+#endif
+
 // TODO do not use this at all
 #define MAX_HAND_SWITCH_TIME 25
 // do not forget for ShanonKotelnik theorem where MAX_HAND_SWITCH_CHARS >= PACKET_LENGTH*2
@@ -219,15 +276,15 @@ uint8_t teapotPacket[PACKET_LENGTH] = {'*', 0x99, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                                        0x00, 0x00, '\r', '\n'};
 #endif
 
-enum Finger
+enum SENSOR
 {
-    FINGER_PIN_TU = 0,
-    FINGER_PIN_SU = 1,
-    FINGER_PIN_FU = 2,
-    FINGER_PIN_MU = 3,
-    FINGER_PIN_EU = 4,
-    FINGER_PIN_HP = 5, // hadn palm
-    FINGER_PIN_NF=-1,
+    SENSOR_PIN_TU = 0,
+    SENSOR_PIN_SU = 1,
+    SENSOR_PIN_FU = 2,
+    SENSOR_PIN_MU = 3,
+    SENSOR_PIN_EU = 4,
+    //SENSOR_PIN_HP = 5, // hadn palm
+    SENSOR_PIN_NF=-1,
     
 };
 char emptyArr[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -248,64 +305,73 @@ struct Gyro
     long lastResetTime=0;
 };
 
-Finger selectedFinger = FINGER_PIN_NF;
+SENSOR selectedSENSOR = SENSOR_PIN_NF;
 
 //Variables
-float elapsedTime, time, timePrev, elapsedTimeToSwitch, handSwitchPrev, handSwitchElapsed; //Variables for time control
-Gyro gyros[FINGERS_COUNT];
+float elapsedTime, timeNow, timePrev, elapsedTimeToSwitch, handSwitchPrev, handSwitchElapsed; //Variables for time control
+Gyro gyros[SENSORS_COUNT];
 
 // ================================================================
 // ===                      INITIAL SETUP                       ===
 // ================================================================
-
-void enableSingleMPU(int fingerToEnable)
-{
-    for (int i = 0; i < FINGERS_COUNT; i++)
-    {
-        int fingerToEnableOffsetted = FINGER_PIN_OFFSET + i;
+void enableSingleMPU(int SENSORToEnable) {
+    for (int i = 0; i < SENSORS_COUNT; i++) {
+        int SENSORToEnableOffsetted = SENSOR_PIN_OFFSET + i;
+        
+        #ifdef SENSOR_PIN_TU_COMPENSATION
+        if (i == SENSOR_PIN_TU) {
+            SENSORToEnableOffsetted = SENSOR_PIN_TU_COMPENSATION;
+        }
+        #endif
+        #ifdef SENSOR_PIN_SU_COMPENSATION
+        if (i == SENSOR_PIN_SU) {
+            SENSORToEnableOffsetted = SENSOR_PIN_SU_COMPENSATION;
+        }
+        #endif
+        #ifdef SENSOR_PIN_FU_COMPENSATION
+        if (i == SENSOR_PIN_FU) {
+            SENSORToEnableOffsetted = SENSOR_PIN_FU_COMPENSATION;
+        }
+        #endif
+        #ifdef SENSOR_PIN_MU_COMPENSATION
+        if (i == SENSOR_PIN_MU) {
+            SENSORToEnableOffsetted = SENSOR_PIN_MU_COMPENSATION;
+        }
+        #endif
+        #ifdef SENSOR_PIN_EU_COMPENSATION
+        if (i == SENSOR_PIN_EU) {
+            SENSORToEnableOffsetted = SENSOR_PIN_EU_COMPENSATION;
+        }
+        #endif
         // Because Non-firing contact field on right hand has broken contact on pin D8  
-        if (i == FINGER_PIN_HP) {
-            fingerToEnableOffsetted = FINGER_PIN_HP_COMPENSATION;
+        #ifdef SENSOR_PIN_HP_COMPENSATION
+        if (i == SENSOR_PIN_HP) {
+            SENSORToEnableOffsetted = SENSOR_PIN_HP_COMPENSATION;
         }
-        if (i == fingerToEnable)
+        #endif
+        
+        /*
+        MASTER_SERIAL_NAME.print(SENSORToEnable);
+        MASTER_SERIAL_NAME.print(" "); 
+        MASTER_SERIAL_NAME.print(i);
+        MASTER_SERIAL_NAME.print(" ");
+*/
+        if ( i == SENSORToEnable)//i == 0 || i == 1) //SENSORToEnable)
         {
-            digitalWrite(fingerToEnableOffsetted, LOW);
+            // MASTER_SERIAL_NAME.print("L");
+            digitalWrite(SENSORToEnableOffsetted, LOW);
+        } else {
+            //MASTER_SERIAL_NAME.print("H");
+            digitalWrite(SENSORToEnableOffsetted, HIGH);
         }
-        else
-        {
-            digitalWrite(fingerToEnableOffsetted, HIGH);
-        }
+        //MASTER_SERIAL_NAME.print(" ");
+        //MASTER_SERIAL_NAME.println(SENSORToEnableOffsetted);
+
     }
+
 }
 
-void setup()
-{
-    for (int i = FIRST_FINGER; i <= LAST_FINGER; i++)
-    {
-        int fingerToEnable = FINGER_PIN_OFFSET + i;
-        if (i == FINGER_PIN_HP) {
-            fingerToEnable = FINGER_PIN_HP_COMPENSATION;
-        }
-        pinMode(fingerToEnable, OUTPUT);
-    }
-
-// join I2C bus (I2Cdev library doesn't do this automatically)
-#if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
-    Wire.begin();
-    //TWBR = 24; // 400kHz I2C clock (200kHz if CPU is 8MHz)
-    Wire.setClock(400000); // 400kHz I2C clock. Comment this line if having compilation difficulties#elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
-#elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
-    Fastwire::setup(400, true);
-#endif
-
-// initialize serial communication
-// (9600 38400 57600 74880 115200 230400 250000 57600 38400 chosen because it is required for Teapot Demo output, but it's
-// really up to you depending on your project)
-#ifdef USE_BT_MASTER
-    PC_SERIAL_NAME.begin(BT_BAUD);
-    // while (!hc05.available()){}
-    // hc05Master.println(F("BT up"));
-#endif
+void setup() {
 #ifdef USE_USB
     MASTER_SERIAL_NAME.begin(USB_BAUD);
     #ifdef RIGHT_HAND
@@ -316,25 +382,82 @@ void setup()
     MASTER_SERIAL_NAME.println(F("USB up"));
 #endif
 
+    for (int i = FIRST_SENSOR; i <= LAST_SENSOR; i++) {
+        int SENSORToEnable = SENSOR_PIN_OFFSET + i;
+         
+        #ifdef SENSOR_PIN_TU_COMPENSATION
+        if (i == SENSOR_PIN_TU) {
+            SENSORToEnable = SENSOR_PIN_TU_COMPENSATION;
+        }
+        #endif
+        #ifdef SENSOR_PIN_SU_COMPENSATION
+        if (i == SENSOR_PIN_SU) {
+            SENSORToEnable = SENSOR_PIN_SU_COMPENSATION;
+        }
+        #endif
+        #ifdef SENSOR_PIN_FU_COMPENSATION
+        if (i == SENSOR_PIN_FU) {
+            SENSORToEnable = SENSOR_PIN_FU_COMPENSATION;
+        }
+        #endif
+        #ifdef SENSOR_PIN_MU_COMPENSATION
+        if (i == SENSOR_PIN_MU) {
+            SENSORToEnable = SENSOR_PIN_MU_COMPENSATION;
+        }
+        #endif
+        #ifdef SENSOR_PIN_EU_COMPENSATION
+        if (i == SENSOR_PIN_EU) {
+            SENSORToEnable = SENSOR_PIN_EU_COMPENSATION;
+        }
+        #endif
+        #ifdef SENSOR_PIN_HP_COMPENSATION
+        if (i == SENSOR_PIN_HP) {
+            SENSORToEnable = SENSOR_PIN_HP_COMPENSATION;
+        }
+        #endif
+
+        pinMode(SENSORToEnable, OUTPUT);
+    }
+#ifdef ESP32_RIGHT
+Wire.begin(21 , 22, 400000);
+
+#else
+// join I2C bus (I2Cdev library doesn't do this automatically)
+#if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
+    Wire.begin();
+    //TWBR = 24; // 400kHz I2C clock (200kHz if CPU is 8MHz)
+    Wire.setClock(400000); // 400kHz I2C clock. Comment this line if having compilation difficulties#elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
+#elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
+    Fastwire::setup(400, true);
+#endif
+#endif
+// initialize serial communication
+// (9600 38400 57600 74880 115200 230400 250000 57600 38400 chosen because it is required for Teapot Demo output, but it's
+// really up to you depending on your project)
+#ifdef USE_BT_MASTER
+    PC_SERIAL_NAME.begin(BT_BAUD);
+    // while (!hc05.available()){}
+    // hc05Master.println(F("BT up"));
+#endif
+
     // NOTE: 8MHz or slower host processors, like the Teensy @ 3.3v or Ardunio
     // Pro Mini running at 3.3v, cannot handle this baud rate reliably due to
     // the baud timing being too misaligned with processor ticks. You must use
     // 38400 or slower in these cases, or use some kind of external separate
     // crystal solution for the UART timer.
 
-    for (int i = FIRST_FINGER; i <= LAST_FINGER; i++)
-    {
-        selectedFinger = (Finger)i;
-        enableSingleMPU(selectedFinger);
-        gyros[selectedFinger].mpu = new MPU6050();
+    for (int i = FIRST_SENSOR; i <= LAST_SENSOR; i++) {
+        selectedSENSOR = (SENSOR)i;
+        enableSingleMPU(selectedSENSOR);
+        gyros[selectedSENSOR].mpu = new MPU6050(0x68);
+        //MPU6050 mpu(0x69); // <-- use for AD0 high
+
         initMPUAndDMP(1);
     }
-
-    time = millis(); //Start counting time in milliseconds
+    timeNow = millis(); //Start counting time in milliseconds
 }
 
-int initMPUAndDMP(int attempt)
-{
+int initMPUAndDMP(int attempt) {
     if (attempt <= 0)
     {
         return 0;
@@ -346,7 +469,7 @@ int initMPUAndDMP(int attempt)
 #ifdef USE_USB
     MASTER_SERIAL_NAME.println(F("USB: Initializing I2C devices..."));
 #endif
-    MPU6050 mpu = *gyros[selectedFinger].mpu;
+    MPU6050 mpu = *gyros[selectedSENSOR].mpu;
     mpu.initialize();
 #ifdef USE_USB
     MASTER_SERIAL_NAME.println(F("Testing device connections..."));
@@ -374,12 +497,12 @@ int initMPUAndDMP(int attempt)
 // initialize device
 #ifdef USE_BT
         hc05.print(F("Enabling DMP... "));
-        hc05.println(selectedFinger);
+        hc05.println(selectedSENSOR);
         mpu.setDMPEnabled(true);
 
         // set our DMP Ready flag so the main loop() function knows it's okay to use it
         hc05.println(F("DMP ready! Getting packet size..."));
-        gyros[selectedFinger].dmpReady = true;
+        gyros[selectedSENSOR].dmpReady = true;
         // get expected DMP packet size for later comparison
         hc05.print(F("packet size: "));
         hc05.print(packetSize);
@@ -387,19 +510,17 @@ int initMPUAndDMP(int attempt)
 #endif
 #ifdef USE_USB
         MASTER_SERIAL_NAME.print(F("Enabling DMP... "));
-        MASTER_SERIAL_NAME.println(selectedFinger);
+        MASTER_SERIAL_NAME.println(selectedSENSOR);
         mpu.setDMPEnabled(true);
 
         // set our DMP Ready flag so the main loop() function knows it's okay to use it
         MASTER_SERIAL_NAME.println(F("DMP ready! Getting packet size..."));
-        gyros[selectedFinger].dmpReady = true;
+        gyros[selectedSENSOR].dmpReady = true;
         MASTER_SERIAL_NAME.print(F("packet size: "));
         MASTER_SERIAL_NAME.print(packetSize);
         MASTER_SERIAL_NAME.println(F(""));
 #endif
-    }
-    else
-    {
+    } else {
 // ERROR!
 // 1 = initial memory load failed
 // 2 = DMP configuration updates failed
@@ -419,31 +540,29 @@ int initMPUAndDMP(int attempt)
     return 0;
 }
 
-int setOrRotateSelectedGyro(int i)
-{
+int setOrRotateSelectedGyro(int i) {
     if (i == -1) {
-        i = selectedFinger + 1;
+        i = selectedSENSOR + 1;
     }
-    if (i > LAST_FINGER) {
-        i = FIRST_FINGER;
+    if (i > LAST_SENSOR) {
+        i = FIRST_SENSOR;
     }
-    selectedFinger = (Finger)i;
-    enableSingleMPU(selectedFinger);
+    selectedSENSOR = (SENSOR)i;
+    enableSingleMPU(selectedSENSOR);
     return i;
 }
 
 #ifdef OLD_RESET
-void resetMPUs(int around)
-{
+void resetMPUs(int around) {
     // reset n after (TODO without current?)
     if (around > 0) {
         for (int i = 0; i < around; i++) {
-            MPU6050 mpu = *gyros[selectedFinger].mpu;
+            MPU6050 mpu = *gyros[selectedSENSOR].mpu;
             mpu.resetFIFO();
             setOrRotateSelectedGyro(-1);
         }
         // rotate to start position
-        for (int i = around; i < FINGERS_COUNT; i++) {
+        for (int i = around; i < SENSORS_COUNT; i++) {
             setOrRotateSelectedGyro(-1);
         }
     }
@@ -452,11 +571,11 @@ void resetMPUs(int around)
         // reset n before current (TODO without current?)
         // rotate to position where reset should start
         int i = 0;
-        for (; i < FINGERS_COUNT + around; i++) {
+        for (; i < SENSORS_COUNT + around; i++) {
             setOrRotateSelectedGyro(-1);
         }
-        for (; i < FINGERS_COUNT; i++) {
-            MPU6050 mpu = *gyros[selectedFinger].mpu;
+        for (; i < SENSORS_COUNT; i++) {
+            MPU6050 mpu = *gyros[selectedSENSOR].mpu;
             mpu.resetFIFO();
             setOrRotateSelectedGyro(-1);
         }
@@ -464,10 +583,10 @@ void resetMPUs(int around)
 }
 #endif
 
-void automaticFifoReset(){
+void automaticFifoReset() {
     long now = millis();
-    int currentlySellectedSensor = selectedFinger;
-    for(int i = 0; i < FINGERS_COUNT; i++){
+    int currentlySellectedSensor = selectedSENSOR;
+    for(int i = 0; i < SENSORS_COUNT; i++){
         if(gyros[i].lastResetTime + MIN_TIME_TO_RESET < now 
         #ifdef RIGHT_HAND
         && gyros[i].hasDataReady
@@ -488,8 +607,8 @@ void automaticFifoReset(){
     setOrRotateSelectedGyro(currentlySellectedSensor);
 }
 
-void fifoToPacket(byte * fifoBuffer, byte * packet, int selectedFinger){
-    packet[2] = selectedFinger;
+void fifoToPacket(byte * fifoBuffer, byte * packet, int selectedSENSOR) {
+    packet[2] = selectedSENSOR;
     packet[3] = fifoBuffer[0];
     packet[4] = fifoBuffer[1];
     packet[5] = fifoBuffer[4];
@@ -501,9 +620,9 @@ void fifoToPacket(byte * fifoBuffer, byte * packet, int selectedFinger){
 }
 
 #ifdef USE_BT_MASTER
-void sendDataRequest(int selectedFinger){
+void sendDataRequest(int selectedSENSOR) {
     PC_SERIAL_NAME.write('$');
-    PC_SERIAL_NAME.write(selectedFinger);
+    PC_SERIAL_NAME.write(selectedSENSOR);
     PC_SERIAL_NAME.write((byte)0x00); // 0x00 fails to compile
 }
 #endif
@@ -517,11 +636,11 @@ volatile int readAligned = 1;
 #endif
 volatile float time2, timePrev2;
 
-bool loadDataFromFIFO(int forceLoad = false){
-    MPU6050 mpu = *gyros[selectedFinger].mpu;
-    if(!gyros[selectedFinger].hasDataReady || forceLoad){
+bool loadDataFromFIFO(int forceLoad = false) {
+    MPU6050 mpu = *gyros[selectedSENSOR].mpu;
+    if(!gyros[selectedSENSOR].hasDataReady || forceLoad){
         fifoCount = mpu.getFIFOCount();
-        uint8_t *fifoBuffer = gyros[selectedFinger].fifoBuffer; // FIFO storage buffer
+        uint8_t *fifoBuffer = gyros[selectedSENSOR].fifoBuffer; // FIFO storage buffer
         
         if (fifoCount >= packetSize && fifoCount <= 1024 && fifoCount != 0 ) // if (mpuIntStatus & 0x02) 
         {
@@ -531,7 +650,7 @@ bool loadDataFromFIFO(int forceLoad = false){
                 mpu.getFIFOBytes(fifoBuffer, packetSize);
                 fifoCount -= packetSize;
             }
-            gyros[selectedFinger].hasDataReady=true;
+            gyros[selectedSENSOR].hasDataReady=true;
             return true;
         }
     }
@@ -539,35 +658,50 @@ bool loadDataFromFIFO(int forceLoad = false){
     return false;
 }
 
-void writePacket(){
-    uint8_t *fifoBuffer = gyros[selectedFinger].fifoBuffer; // FIFO storage buffer
+void writePacket() {
+    uint8_t *fifoBuffer = gyros[selectedSENSOR].fifoBuffer; // FIFO storage buffer
+
+#ifdef ESP32_RIGHT
+    MASTER_SERIAL_NAME.write(teapotPacket, PACKET_LENGTH);
+
+    if(!gyros[selectedSENSOR].alreadySentData && gyros[selectedSENSOR].hasDataReady) {
+        fifoToPacket(fifoBuffer, teapotPacket, selectedSENSOR);
+        MASTER_SERIAL_NAME.write(teapotPacket, PACKET_LENGTH);
+        MASTER_SERIAL_NAME.write((byte)0x00);
+        gyros[selectedSENSOR].hasDataReady = false;
+        gyros[selectedSENSOR].alreadySentData = true;
+        teapotPacket[PACKET_COUNTER_POSITION]++; // packetCount, loops at 0xFF on purpose
+    }
+#else
 #ifdef RIGHT_HAND
-    if(!gyros[selectedFinger].alreadySentData && gyros[selectedFinger].hasDataReady){
-        fifoToPacket(fifoBuffer, teapotPacket, selectedFinger);
+    if(!gyros[selectedSENSOR].alreadySentData && gyros[selectedSENSOR].hasDataReady){
+        fifoToPacket(fifoBuffer, teapotPacket, selectedSENSOR);
         MASTER_SERIAL_NAME.write(teapotPacket, PACKET_LENGTH);
         MASTER_SERIAL_NAME.write(0x00);
         teapotPacket[PACKET_COUNTER_POSITION]++; // packetCount, loops at 0xFF on purpose
-        gyros[selectedFinger].hasDataReady = false;
-        gyros[selectedFinger].alreadySentData = true;
+        gyros[selectedSENSOR].hasDataReady = false;
+        gyros[selectedSENSOR].alreadySentData = true;
     }
     readAlign = 0;
     readAligned = 0;
 #endif
 #ifdef LEFT_HAND
-    if(!gyros[selectedFinger].alreadySentData && gyros[selectedFinger].hasDataReady) {
-        fifoToPacket(fifoBuffer, teapotPacket, selectedFinger);
+    if(!gyros[selectedSENSOR].alreadySentData && gyros[selectedSENSOR].hasDataReady) {
+        fifoToPacket(fifoBuffer, teapotPacket, selectedSENSOR);
         MASTER_SERIAL_NAME.write(teapotPacket, PACKET_LENGTH);
         MASTER_SERIAL_NAME.write((byte)0x00);
-        gyros[selectedFinger].hasDataReady = false;
-        gyros[selectedFinger].alreadySentData = true;
+        gyros[selectedSENSOR].hasDataReady = false;
+        gyros[selectedSENSOR].alreadySentData = true;
         teapotPacket[PACKET_COUNTER_POSITION]++; // packetCount, loops at 0xFF on purpose
     }
 #endif        
+#endif
+
 }
 
 void loadDataAndSendPacket() {
     loadDataFromFIFO(false);
-    if(gyros[selectedFinger].hasDataReady) {
+    if(gyros[selectedSENSOR].hasDataReady) {
 
 #ifdef USE_BT
         if (hc05.availableForWrite()) {
@@ -583,31 +717,34 @@ void loadDataAndSendPacket() {
 }
 
 #ifdef RIGHT_HAND_SLAVE     
-void rightHandDataRequestHandler(){
-   int limit = REPEAT_LEFT_HAND_READ_LIMIT;
+void slaveHandDataRequestHandler() {
+    int limit = REPEAT_LEFT_HAND_READ_LIMIT;
     readAlign = 0;
     readAligned = 0;
     while(limit > 0) {
         int ch = MASTER_SERIAL_NAME.read();
         if (ch != -1) {
+         
             if(readAlign<1) {
                 if(ch == '$') {
                     readAlign=1;
+                    //MASTER_SERIAL_NAME.println("$");
                 }
-            }else {
-                if(ch >= 0 && ch < FINGERS_COUNT) {
+            } else {
+                if(ch >= 0 && ch < SENSORS_COUNT) {
+                    //MASTER_SERIAL_NAME.println("al");
                     readAligned = 1;
                     readAlign=0;//++;
                     setOrRotateSelectedGyro(ch);
 
                     if(readAligned == 1){
-                        gyros[selectedFinger].alreadySentData = false;
+                        gyros[selectedSENSOR].alreadySentData = false;
                         writePacket();
                         loadDataAndSendPacket();
-                        int currentlySellectedSensor = selectedFinger;
+                        int currentlySellectedSensor = selectedSENSOR;
                         setOrRotateSelectedGyro(-1);
                         loadDataFromFIFO(true);
-                    // setOrRotateSelectedGyro(currentlySellectedSensor);
+                        // setOrRotateSelectedGyro(currentlySellectedSensor);
                     }
 
                     break;
@@ -622,11 +759,11 @@ void rightHandDataRequestHandler(){
 #endif
 
 #ifdef USE_BT_MASTER
-void loadRightHandData(){
+void loadSlaveHandData() {
     int limit = REPEAT_RIGHT_HAND_READ_LIMIT;
     
     while(--limit>0){ 
-        sendDataRequest(selectedFinger);
+        sendDataRequest(selectedSENSOR);
         handSwitchElapsed = 0;
         time2 = millis();
         timePrev2 = 0;
@@ -655,18 +792,18 @@ void loadRightHandData(){
             int ch = PC_SERIAL_NAME.read();
 
             if (ch != -1) {
-                if(ch == '$'){
+                if(ch == '$') {
                     align++;
                     sentPacketCharCounter++;
                 }
-                if(ch == 0x99){
+                if(ch == 0x99) {
                     align++;
                     sentPacketCharCounter++;
                 }
-                if(align > 1){
+                if(align > 1) {
                     aligned = 1;
                 }
-                if(sentPacketCharCounter>0){
+                if(sentPacketCharCounter>0) {
                     MASTER_SERIAL_NAME.write(ch);
                     sentPacketCharCounter++;
                 }
@@ -687,8 +824,7 @@ void loadRightHandData(){
 // ================================================================
 // ===                    MAIN PROGRAM LOOP                     ===
 // ================================================================
-void loop()
-{
+void loop() {
 
     // if programming failed, don't try to do anything
     //if (!dmpReady)
@@ -708,37 +844,48 @@ void loop()
     // .
     // .
     // }
-
     //uint8_t teapotPacket[21] = {'*', 0x99, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0,0,0,0,0,0x00, 0x00 , '\r', '\n'};
-    handSwitchPrev = time;
-    timePrev = time; // the previous time is stored before the actual time read
-    time = millis(); // actual time read
-    elapsedTime = (time - timePrev);
+    handSwitchPrev = timeNow;
+    timePrev = timeNow; // the previous time is stored before the actual time read
+    timeNow = millis(); // actual time read
+    elapsedTime = (timeNow - timePrev);
  
     // reset interrupt flag and get INT_STATUS byte
     
 #ifdef USE_BT_MASTER
-        loadRightHandData();
+    loadSlaveHandData();
 #endif
 
+// TODO switch hands
 #ifdef RIGHT_HAND_SLAVE 
-    rightHandDataRequestHandler();
+    //Serial.println("idk");
+    //slaveHandDataRequestHandler();
 #endif
-   
+
+#ifdef ESP32_RIGHT
+    
+    gyros[selectedSENSOR].alreadySentData = false;
+    //writePacket();
+    loadDataAndSendPacket();
+    int currentlySellectedSensor = selectedSENSOR;
+    //setOrRotateSelectedGyro(-1);
+    setOrRotateSelectedGyro(2);
+    loadDataFromFIFO(true);
+#endif
+
 #ifdef LEFT_HAND
-        gyros[selectedFinger].alreadySentData = false;
+        gyros[selectedSENSOR].alreadySentData = false;
         //writePacket();
         loadDataAndSendPacket();
-        int currentlySellectedSensor = selectedFinger;
+        int currentlySellectedSensor = selectedSENSOR;
         setOrRotateSelectedGyro(-1);
         loadDataFromFIFO(true);
         //resetMPUs(-3);
         //automaticFifoReset();
-
 #endif
     automaticFifoReset();
 #ifdef USE_BT_MASTER
-    loadRightHandData();
+    loadSlaveHandData();
 #endif
 
 }
