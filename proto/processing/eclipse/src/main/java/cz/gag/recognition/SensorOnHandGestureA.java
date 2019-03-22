@@ -61,7 +61,7 @@ public abstract class SensorOnHandGestureA implements SensorGesture, HandGesture
         System.out.println("Loading ref data");
         data = new ArrayList<GestLineData>();
         GestLineData rl = null;
-        while ((rl = (GestLineData) parser.parseLine()) != null) {
+        while ((rl = parser.parseLine()) != null) {
             if (rl.sensor == sensor && rl.hand == hand) {
                 data.add(rl);
             }

@@ -36,6 +36,7 @@ public class DataFileParser<T extends LineData> {
     int replayChar = 0;
     boolean EOL = false;
     String file;
+    Class lineDataClass = null;
 
     public DataFileParser(String file) {
         this.file = file;
@@ -46,6 +47,11 @@ public class DataFileParser<T extends LineData> {
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
+    }
+
+    public DataFileParser(String file, Class c) {
+        this(file);
+        lineDataClass = c;
     }
 
     public T parseLine() {
@@ -84,14 +90,15 @@ public class DataFileParser<T extends LineData> {
                  */
                 // System.out.println("Return Type: " + c.getName());
 
-                /*
-                 * if (ReplayLine.class.equals(Class.forName(T))) { return (T) new
-                 * ReplayLine(fakeDate, fakequaternionODataArr, Sensor.values()[sensor],
-                 * thisHand); } else if (c.equals(GestLineData.class)) { return (T) new
-                 * GestLineData(fakeDate, fakequaternionODataArr, Sensor.values()[sensor],
-                 * thisHand); }
-                 */
+                if (lineDataClass.equals(ReplayLine.class)) {
+                    return (T) new ReplayLine(fakeDate, fakequaternionODataArr, Sensor.values()[sensor], thisHand);
+                } else if (lineDataClass.equals(GestLineData.class)) {
+                    return (T) new GestLineData(fakeDate, fakequaternionODataArr, Sensor.values()[sensor], thisHand);
+                }
                 return (T) new LineData(fakeDate, fakequaternionODataArr, Sensor.values()[sensor], thisHand);
+
+                // return new (fakeDate, fakequaternionODataArr, Sensor.values()[sensor],
+                // thisHand);
             } else {
                 return null;
             }

@@ -13,11 +13,11 @@ import toxi.geom.Quaternion;
 public class WholeHandGestureI extends HandGestureA {
 
     public SensorOnHandGestureI[] sensoresGestrues = new SensorOnHandGestureI[Sensor.values().length];
-    private DataFileParser parser;
+    private DataFileParser<GestLineData> parser;
 
     WholeHandGestureI(Hand hand, String file) {
         super(hand);
-        parser = new DataFileParser(file);  
+        parser = new DataFileParser(file, GestLineData.class);  
         for (int i = 0; i < sensoresGestrues.length; i++) {
             sensoresGestrues[i] = new SensorOnHandGestureI(hand, Sensor.values()[i], parser);
         }

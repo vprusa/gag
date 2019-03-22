@@ -13,7 +13,7 @@ import cz.gag.visualization.GestLineData;
 
 public class SensorOnHandGestureI extends SensorOnHandGestureA {
 
-    SensorOnHandGestureI(Hand hand, Sensor sensor, DataFileParser parser) {
+    SensorOnHandGestureI(Hand hand, Sensor sensor, DataFileParser<GestLineData> parser) {
         super(hand, sensor, parser);
     }
 
