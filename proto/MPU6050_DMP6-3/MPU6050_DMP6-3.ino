@@ -7,17 +7,22 @@ Copyright (c) 2018 Vojtěch Průša
 // 
 #define ESP32_RIGHT // master to left, slave to pc
 
-// I2Cdev and MPU6050 must be installed as libraries, or else the .cpp/.h files
+
+#ifdef ESP32_RIGHT
+//#include "/home/vprusa/.arduino15/packages/esp32/hardware/esp32/1.0.1/libraries/Wire/src/Wire.h"
+#include "Wire.h"
+#endif
+
 // for both classes must be in the include path of your project
-#include "I2Cdev.h"
+//#include "I2Cdev.h"
 #include "MPU6050_6Axis_MotionApps20.h"
 //#include "MPU6050.h" // not necessary iq using MotionApps include file
 
 // Arduino Wire library is required if I2Cdev I2CDEV_ARDUINO_WIRE implementation
 // is used in I2Cdev.h
-#ifdef ESP32_RIGHT
-#include "/home/vprusa/.arduino15/packages/esp32/hardware/esp32/1.0.1/libraries/Wire/src/Wire.h"
-#else
+#ifndef ESP32_RIGHT
+//#include "/home/vprusa/.arduino15/packages/esp32/hardware/esp32/1.0.1/libraries/Wire/src/Wire.h"
+//#include "Wire.h"
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
 #include "Wire.h"
 #endif
@@ -92,6 +97,13 @@ Copyright (c) 2018 Vojtěch Průša
 #define LEFT_HAND
 #endif
 
+//#define CONFIG_DISABLE_HAL_LOCKS
+
+//#define ARDUHAL_LOG_LEVEL ARDUHAL_LOG_LEVEL_ERROR
+//#define CORE_DEBUG_LEVEL
+#define ARDUHAL_LOG_LEVEL (1)
+#define CORE_DEBUG_LEVEL 
+
 // uncomment "OUTPUT_TEAPOT" if you want output that matches the
 // format used for the InvenSense teapot demo
 #define OUTPUT_TEAPOT
@@ -115,7 +127,8 @@ Copyright (c) 2018 Vojtěch Průša
 #define LAST_SENSOR 4
 // time for internal interrupt to trigger in loop - working up to 50 ms but freezes may occure - so reset MPU's FIFO more ften (20ms each?)
 #define SWITCH_SENSORS_MS 0
-#define SENSOR_PIN_TU TU
+
+/*#define SENSOR_PIN_TU TU
 #define SENSOR_PIN_TU_COMPENSATION 34 
 #define SENSOR_PIN_SU SU
 #define SENSOR_PIN_SU_COMPENSATION 35
@@ -128,18 +141,20 @@ Copyright (c) 2018 Vojtěch Průša
 #define SENSOR_PIN_HP HP // HAND PALM
 //#define SENSOR_PIN_HP_COMPENSATION 13
 #define SENSOR_PIN_NF NF
+*/
 
+// https://randomnerdtutorials.com/esp32-pinout-reference-gpios/
 
 #define SENSOR_PIN_TU TU
-#define SENSOR_PIN_TU_COMPENSATION 34 
+#define SENSOR_PIN_TU_COMPENSATION 4
 #define SENSOR_PIN_SU SU
-#define SENSOR_PIN_SU_COMPENSATION 35
+#define SENSOR_PIN_SU_COMPENSATION 15
 #define SENSOR_PIN_FU FU
-#define SENSOR_PIN_FU_COMPENSATION 32
+#define SENSOR_PIN_FU_COMPENSATION 12
 #define SENSOR_PIN_MU MU
-#define SENSOR_PIN_MU_COMPENSATION 33
+#define SENSOR_PIN_MU_COMPENSATION 13
 #define SENSOR_PIN_EU EU
-#define SENSOR_PIN_EU_COMPENSATION 25
+#define SENSOR_PIN_EU_COMPENSATION 14
 #define SENSOR_PIN_HP HP // HAND PALM
 //#define SENSOR_PIN_HP_COMPENSATION 13
 #define SENSOR_PIN_NF NF
@@ -200,10 +215,20 @@ Copyright (c) 2018 Vojtěch Průša
 #define RIGHT_HAND_SLAVE
 #define RIGHT_HAND_TO_PC
 
+#ifdef ESP32_RIGHT
+// values for ESP32 400KHz I2C
+// comparing to nano MPU6050 needs to be reset more often
+#define MAX_TIME_TO_RESET 15
+#define MIN_TIME_TO_RESET 5
+#define MAX_FIFO_USAGE_FOR_RESET 200
+#define MIN_FIFO_USAGE_FOR_RESET 100
+#else
+// values for arduino nano using 400KHz I2C
 #define MAX_TIME_TO_RESET 50
 #define MIN_TIME_TO_RESET 20
 #define MAX_FIFO_USAGE_FOR_RESET 900
 #define MIN_FIFO_USAGE_FOR_RESET 500
+#endif
 #define FIFO_PACKET_SIZE 42
 #define FIFO_SIZE 42
 #endif
@@ -315,38 +340,40 @@ Gyro gyros[SENSORS_COUNT];
 // ===                      INITIAL SETUP                       ===
 // ================================================================
 void enableSingleMPU(int SENSORToEnable) {
+
+    //Wire.flush();
     for (int i = 0; i < SENSORS_COUNT; i++) {
-        int SENSORToEnableOffsetted = SENSOR_PIN_OFFSET + i;
+        int selectorOffsettedPin = SENSOR_PIN_OFFSET + i;
         
         #ifdef SENSOR_PIN_TU_COMPENSATION
         if (i == SENSOR_PIN_TU) {
-            SENSORToEnableOffsetted = SENSOR_PIN_TU_COMPENSATION;
+            selectorOffsettedPin = SENSOR_PIN_TU_COMPENSATION;
         }
         #endif
         #ifdef SENSOR_PIN_SU_COMPENSATION
         if (i == SENSOR_PIN_SU) {
-            SENSORToEnableOffsetted = SENSOR_PIN_SU_COMPENSATION;
+            selectorOffsettedPin = SENSOR_PIN_SU_COMPENSATION;
         }
         #endif
         #ifdef SENSOR_PIN_FU_COMPENSATION
         if (i == SENSOR_PIN_FU) {
-            SENSORToEnableOffsetted = SENSOR_PIN_FU_COMPENSATION;
+            selectorOffsettedPin = SENSOR_PIN_FU_COMPENSATION;
         }
         #endif
         #ifdef SENSOR_PIN_MU_COMPENSATION
         if (i == SENSOR_PIN_MU) {
-            SENSORToEnableOffsetted = SENSOR_PIN_MU_COMPENSATION;
+            selectorOffsettedPin = SENSOR_PIN_MU_COMPENSATION;
         }
         #endif
         #ifdef SENSOR_PIN_EU_COMPENSATION
         if (i == SENSOR_PIN_EU) {
-            SENSORToEnableOffsetted = SENSOR_PIN_EU_COMPENSATION;
+            selectorOffsettedPin = SENSOR_PIN_EU_COMPENSATION;
         }
         #endif
         // Because Non-firing contact field on right hand has broken contact on pin D8  
         #ifdef SENSOR_PIN_HP_COMPENSATION
         if (i == SENSOR_PIN_HP) {
-            SENSORToEnableOffsetted = SENSOR_PIN_HP_COMPENSATION;
+            selectorOffsettedPin = SENSOR_PIN_HP_COMPENSATION;
         }
         #endif
         
@@ -356,19 +383,69 @@ void enableSingleMPU(int SENSORToEnable) {
         MASTER_SERIAL_NAME.print(i);
         MASTER_SERIAL_NAME.print(" ");
 */
-        if ( i == SENSORToEnable)//i == 0 || i == 1) //SENSORToEnable)
+        if ( i != SENSORToEnable )//i == 0 || i == 1) //SENSORToEnable)
         {
-            // MASTER_SERIAL_NAME.print("L");
-            digitalWrite(SENSORToEnableOffsetted, LOW);
-        } else {
-            //MASTER_SERIAL_NAME.print("H");
-            digitalWrite(SENSORToEnableOffsetted, HIGH);
+          //  MASTER_SERIAL_NAME.print("H");
+            digitalWrite(selectorOffsettedPin, LOW);
         }
-        //MASTER_SERIAL_NAME.print(" ");
-        //MASTER_SERIAL_NAME.println(SENSORToEnableOffsetted);
+       // MASTER_SERIAL_NAME.print(" ");
+       // MASTER_SERIAL_NAME.println(selectorOffsettedPin);
 
     }
 
+  for (int i = 0; i < SENSORS_COUNT; i++) {
+        int selectorOffsettedPin = SENSOR_PIN_OFFSET + i;
+        
+        #ifdef SENSOR_PIN_TU_COMPENSATION
+        if (i == SENSOR_PIN_TU) {
+            selectorOffsettedPin = SENSOR_PIN_TU_COMPENSATION;
+        }
+        #endif
+        #ifdef SENSOR_PIN_SU_COMPENSATION
+        if (i == SENSOR_PIN_SU) {
+            selectorOffsettedPin = SENSOR_PIN_SU_COMPENSATION;
+        }
+        #endif
+        #ifdef SENSOR_PIN_FU_COMPENSATION
+        if (i == SENSOR_PIN_FU) {
+            selectorOffsettedPin = SENSOR_PIN_FU_COMPENSATION;
+        }
+        #endif
+        #ifdef SENSOR_PIN_MU_COMPENSATION
+        if (i == SENSOR_PIN_MU) {
+            selectorOffsettedPin = SENSOR_PIN_MU_COMPENSATION;
+        }
+        #endif
+        #ifdef SENSOR_PIN_EU_COMPENSATION
+        if (i == SENSOR_PIN_EU) {
+            selectorOffsettedPin = SENSOR_PIN_EU_COMPENSATION;
+        }
+        #endif
+        // Because Non-firing contact field on right hand has broken contact on pin D8  
+        #ifdef SENSOR_PIN_HP_COMPENSATION
+        if (i == SENSOR_PIN_HP) {
+            selectorOffsettedPin = SENSOR_PIN_HP_COMPENSATION;
+        }
+        #endif
+        
+        /*
+        MASTER_SERIAL_NAME.print(SENSORToEnable);
+        MASTER_SERIAL_NAME.print(" "); 
+        MASTER_SERIAL_NAME.print(i);
+        MASTER_SERIAL_NAME.print(" ");
+*/
+        if ( i == SENSORToEnable )//i == 0 || i == 1) //SENSORToEnable)
+        {
+            // MASTER_SERIAL_NAME.print("L");
+            digitalWrite(selectorOffsettedPin, HIGH);
+        }
+       // MASTER_SERIAL_NAME.print(" ");
+       // MASTER_SERIAL_NAME.println(selectorOffsettedPin);
+       
+
+    }
+    //Wire.flush();
+    //delay(1);
 }
 
 void setup() {
@@ -381,7 +458,6 @@ void setup() {
     //Serial.write('');
     MASTER_SERIAL_NAME.println(F("USB up"));
 #endif
-
     for (int i = FIRST_SENSOR; i <= LAST_SENSOR; i++) {
         int SENSORToEnable = SENSOR_PIN_OFFSET + i;
          
@@ -415,12 +491,16 @@ void setup() {
             SENSORToEnable = SENSOR_PIN_HP_COMPENSATION;
         }
         #endif
-
         pinMode(SENSORToEnable, OUTPUT);
     }
 #ifdef ESP32_RIGHT
-Wire.begin(21 , 22, 400000);
-
+    Wire.begin(21 , 22, 400000);
+    Wire.setTimeOut(2);
+    //setTimeOut
+    //Fastwire::setup(400, true);
+    //Wire.begin();
+    //TWBR = 24; // 400kHz I2C clock (200kHz if CPU is 8MHz)
+    //Wire.setClock(400000);
 #else
 // join I2C bus (I2Cdev library doesn't do this automatically)
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
@@ -449,12 +529,53 @@ Wire.begin(21 , 22, 400000);
     for (int i = FIRST_SENSOR; i <= LAST_SENSOR; i++) {
         selectedSENSOR = (SENSOR)i;
         enableSingleMPU(selectedSENSOR);
-        gyros[selectedSENSOR].mpu = new MPU6050(0x68);
+        gyros[selectedSENSOR].mpu = new MPU6050(0x69);
         //MPU6050 mpu(0x69); // <-- use for AD0 high
 
+
+         int selectorOffsettedPin = SENSOR_PIN_OFFSET + i;
+        
+        #ifdef SENSOR_PIN_TU_COMPENSATION
+        if (i == SENSOR_PIN_TU) {
+            selectorOffsettedPin = SENSOR_PIN_TU_COMPENSATION;
+        }
+        #endif
+        #ifdef SENSOR_PIN_SU_COMPENSATION
+        if (i == SENSOR_PIN_SU) {
+            selectorOffsettedPin = SENSOR_PIN_SU_COMPENSATION;
+        }
+        #endif
+        #ifdef SENSOR_PIN_FU_COMPENSATION
+        if (i == SENSOR_PIN_FU) {
+            selectorOffsettedPin = SENSOR_PIN_FU_COMPENSATION;
+        }
+        #endif
+        #ifdef SENSOR_PIN_MU_COMPENSATION
+        if (i == SENSOR_PIN_MU) {
+            selectorOffsettedPin = SENSOR_PIN_MU_COMPENSATION;
+        }
+        #endif
+        #ifdef SENSOR_PIN_EU_COMPENSATION
+        if (i == SENSOR_PIN_EU) {
+            selectorOffsettedPin = SENSOR_PIN_EU_COMPENSATION;
+        }
+        #endif
+        // Because Non-firing contact field on right hand has broken contact on pin D8  
+        #ifdef SENSOR_PIN_HP_COMPENSATION
+        if (i == SENSOR_PIN_HP) {
+            selectorOffsettedPin = SENSOR_PIN_HP_COMPENSATION;
+        }
+        #endif
+        MASTER_SERIAL_NAME.print(F("Enabled on pin: "));
+        MASTER_SERIAL_NAME.print(selectorOffsettedPin);
+        MASTER_SERIAL_NAME.println(F(""));
+        
         initMPUAndDMP(1);
     }
     timeNow = millis(); //Start counting time in milliseconds
+
+    //delay(3000);
+
 }
 
 int initMPUAndDMP(int attempt) {
@@ -463,7 +584,7 @@ int initMPUAndDMP(int attempt) {
         return 0;
     }
 // initialize device
-#ifdef USE_BT
+#ifdef USE_BTlea
     hc05.println(F("BT: Initializing I2C devices..."));
 #endif
 #ifdef USE_USB
@@ -858,8 +979,6 @@ void loop() {
 
 // TODO switch hands
 #ifdef RIGHT_HAND_SLAVE 
-    //Serial.println("idk");
-    //slaveHandDataRequestHandler();
 #endif
 
 #ifdef ESP32_RIGHT
@@ -868,8 +987,8 @@ void loop() {
     //writePacket();
     loadDataAndSendPacket();
     int currentlySellectedSensor = selectedSENSOR;
-    //setOrRotateSelectedGyro(-1);
-    setOrRotateSelectedGyro(2);
+    setOrRotateSelectedGyro(-1);
+    //setOrRotateSelectedGyro(2);
     loadDataFromFIFO(true);
 #endif
 

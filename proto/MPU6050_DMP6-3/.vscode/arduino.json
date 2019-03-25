@@ -1,6 +1,6 @@
 {
-    "board": "esp32:esp32:esp32",
-    "configuration": "PSRAM=disabled,PartitionScheme=default,CPUFreq=240,FlashMode=qio,FlashFreq=80,FlashSize=4M,UploadSpeed=115200,DebugLevel=error",
+    "board": "esp32:esp32:esp32wrover",
+    "configuration": "PartitionScheme=default,FlashMode=qio,FlashFreq=80,UploadSpeed=921600,DebugLevel=none",
     "sketch": "MPU6050_DMP6-3.ino",
     "port": "/dev/ttyUSB0"
 }

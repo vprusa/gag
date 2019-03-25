@@ -27,6 +27,10 @@ import cz.gag.recognition.Sensor;
  *        into LineData class base for further operations line replaying file,
  *        etc.
  * 
+ *        Why to use generic class T: because then i can use LineDate children
+ *        class instances to store just necessary data and/or implement specific
+ *        methods in given context. TODO .. fix constructors 
+ * 
  */
 public class DataFileParser<T extends LineData> {
     FileReader fr;
@@ -49,6 +53,7 @@ public class DataFileParser<T extends LineData> {
         }
     }
 
+    // TODO hack java with not using Class c in constructor .. because this is ugly.
     public DataFileParser(String file, Class c) {
         this(file);
         lineDataClass = c;
