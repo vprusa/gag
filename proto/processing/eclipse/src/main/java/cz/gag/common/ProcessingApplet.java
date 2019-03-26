@@ -318,22 +318,54 @@ public class ProcessingApplet extends PApplet {
         // System.out.println(Configuration.globesRotationCoeficientY);
         // translate(1, 500,1);
         strokeWeight(8);
-        stroke(255, 0, 0); // R
+        // stroke(255, 0, 0); // R
+        stroke(255, 0, 255); // purple
         point(0, 0, 0);
         strokeWeight(1);
-        stroke(255, 0, 255); // purple
-        strokeWeight(8);
-        point(0, 100, 0);
-        strokeWeight(1);
-        line(0, 100, 0, 0, 0, 0);
+        // stroke(255, 0, 255); // purple
+        // strokeWeight(8);
+        // point(0, 100, 0);
+        // strokeWeight(1);
+        // line(0, 100, 0, 0, 0, 0);
         // hand palm bones
-        line(0, 100, 0, 0, 200, 0);
+        // line(0, 100, 0, 0, 200, 0);
 
-        int fingerStartX = 0;
-        int fingerStartY = 100;
+        // int fingerStartX = 0;
+        // int fingerStartY = 100;
 
-        class FingerVisualisation {
-            // TODO change to finger parts or smth..
+        class HandVisualisationBase {
+            public float rotationX = 0.0f;
+            public float rotationY = 0.0f;
+            public float rotationZ = 0.0f;
+
+            protected ProcessingApplet app;
+
+            public HandVisualisationBase() {
+                this.app = Configuration.app;
+            }
+
+            public void rotate(float rotationX, float rotationY, float rotationZ) {
+                this.rotationX = rotationX;
+                this.rotationY = rotationY;
+                this.rotationZ = rotationZ;
+                // ... magic in child classes
+            }
+
+            public void rotateX(float rotationX) {
+                this.rotate(rotationX, this.rotationY, this.rotationZ);
+            }
+
+            public void rotateY(float rotationY) {
+                this.rotate(this.rotationX, rotationY, this.rotationZ);
+            }
+
+            public void rotateZ(float rotationZ) {
+                this.rotate(this.rotationX, this.rotationY, rotationZ);
+            }
+        }
+
+        class FingerVisualisation extends HandVisualisationBase {
+            // TODO change to finger parts or smth.. maybe?
             public int sideOffset;
             public int length1;
             public int length2;
@@ -344,8 +376,7 @@ public class ProcessingApplet extends PApplet {
             public int length3offset;
             public int length4offset; // if == -1 then is thumb
 
-            public int offsetY = 100; // TODO add to constructors offset[X,Y,Z]
-            public float rotationX = 0.5f; // TODO add to constructors rotation[X,Y,Z]
+            public int offsetY = 0; // TODO add to constructors offset[X,Y,Z]
 
             // for thumb
             public FingerVisualisation(int sideOffset, int length1, int length2offset, int length3offset) {
@@ -374,62 +405,82 @@ public class ProcessingApplet extends PApplet {
             }
 
             public void drawStaticPart() {
-                lineWithDot(0, offsetY, 0, sideOffset, length1, 0);
+                app.lineWithDot(0, offsetY, 0, sideOffset, length1, 0);
             }
 
             public void draw() {
                 drawStaticPart();
-                lineWithDot(fingerStartX, fingerStartY, 0, sideOffset, this.length1, 0);
-                lineWithDot(sideOffset, this.length1, 0, sideOffset, this.length2, 0);
+                // app.lineWithDot(fingerStartX, fingerStartY, 0, sideOffset, this.length1, 0);
+                app.lineWithDot(sideOffset, this.length1, 0, sideOffset, this.length2, 0);
                 if (this.length4 == -1) {
-                    strokeWeight(1);
-                    line(sideOffset, this.length2, 0, sideOffset, this.length3, 0);
+                    this.app.strokeWeight(1);
+                    this.app.line(sideOffset, this.length2, 0, sideOffset, this.length3, 0);
                 } else {
-                    lineWithDot(sideOffset, this.length2, 0, sideOffset, this.length3, 0);
-                    strokeWeight(1);
-                    line(sideOffset, this.length3, 0, sideOffset, this.length4, 0);
+                    app.lineWithDot(sideOffset, this.length2, 0, sideOffset, this.length3, 0);
+                    this.app.strokeWeight(1);
+                    this.app.line(sideOffset, this.length3, 0, sideOffset, this.length4, 0);
                 }
             }
 
-            public void rotatePartAndDraw() {
+            public void rotate(float rotationX, float rotationY, float rotationZ) {
+                super.rotate(rotationX, rotationY, rotationZ);
+
                 drawStaticPart();
                 // translate magic
-                pushMatrix();
-                // translate(0, length1-(25/2), -length1);
-                translate(0, 0, 0);
-                translate(sideOffset, this.length1, 0);
+                app.pushMatrix();
+                app.translate(0, 0, 0);
+                app.translate(sideOffset, this.length1, 0);
                 this.length1 = 0;
                 recalcLenghts(this.length1, length2offset, length3offset, length4offset);
-                rotateX(rotationX);
-                stroke(0, 255, 0);
-                point(0, 0, 0);
+
+                app.rotateX(rotationX * (hi.ordinal() == 0 ? 1f : -1f));
+                app.rotateY(rotationY * (hi.ordinal() == 0 ? 1f : -1f));
+                app.rotateZ(rotationZ);// * (hi.ordinal() == 0 ? 1f : -1f));
+                app.stroke(0, 255, 0);
+                app.point(0, 0, 0);
                 sideOffset = 0;
                 draw();
-                translate(0, 0, 0);
-                popMatrix();
-                stroke(255, 0, 255); // purple
+                app.translate(0, 0, 0);
+                app.popMatrix();
+                app.stroke(255, 0, 255); // purple
             }
         }
 
-        // thump
-        FingerVisualisation thumpVis = new FingerVisualisation(50, 150, 50, 50);
-        thumpVis.rotatePartAndDraw();
+        class HandVisualisation extends HandVisualisationBase {
 
-        // index
-        FingerVisualisation indexVis = new FingerVisualisation(25, 212, 60, 45, 30);
-        indexVis.rotatePartAndDraw();
+            public FingerVisualisation thumpVis = new FingerVisualisation(50, 50, 50, 50);
+            public FingerVisualisation indexVis = new FingerVisualisation(25, 112, 60, 45, 30);
+            public FingerVisualisation middleVis = new FingerVisualisation(0, 120, 70, 50, 35);
+            public FingerVisualisation ringVis = new FingerVisualisation(-25, 112, 65, 48, 30);
+            public FingerVisualisation littleVis = new FingerVisualisation(-50, 102, 45, 35, 25);
 
-        // middle
-        FingerVisualisation middleVis = new FingerVisualisation(0, 220, 70, 50, 35);
-        middleVis.draw();//rotatePartAndDraw();
+            public void draw() {
+                thumpVis.rotateX(0.5f);
+                indexVis.rotateZ(-0.5f);
+                // no rotation in Y ;)
+                middleVis.rotateY(-0.5f); // .draw();// rotatePartAndDraw();
+                ringVis.draw();// rotatePartAndDraw();
+                littleVis.draw();// rotatePartAndDraw();
+            }
 
-        // ring
-        FingerVisualisation ringVis = new FingerVisualisation(-25, 212, 65, 48, 30);
-        ringVis.draw();//rotatePartAndDraw();
+            public void rotate(float rotationX, float rotationY, float rotationZ) {
+                super.rotate(rotationX, rotationY, rotationZ);
 
-        // little
-        FingerVisualisation littleVis = new FingerVisualisation(-50, 202, 45, 35, 25);
-        littleVis.draw();//rotatePartAndDraw();
+                // translate magic
+                app.pushMatrix();
+                app.translate(0, 0, 0);
+
+                app.rotateX(rotationX * (hi.ordinal() == 0 ? 1f : -1f));
+                app.rotateY(rotationY * (hi.ordinal() == 0 ? 1f : -1f));
+                app.rotateZ(rotationZ * (hi.ordinal() == 0 ? 1f : -1f));
+                draw();
+                app.translate(0, 0, 0);
+                app.popMatrix();
+            }
+        }
+
+        HandVisualisation handVis = new HandVisualisation();
+        handVis.rotate(0, 0, 0);
 
         popMatrix();
     }
