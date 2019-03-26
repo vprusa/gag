@@ -328,58 +328,108 @@ public class ProcessingApplet extends PApplet {
         line(0, 100, 0, 0, 0, 0);
         // hand palm bones
         line(0, 100, 0, 0, 200, 0);
+
+        int fingerStartX = 0;
+        int fingerStartY = 100;
+
+        class FingerVisualisation {
+            // TODO change to finger parts or smth..
+            public int sideOffset;
+            public int length1;
+            public int length2;
+            public int length3;
+            public int length4; // if == -1 then is thumb
+
+            public int length2offset;
+            public int length3offset;
+            public int length4offset; // if == -1 then is thumb
+
+            public int offsetY = 100; // TODO add to constructors offset[X,Y,Z]
+            public float rotationX = 0.5f; // TODO add to constructors rotation[X,Y,Z]
+
+            // for thumb
+            public FingerVisualisation(int sideOffset, int length1, int length2offset, int length3offset) {
+                this(sideOffset, length1, length2offset, length3offset, -1);
+            }
+
+            public FingerVisualisation(int sideOffset, int length1, int length2offset, int length3offset,
+                    int length4offset) {
+                super();
+                this.sideOffset = sideOffset;
+                this.length2offset = length2offset;
+                this.length3offset = length3offset;
+                this.length4offset = length4offset;
+                recalcLenghts(length1, length2offset, length3offset, length4offset);
+            }
+
+            void recalcLenghts(int length1, int length2offset, int length3offset, int length4offset) {
+                this.length1 = length1;
+                this.length2 = this.length1 + length2offset;
+                this.length3 = this.length2 + length3offset;
+                if (length4offset != -1) {
+                    this.length4 = this.length3 + length4offset;
+                } else {
+                    this.length4 = -1;
+                }
+            }
+
+            public void drawStaticPart() {
+                lineWithDot(0, offsetY, 0, sideOffset, length1, 0);
+            }
+
+            public void draw() {
+                drawStaticPart();
+                lineWithDot(fingerStartX, fingerStartY, 0, sideOffset, this.length1, 0);
+                lineWithDot(sideOffset, this.length1, 0, sideOffset, this.length2, 0);
+                if (this.length4 == -1) {
+                    strokeWeight(1);
+                    line(sideOffset, this.length2, 0, sideOffset, this.length3, 0);
+                } else {
+                    lineWithDot(sideOffset, this.length2, 0, sideOffset, this.length3, 0);
+                    strokeWeight(1);
+                    line(sideOffset, this.length3, 0, sideOffset, this.length4, 0);
+                }
+            }
+
+            public void rotatePartAndDraw() {
+                drawStaticPart();
+                // translate magic
+                pushMatrix();
+                // translate(0, length1-(25/2), -length1);
+                translate(0, 0, 0);
+                translate(sideOffset, this.length1, 0);
+                this.length1 = 0;
+                recalcLenghts(this.length1, length2offset, length3offset, length4offset);
+                rotateX(rotationX);
+                stroke(0, 255, 0);
+                point(0, 0, 0);
+                sideOffset = 0;
+                draw();
+                translate(0, 0, 0);
+                popMatrix();
+                stroke(255, 0, 255); // purple
+            }
+        }
+
         // thump
-        int length1 = 150, length2 = length1 + 50, length3 = length2 + 50, length4 = 0;
-        lineWithDot(0, 100, 0, 50, length1, 0);
-        lineWithDot(50, length1, 0, 70, length2, 0);
-        strokeWeight(1);
-        line(70, length2, 0, 70, length3, 0);
+        FingerVisualisation thumpVis = new FingerVisualisation(50, 150, 50, 50);
+        thumpVis.rotatePartAndDraw();
 
-
-        
         // index
-        length1 = 212;
-        length2 = length1 + 60;
-        length3 = length2 + 45;
-        length4 = length3 + 30;
-        lineWithDot(0, 100, 0, 25, length1, 0);
-        lineWithDot(25, length1, 0, 25, length2, 0);
-        lineWithDot(25, length2, 0, 25, length3, 0);
-        strokeWeight(1);
-        line(25, length3, 0, 25, length4, 0);
+        FingerVisualisation indexVis = new FingerVisualisation(25, 212, 60, 45, 30);
+        indexVis.rotatePartAndDraw();
 
         // middle
-        length1 = 220;
-        length2 = length1 + 70;
-        length3 = length2 + 50;
-        length4 = length3 + 35;
-        lineWithDot(0, 100, 0, 0, length1, 0);
-        lineWithDot(0, length1, 0, 0, length2, 0);
-        lineWithDot(0, length2, 0, 0, length3, 0);
-        strokeWeight(1);
-        line(0, length3, 0, 0, length4, 0);
+        FingerVisualisation middleVis = new FingerVisualisation(0, 220, 70, 50, 35);
+        middleVis.draw();//rotatePartAndDraw();
 
         // ring
-        length1 = 212;
-        length2 = length1 + 65;
-        length3 = length2 + 48;
-        length4 = length3 + 30;
-        lineWithDot(0, 100, 0, -25, length1, 0);
-        lineWithDot(-25, length1, 0, -25, length2, 0);
-        lineWithDot(-25, length2, 0, -25, length3, 0);
-        strokeWeight(1);
-        line(-25, length3, 0, -25, length4, 0);
+        FingerVisualisation ringVis = new FingerVisualisation(-25, 212, 65, 48, 30);
+        ringVis.draw();//rotatePartAndDraw();
 
         // little
-        length1 = 202;
-        length2 = length1 + 45;
-        length3 = length2 + 30;
-        length4 = length3 + 25;
-        lineWithDot(0, 100, 0, -50, length1, 0);
-        lineWithDot(-50, length1, 0, -50, length2, 0);
-        lineWithDot(-50, length2, 0, -50, length3, 0);
-        strokeWeight(1);
-        line(-50, length3, 0, -50, length4, 0);
+        FingerVisualisation littleVis = new FingerVisualisation(-50, 202, 45, 35, 25);
+        littleVis.draw();//rotatePartAndDraw();
 
         popMatrix();
     }
