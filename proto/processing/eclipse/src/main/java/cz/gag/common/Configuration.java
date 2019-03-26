@@ -76,9 +76,9 @@ public class Configuration {
     
     static public boolean showGlobesLines = System.getProperty("showGlobesLines") == null ? false
             : Boolean.valueOf(System.getProperty("showGlobesLines"));
-    static public float globesRotationCoeficientX = System.getProperty("globesRotationCoeficientX") == null ? 1.0f
+    static public float globesRotationCoeficientX = System.getProperty("globesRotationCoeficientX") == null ? 3.2f//1.0f
             : Float.valueOf(System.getProperty("globesRotationCoeficientX"));
-    static public float globesRotationCoeficientY = System.getProperty("globesRotationCoeficientY") == null ? 1.0f
+    static public float globesRotationCoeficientY = System.getProperty("globesRotationCoeficientY") == null ? -0.5f//1.0f
             : Float.valueOf(System.getProperty("showGlobesBody"));
 
     static public boolean useFilter = System.getProperty("useFilter") == null ? true

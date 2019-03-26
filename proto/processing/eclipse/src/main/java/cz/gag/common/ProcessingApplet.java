@@ -126,13 +126,12 @@ public class ProcessingApplet extends PApplet {
     // TODO move sensor in packet to 1. position, change code here and for arduino
     // send packet
 
-
     public static HandData leftHandData = new HandData(Hand.LEFT);
     public static HandData rightHandData = new HandData(Hand.RIGHT);
     // TODO
     // HandData rightHandData = new HandData();
 
-    //ToxiclibsSupport gfx;
+    // ToxiclibsSupport gfx;
 
     Serial portRight; // The serial port
     Serial portLeft; // The serial port
@@ -145,14 +144,14 @@ public class ProcessingApplet extends PApplet {
 
     public void settings() {
         // size(900, 400, OPENGL);
-        size(900, 500, P3D);
+        size(900, 700, P3D);
         // size(1200, 900, OPENGL);
         Configuration.app = this;
     }
 
     // lukrecia -start
 
-    //PeasyCam cam;
+    // PeasyCam cam;
     float dim = 0;
     // ArrayList<Point3D>[] points = new ArrayList[5];
     // float[][] axis = new float[5][4];
@@ -163,11 +162,12 @@ public class ProcessingApplet extends PApplet {
 
     int clk = 1; // number of times the button is cli
 
-    //Button on_button;
+    // Button on_button;
     BothHandsGesture refHandsGesture;
+
     public void setup() {
         // 300px square viewport using OpenGL rendering
-        //gfx = new ToxiclibsSupport(this);
+        // gfx = new ToxiclibsSupport(this);
 
         // Create an instance of SimpleDateFormat used for formatting
         // the string representation of date (month/day/year)
@@ -193,7 +193,7 @@ public class ProcessingApplet extends PApplet {
 
         // create the button object
         translate(0, 0);
-       // on_button = new Button("Sphere off", 0, 0, 100, 50);
+        // on_button = new Button("Sphere off", 0, 0, 100, 50);
 
         // display serial port list for debugging/clarity
         println(Serial.list());
@@ -210,8 +210,8 @@ public class ProcessingApplet extends PApplet {
          * cam.setMaximumDistance(900);
          */
         x_axis = width * 0.3f;
-        y_axis = -height * 0.3f;
-        z_axis = height * 0.3f;
+        y_axis = -height * 0.25f;
+        z_axis = height * 0.25f;
 
         // open the serial port
         // port = new Serial(this, portName, 115200); // 9600 115200 57600
@@ -232,10 +232,11 @@ public class ProcessingApplet extends PApplet {
             // send single character to trigger DMP init/start
             // (expected by MPU6050_DMP6 example Arduino sketch)
         }
-        /*if (Configuration.replayData && Configuration.replayRefPathFile != null) {
-            Thread t1 = new Thread(new RePlayer(Configuration.replayDataFile, Configuration.replayRefPathFile));
-            t1.start();
-        } else */
+        /*
+         * if (Configuration.replayData && Configuration.replayRefPathFile != null) {
+         * Thread t1 = new Thread(new RePlayer(Configuration.replayDataFile,
+         * Configuration.replayRefPathFile)); t1.start(); } else
+         */
         if (Configuration.replayRefPathFile != null) {
             refHandsGesture = new BothHandsGesture(Configuration.replayRefPathFile);
         }
@@ -249,22 +250,23 @@ public class ProcessingApplet extends PApplet {
         new Thread() {
             public void run() {
                 System.out.println("Started data requester");
-                while(true) {
+                while (true) {
                     try {
-                        Serial p = null; //portRight;//portLeft;//portRight; // portLeft;
-                    if(p != null && p.active()) {
-                        //portRight.write(new byte[] { '$', (byte) 0x99, (byte) rightHandSensorIndex });
-                        for(int i = 0; i < 10; i++) { 
-                            p.write(new byte[] { '$', /*(byte) 0x99,*/ (byte) rightHandSensorIndex });
-                            Thread.sleep(1);
+                        Serial p = null; // portRight;//portLeft;//portRight; // portLeft;
+                        if (p != null && p.active()) {
+                            // portRight.write(new byte[] { '$', (byte) 0x99, (byte) rightHandSensorIndex
+                            // });
+                            for (int i = 0; i < 10; i++) {
+                                p.write(new byte[] { '$', /* (byte) 0x99, */ (byte) rightHandSensorIndex });
+                                Thread.sleep(1);
+                            }
+                            p.write(new byte[] { '$', /* (byte) 0x99, */ (byte) rightHandSensorIndex++ });
+                            if (rightHandSensorIndex >= Sensor.values().length) {
+                                rightHandSensorIndex = 0;
+                            }
+                            // System.out.println(".");
                         }
-                        p.write(new byte[] { '$', /*(byte) 0x99,*/ (byte) rightHandSensorIndex++ });
-                        if (rightHandSensorIndex >= Sensor.values().length) {
-                            rightHandSensorIndex = 0;
-                        }
-                       // System.out.println(".");
-                    }
-                  
+
                         Thread.sleep(1);
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -291,10 +293,101 @@ public class ProcessingApplet extends PApplet {
         line(0, 0, 0, 0, 0, z_axis);
     }
 
+    public void lineWithDot(float x1, float y1, float z1, float x2, float y2, float z2) {
+        strokeWeight(1);
+        line(x1, y1, z1, x2, y2, z2);
+        strokeWeight(8);
+        point(x2, y2, z2);
+    }
+
+    void handSkelet(Hand hi) {
+        pushMatrix();
+        // some other magic numbers
+        translate(-(width * 0.5f) + hi.ordinal() * (width * 0.4f) + hi.ordinal() * 500 + 450, 900f, -700);
+        rotateX(Configuration.globesRotationCoeficientX);
+        rotateY(Configuration.globesRotationCoeficientY + (hi.ordinal() * -2.3f));
+        // rotateY(3.2f);
+        // rotateX(1.2f);
+        // rotateY(1f);
+        // rotateX(1f);
+
+        // rotateX(3.2f * Configuration.globesRotationCoeficientX);
+        // rotateY(-0.4f * Configuration.globesRotationCoeficientY);
+
+        // System.out.println(Configuration.globesRotationCoeficientX);
+        // System.out.println(Configuration.globesRotationCoeficientY);
+        // translate(1, 500,1);
+        strokeWeight(8);
+        stroke(255, 0, 0); // R
+        point(0, 0, 0);
+        strokeWeight(1);
+        stroke(255, 0, 255); // purple
+        strokeWeight(8);
+        point(0, 100, 0);
+        strokeWeight(1);
+        line(0, 100, 0, 0, 0, 0);
+        // hand palm bones
+        line(0, 100, 0, 0, 200, 0);
+        // thump
+        int length1 = 150, length2 = length1 + 50, length3 = length2 + 50, length4 = 0;
+        lineWithDot(0, 100, 0, 50, length1, 0);
+        lineWithDot(50, length1, 0, 70, length2, 0);
+        strokeWeight(1);
+        line(70, length2, 0, 70, length3, 0);
+
+
+        
+        // index
+        length1 = 212;
+        length2 = length1 + 60;
+        length3 = length2 + 45;
+        length4 = length3 + 30;
+        lineWithDot(0, 100, 0, 25, length1, 0);
+        lineWithDot(25, length1, 0, 25, length2, 0);
+        lineWithDot(25, length2, 0, 25, length3, 0);
+        strokeWeight(1);
+        line(25, length3, 0, 25, length4, 0);
+
+        // middle
+        length1 = 220;
+        length2 = length1 + 70;
+        length3 = length2 + 50;
+        length4 = length3 + 35;
+        lineWithDot(0, 100, 0, 0, length1, 0);
+        lineWithDot(0, length1, 0, 0, length2, 0);
+        lineWithDot(0, length2, 0, 0, length3, 0);
+        strokeWeight(1);
+        line(0, length3, 0, 0, length4, 0);
+
+        // ring
+        length1 = 212;
+        length2 = length1 + 65;
+        length3 = length2 + 48;
+        length4 = length3 + 30;
+        lineWithDot(0, 100, 0, -25, length1, 0);
+        lineWithDot(-25, length1, 0, -25, length2, 0);
+        lineWithDot(-25, length2, 0, -25, length3, 0);
+        strokeWeight(1);
+        line(-25, length3, 0, -25, length4, 0);
+
+        // little
+        length1 = 202;
+        length2 = length1 + 45;
+        length3 = length2 + 30;
+        length4 = length3 + 25;
+        lineWithDot(0, 100, 0, -50, length1, 0);
+        lineWithDot(-50, length1, 0, -50, length2, 0);
+        lineWithDot(-50, length2, 0, -50, length3, 0);
+        strokeWeight(1);
+        line(-50, length3, 0, -50, length4, 0);
+
+        popMatrix();
+    }
+
     public static float distanceTo(Point3D p, Point3D p2) {
         return (float) Math.sqrt(Math.pow(p2.x - p.x, 2) + Math.pow(p2.y - p.y, 2) + Math.pow(p2.z - p.z, 2));
     }
-    
+
     public static float betweenPointAndLine(float[] point, float[] lineStart, float[] lineEnd) {
         float[] PointThing = new float[3];
         float[] TotalThing = new float[3];
@@ -311,7 +404,6 @@ public class ProcessingApplet extends PApplet {
                 / Math.sqrt(lineEnd[0] * lineEnd[0] + lineEnd[1] * lineEnd[1] + lineEnd[2] * lineEnd[2]));
         return distance;
     }
-
 
     // mouse button clicked
     /*
@@ -343,7 +435,7 @@ public class ProcessingApplet extends PApplet {
     public int getColorForSensor(int i) {
         return getColorForSensor(i, 255);
     }
-    
+
     public int getColorForSensor(int i, int alpha) {
         switch (i) {
         case 0:
@@ -364,34 +456,52 @@ public class ProcessingApplet extends PApplet {
 
     public void draw() {
 
-        /*if (gfx != null) {
-            translate(width / 2f, height / 6);
-        }*/
+        // https://github.com/processing/processing/issues/4952
+        if (keyPressed && key == CODED && millis() - lastPressed > 100) {
+            switch (keyCode) {
+            case LEFT:
+                Configuration.globesRotationCoeficientY += 0.2;
+                break;
+            case RIGHT:
+                Configuration.globesRotationCoeficientY -= 0.2;
+                break;
+            case UP:
+                Configuration.globesRotationCoeficientX += 0.2;
+                break;
+            case DOWN:
+                Configuration.globesRotationCoeficientX -= 0.2;
+                break;
+            }
+
+            lastPressed = millis();
+        }
+
+        /*
+         * if (gfx != null) { translate(width / 2f, height / 6); }
+         */
         // draw the button in the window
-        //on_button.draw();
+        // on_button.draw();
 
         if (millis() - interval > 1000) { // resend single character to trigger DMP init/start // in case the MPU is
             interval = millis();
         }
 
-
         // black background
         background(0);
-
         noStroke();
 
         for (Hand hi : Hand.values()) {
             for (int i = 1; i < sensorsCount + 1; i++) {
-           
+
                 // translate everything to the middle of the viewport
                 noStroke();
 
                 pushMatrix();
-                //experimental magic numbers
-                translate(i * (width / 4) - (width * 1.2f) + hi.ordinal() * width * 1.6f, -height + 150, -1000);
+                // experimental magic numbers
+                translate(i * (width / 4) - (width * 1.2f) + hi.ordinal() * width * 1.6f, -height + 150, -1400);
                 // to rotate all arrows up
                 rotateX(-PI / 2);
-                
+
                 // translate(i*(width/2)-width/2, height/2, -200);
                 // translate(-width/2, height / 2);
                 // translate(i*(width/2), 0, -200);
@@ -411,7 +521,7 @@ public class ProcessingApplet extends PApplet {
                 // System.out.println(currentHand.getSensorData(nmb).toString());
 
                 float[] axis = currentHand.getSensorData(nmb).quatO.toAxisAngle();
-                //rotate(axis[0], -axis[1], axis[3], axis[2]);
+                // rotate(axis[0], -axis[1], axis[3], axis[2]);
                 rotate(axis[0], axis[1], axis[2], axis[3]);
 
                 // print(leftHandData.getSensorData(i).toString() + "\n");
@@ -488,10 +598,11 @@ public class ProcessingApplet extends PApplet {
             pushMatrix();
 
             // some other magic numbers
-            translate(-(width * 0.5f) + hi.ordinal() * (width * 0.4f) + hi.ordinal() * 500 + 450, 250f, -700);
+            translate(-(width * 0.5f) + hi.ordinal() * (width * 0.4f) + hi.ordinal() * 500 + 450, 150f, -900);
             rotateX(Configuration.globesRotationCoeficientX);
             rotateY(Configuration.globesRotationCoeficientY);
             axis();
+
             if (Configuration.showGlobesBody) {
                 fill(255, 255, 255, 50);
                 stroke(255, 255, 255, 10);
@@ -499,52 +610,51 @@ public class ProcessingApplet extends PApplet {
                 noStroke();
             }
 
-
             if (Configuration.showRefHandsSensorValues) {
                 // draw ref data
-                if(refHandsGesture != null) {
+                if (refHandsGesture != null) {
                     pushMatrix();
                     stroke(255, 255, 255, 50);
-    
+
                     for (Hand hval : Hand.values()) {
                         for (int i = 1; i < sensorsCount + 1; i++) {
-                            //for(int si = 0; si < refHandsGesture.left.sensoresGestrues.length; si++) {
-                                ArrayList<GestLineData> data = refHandsGesture.left.sensoresGestrues[i-1].data;
-                                GestLineData line = null;
-                                Iterator<GestLineData> iterator = data.iterator();
-                                
-                                while(iterator.hasNext() && (line = iterator.next()) != null) {
-                                    pushMatrix();
-                                    noStroke();
-                                    fill(getColorForSensor(i-1,20));
-                                    stroke(color(20,20,20,10));
-                                    //stroke(getColorForSensor(i-1,10));
-                                    float[] axis = line.quatO.toAxisAngle();
-                                    Point3D newP = new Point3D(axis[1] * scale, axis[2] * scale, axis[3] * scale);
-                                    
-                                    Iterator<Point3D> it =
-                                            (hval == Hand.LEFT ? leftHandData : rightHandData).points[i-1].iterator();
-                                    while (it.hasNext()) {
-                                        Point3D toCmp = it.next();
-                                        if(distanceTo(toCmp,newP) < Configuration.refSensorValueDistanceLimit) {
-                                            stroke(getColorForSensor(i-1));
-                                        }
+                            // for(int si = 0; si < refHandsGesture.left.sensoresGestrues.length; si++) {
+                            ArrayList<GestLineData> data = refHandsGesture.left.sensoresGestrues[i - 1].data;
+                            GestLineData line = null;
+                            Iterator<GestLineData> iterator = data.iterator();
+
+                            while (iterator.hasNext() && (line = iterator.next()) != null) {
+                                pushMatrix();
+                                noStroke();
+                                fill(getColorForSensor(i - 1, 20));
+                                stroke(color(20, 20, 20, 10));
+                                // stroke(getColorForSensor(i-1,10));
+                                float[] axis = line.quatO.toAxisAngle();
+                                Point3D newP = new Point3D(axis[1] * scale, axis[2] * scale, axis[3] * scale);
+
+                                Iterator<Point3D> it = (hval == Hand.LEFT ? leftHandData : rightHandData).points[i - 1]
+                                        .iterator();
+                                while (it.hasNext()) {
+                                    Point3D toCmp = it.next();
+                                    if (distanceTo(toCmp, newP) < Configuration.refSensorValueDistanceLimit) {
+                                        stroke(getColorForSensor(i - 1));
                                     }
-                                    //Point3D newP = new Point3D(axis[1], axis[2], axis[3]);
-                                    //rotate(axis[0], -axis[1], axis[3], axis[2]);
-                                    translate(newP.x, newP.y, newP.z);
-                                    sphere(Configuration.refSensorValueDistanceLimit);
-                                    noStroke();
-    
-                                    //System.out.println(line.hand+" "+line.sensor+" "+newP.x + "" + newP.y+ " " + newP.z);
-                                    popMatrix();
                                 }
-                           // }
-    
+                                // Point3D newP = new Point3D(axis[1], axis[2], axis[3]);
+                                // rotate(axis[0], -axis[1], axis[3], axis[2]);
+                                translate(newP.x, newP.y, newP.z);
+                                sphere(Configuration.refSensorValueDistanceLimit);
+                                noStroke();
+
+                                // System.out.println(line.hand+" "+line.sensor+" "+newP.x + "" + newP.y+ " " +
+                                // newP.z);
+                                popMatrix();
+                            }
+                            // }
+
                         }
                     }
                     popMatrix();
-    
                 }
             }
 
@@ -590,7 +700,10 @@ public class ProcessingApplet extends PApplet {
                 stroke(255);
                 strokeWeight(1);
             }
+
             popMatrix();
+
+            handSkelet(hi);
 
         }
 
@@ -614,12 +727,12 @@ public class ProcessingApplet extends PApplet {
                 }
                 interval = millis();
 
-               // port.write(new byte[] { '$', (byte) 0x99, (byte) rightHandSensorIndex++ });
-                //port.write(new byte[] { '$', (byte) 0x99, (byte) rightHandSensorIndex++ });
-                //port.write(new byte[] { '$', (byte) 0x99, (byte) rightHandSensorIndex++ });
-              //  if (rightHandSensorIndex >= Sensor.values().length) {
-               //     rightHandSensorIndex = 0;
-               // }
+                // port.write(new byte[] { '$', (byte) 0x99, (byte) rightHandSensorIndex++ });
+                // port.write(new byte[] { '$', (byte) 0x99, (byte) rightHandSensorIndex++ });
+                // port.write(new byte[] { '$', (byte) 0x99, (byte) rightHandSensorIndex++ });
+                // if (rightHandSensorIndex >= Sensor.values().length) {
+                // rightHandSensorIndex = 0;
+                // }
                 while (port.available() > 0) {
                     // byte[] bytes = port.readBytesUntil('*');
                     // print();
@@ -756,7 +869,7 @@ public class ProcessingApplet extends PApplet {
                                         }
                                         if (out != null) {
                                             if (dl != null && !Configuration.replayData) {
-                                                //System.out.println(dl.toFileString());
+                                                // System.out.println(dl.toFileString());
                                                 out.println(dl.toFileString());
                                             }
                                         }
@@ -815,6 +928,7 @@ public class ProcessingApplet extends PApplet {
     }
 
     KeyboardRecorder keyboardRecorder;
+    long lastPressed = 0;
 
     public void keyPressed() {
         if (keyboardRecorder != null) {
@@ -847,27 +961,23 @@ public class ProcessingApplet extends PApplet {
             printCamera();
             // camera(1, 0.3f, 1, 0, 0, 0, 1, 1, 0);
         }
-
         if (keyCode == 'R') {
             printCamera();
             // camera(-0.1f, 0.3f, 1f, 0, 0, 0, 1, 1, 0f);
         }
-        if (keyCode == LEFT) {
-            Configuration.globesRotationCoeficientY += 0.2;
-        }
-        if (keyCode == RIGHT) {
-            Configuration.globesRotationCoeficientY -= 0.2;
-        }
-        if (keyCode == UP) {
-            Configuration.globesRotationCoeficientX += 0.2;
-        }
-        if (keyCode == DOWN) {
-            Configuration.globesRotationCoeficientX -= 0.2;
-        }
+        /*
+         * if (millis() - lastPressed > 100) { if (keyCode == LEFT) {
+         * Configuration.globesRotationCoeficientY += 0.2; } if (keyCode == RIGHT) {
+         * Configuration.globesRotationCoeficientY -= 0.2; } if (keyCode == UP) {
+         * Configuration.globesRotationCoeficientX += 0.2; } if (keyCode == DOWN) {
+         * Configuration.globesRotationCoeficientX -= 0.2; } lastPressed = millis(); }
+         */
+        // System.out.println("t");
 
     }
+
     Button b = null;
-    
+
     public void drawButton() {
         // background (255, 255, 255);
 
