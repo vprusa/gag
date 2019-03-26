@@ -163,7 +163,7 @@ public class ProcessingApplet extends PApplet {
 
     int clk = 1; // number of times the button is cli
 
-    Button on_button;
+    //Button on_button;
     BothHandsGesture refHandsGesture;
     public void setup() {
         // 300px square viewport using OpenGL rendering
@@ -193,7 +193,7 @@ public class ProcessingApplet extends PApplet {
 
         // create the button object
         translate(0, 0);
-        on_button = new Button("Sphere off", 0, 0, 100, 50);
+       // on_button = new Button("Sphere off", 0, 0, 100, 50);
 
         // display serial port list for debugging/clarity
         println(Serial.list());
@@ -368,28 +368,27 @@ public class ProcessingApplet extends PApplet {
             translate(width / 2f, height / 6);
         }*/
         // draw the button in the window
-        on_button.draw();
+        //on_button.draw();
 
         if (millis() - interval > 1000) { // resend single character to trigger DMP init/start // in case the MPU is
             interval = millis();
         }
+
 
         // black background
         background(0);
 
         noStroke();
 
-
-        
         for (Hand hi : Hand.values()) {
             for (int i = 1; i < sensorsCount + 1; i++) {
-
            
                 // translate everything to the middle of the viewport
                 noStroke();
 
                 pushMatrix();
-                translate(i * (width / 4) - (width * 1.65f) + hi.ordinal() * width * 1.6f, -height + 150, -1000);
+                //experimental magic numbers
+                translate(i * (width / 4) - (width * 1.2f) + hi.ordinal() * width * 1.6f, -height + 150, -1000);
                 // to rotate all arrows up
                 rotateX(-PI / 2);
                 
@@ -488,7 +487,8 @@ public class ProcessingApplet extends PApplet {
 
             pushMatrix();
 
-            translate(-(width * 0.4f) + hi.ordinal() * (width * 0.6f) + hi.ordinal() * 300 - 100, 250f, -700);
+            // some other magic numbers
+            translate(-(width * 0.5f) + hi.ordinal() * (width * 0.4f) + hi.ordinal() * 500 + 450, 250f, -700);
             rotateX(Configuration.globesRotationCoeficientX);
             rotateY(Configuration.globesRotationCoeficientY);
             axis();
