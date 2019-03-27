@@ -12,12 +12,12 @@ import cz.gag.common.ProcessingApplet;
 /**
  * @author Vojtech Prusa
  * 
- * This class instance replays data to view
+ *         This class instance replays data to view
  */
 public class RePlayer extends DataFileParser<ReplayLine> implements Runnable {
 
     public RePlayer(String file) {
-        super(file);
+        super(file, ReplayLine.class);
     }
 
     @Override
@@ -41,9 +41,9 @@ public class RePlayer extends DataFileParser<ReplayLine> implements Runnable {
                 br = new BufferedReader(fr);
                 continue;
             }
-            if (Configuration.useFilter && (flNew.quatO.w > 1 || flNew.quatO.x > 1 || flNew.quatO.y > 1
-                    || flNew.quatO.z > 1 || flNew.quatO.w < -1 || flNew.quatO.x < -1 || flNew.quatO.y < -1
-                    || flNew.quatO.z < -1))
+            if (Configuration.useFilter
+                    && (flNew.quatO.w > 1 || flNew.quatO.x > 1 || flNew.quatO.y > 1 || flNew.quatO.z > 1
+                            || flNew.quatO.w < -1 || flNew.quatO.x < -1 || flNew.quatO.y < -1 || flNew.quatO.z < -1))
                 continue;
 
             if (flNew.hand == Hand.LEFT) {
@@ -65,4 +65,3 @@ public class RePlayer extends DataFileParser<ReplayLine> implements Runnable {
     }
 
 }
-

@@ -308,6 +308,7 @@ public class ProcessingApplet extends PApplet {
         public float rotationX = 0.0f;
         public float rotationY = 0.0f;
         public float rotationZ = 0.0f;
+        public float angle = 0.0f;
 
         protected ProcessingApplet app;
         protected Hand hi;
@@ -317,26 +318,27 @@ public class ProcessingApplet extends PApplet {
             this.hi = hi;
         }
 
-        public void rotate(float rotationX, float rotationY, float rotationZ) {
+        public void rotate(float angle, float rotationX, float rotationY, float rotationZ) {
+            this.angle = angle;
             this.rotationX = rotationX;
             this.rotationY = rotationY;
             this.rotationZ = rotationZ;
-            // ... magic in child classes
         }
 
         public void rotateX(float rotationX) {
-            // this.rotate(rotationX, this.rotationY, this.rotationZ);
             this.rotationX = rotationX;
         }
 
         public void rotateY(float rotationY) {
-            // this.rotate(this.rotationX, rotationY, this.rotationZ);
             this.rotationY = rotationY;
         }
 
         public void rotateZ(float rotationZ) {
-            // this.rotate(this.rotationX, this.rotationY, rotationZ);
             this.rotationZ = rotationZ;
+        }
+
+        public void rotateAngle(float angle) {
+            this.angle = angle;
         }
     }
 
@@ -409,9 +411,14 @@ public class ProcessingApplet extends PApplet {
             this.length1 = 0;
             recalcLenghts(this.length1, length2offset, length3offset, length4offset);
 
-            app.rotateX(rotationX * (hi.ordinal() == 0 ? 1f : -1f));
-            app.rotateY(rotationY * (hi.ordinal() == 0 ? 1f : -1f));
-            app.rotateZ(rotationZ);// * (hi.ordinal() == 0 ? 1f : -1f));
+            /*
+             * app.rotateX(rotationX * (hi.ordinal() == 0 ? 1f : -1f));
+             * app.rotateY(rotationY * (hi.ordinal() == 0 ? 1f : -1f));
+             * app.rotateZ(rotationZ);// * (hi.ordinal() == 0 ? 1f : -1f));
+             */
+
+            float hiv = (hi.ordinal() == 0 ? 1f : -1f);
+            app.rotate(angle, rotationX * hiv, rotationY * hiv, rotationZ * hiv);
             app.stroke(0, 255, 0);
             app.point(0, 0, 0);
             sideOffset = 0;
@@ -437,33 +444,39 @@ public class ProcessingApplet extends PApplet {
         }
 
         public void draw() {
-            thumpVis.rotateX(0.3f);
+            // thumpVis.rotateX(0.3f);
             thumpVis.draw();
 
-            indexVis.rotateZ(-0.5f);
+            // indexVis.rotateZ(-0.5f);
             indexVis.draw();
 
             // no rotation in Y ;)
-            middleVis.rotateY(-0.5f);
+            // middleVis.rotateY(-0.5f);
             middleVis.draw();
 
-            ringVis.drawStaticPart();
-            ringVis.drawParts();
+            // ringVis.drawStaticPart();
+            // ringVis.drawParts();
+            ringVis.draw();
 
-            littleVis.drawStaticPart();
-            littleVis.drawParts();
+            // littleVis.drawStaticPart();
+            // littleVis.drawParts();
+            littleVis.draw();
         }
 
-        public void rotate(float rotationX, float rotationY, float rotationZ) {
-            super.rotate(rotationX, rotationY, rotationZ);
+        public void rotate(float angle, float rotationX, float rotationY, float rotationZ) {
+            super.rotate(angle, rotationX, rotationY, rotationZ);
 
             // translate magic
             app.pushMatrix();
             app.translate(0, 0, 0);
+            /*
+             * app.rotateX(rotationX * (hi.ordinal() == 0 ? 1f : -1f));
+             * app.rotateY(rotationY * (hi.ordinal() == 0 ? 1f : -1f));
+             * app.rotateZ(rotationZ * (hi.ordinal() == 0 ? 1f : -1f));
+             */
+            float hiv = (hi.ordinal() == 0 ? 1f : -1f);
+            app.rotate(angle, rotationX * hiv, rotationY * hiv, rotationZ * hiv);
 
-            app.rotateX(rotationX * (hi.ordinal() == 0 ? 1f : -1f));
-            app.rotateY(rotationY * (hi.ordinal() == 0 ? 1f : -1f));
-            app.rotateZ(rotationZ * (hi.ordinal() == 0 ? 1f : -1f));
             draw();
             app.translate(0, 0, 0);
             app.popMatrix();
@@ -486,10 +499,56 @@ public class ProcessingApplet extends PApplet {
 
         // TODO when sure that it will not be necessary anythre else propragate hi as
         // draw(hi) parameter
-        if (hi == Hand.LEFT) {
-            handVisLeft.draw();
-        } else {
-            handVisRight.draw();
+        HandData currentHand = hi == Hand.LEFT ? leftHandData : rightHandData;
+        HandVisualization currentHandVis = hi == Hand.LEFT ? handVisLeft : handVisRight;
+
+        float[] axisW = null;
+        for (int i = Sensor.values().length - 1; i >= 0; i--) {
+            Sensor curSensor = Sensor.values()[i];
+            float[] axis2 = currentHand.getSensorData(i).quatO.toAxisAngle();
+            // rotate(axis[0], -axis[1], axis[3], axis[2]);
+
+            // this messy thing needs to refactor
+            // main idea is that i need to calculate relative position of all finger sensors
+            // to wrist sensor ...
+            float[] axis;
+            if (curSensor == Sensor.WRIST) {
+                axis = new float[] { axis2[0], axis2[1], axis2[3], axis2[2] };
+                axisW = new float[] { axis2[0], axis2[1], axis2[3], axis2[2] };
+            } else {
+                if (axisW != null) {
+                    // axis = new float[] { axisW[0] - axis2[0], axisW[1] - axis2[1], axisW[3] -
+                    // axis2[3],
+                    // axisW[2] - axis2[2] };
+                    axis = new float[] { axis2[0] - axisW[0], axis2[1] - axisW[1], axis2[3] - axisW[3],
+                            axis2[2] - axisW[2] };
+                    // axis = new float[] { axis2[0], axis2[1], axis2[3], axis2[2] };
+                } else {
+                    axis = new float[] { axis2[0], axis2[1], axis2[3], axis2[2] };
+                }
+            }
+
+            switch (curSensor) {
+            case THUMB:
+                // rotate(axis[0], axis[1], axis[2], axis[3]);
+                currentHandVis.thumpVis.rotate(axis[0], axis[1], axis[2], axis[3]);
+                break;
+            case INDEX:
+                currentHandVis.indexVis.rotate(axis[0], axis[1], axis[2], axis[3]);
+                break;
+            case MIDDLE:
+                currentHandVis.middleVis.rotate(axis[0], axis[1], axis[2], axis[3]);
+                break;
+            case RING:
+                currentHandVis.ringVis.rotate(axis[0], axis[1], axis[2], axis[3]);
+                break;
+            case LITTLE:
+                currentHandVis.littleVis.rotate(axis[0], axis[1], axis[2], axis[3]);
+                break;
+            case WRIST:
+                currentHandVis.rotate(axis[0], axis[1], axis[2], axis[3]);
+                break;
+            }
         }
 
         popMatrix();

@@ -29,7 +29,7 @@ import cz.gag.recognition.Sensor;
  * 
  *        Why to use generic class T: because then i can use LineDate children
  *        class instances to store just necessary data and/or implement specific
- *        methods in given context. TODO .. fix constructors 
+ *        methods in given context. TODO .. fix constructors
  * 
  */
 public class DataFileParser<T extends LineData> {
@@ -94,11 +94,13 @@ public class DataFileParser<T extends LineData> {
                  * e.printStackTrace(); }
                  */
                 // System.out.println("Return Type: " + c.getName());
-
-                if (lineDataClass.equals(ReplayLine.class)) {
-                    return (T) new ReplayLine(fakeDate, fakequaternionODataArr, Sensor.values()[sensor], thisHand);
-                } else if (lineDataClass.equals(GestLineData.class)) {
-                    return (T) new GestLineData(fakeDate, fakequaternionODataArr, Sensor.values()[sensor], thisHand);
+                if (lineDataClass != null) {
+                    if (lineDataClass.equals(ReplayLine.class)) {
+                        return (T) new ReplayLine(fakeDate, fakequaternionODataArr, Sensor.values()[sensor], thisHand);
+                    } else if (lineDataClass.equals(GestLineData.class)) {
+                        return (T) new GestLineData(fakeDate, fakequaternionODataArr, Sensor.values()[sensor],
+                                thisHand);
+                    }
                 }
                 return (T) new LineData(fakeDate, fakequaternionODataArr, Sensor.values()[sensor], thisHand);
 
