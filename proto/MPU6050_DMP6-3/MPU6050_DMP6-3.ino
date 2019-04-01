@@ -13,9 +13,17 @@ Copyright (c) 2018 Vojtěch Průša
 #include "Wire.h"
 #endif
 
+#define FIFO_APCKET_GLOBAL_SIZE 48
 // for both classes must be in the include path of your project
 //#include "I2Cdev.h"
-#include "MPU6050_6Axis_MotionApps20.h"
+#include "MPU6050_9Axis_MotionApps41.h"
+//#include "MPU6050_6Axis_MotionApps20.h"
+//#include "MPU6050_9Axis_MotionApps41.h"
+//#include "/home/vprusa/.platformio/lib/i2cdevlib/Arduino/MPU6050/MPU6050.h"
+//#include "MPU6050.h"
+//#include "/home/vprusa/.platformio/lib/i2cdevlib/Arduino/MPU6050/BMP180.h"
+
+//#include "MPU6050_9Axis_MotionApps20.h"
 //#include "MPU6050.h" // not necessary iq using MotionApps include file
 
 // Arduino Wire library is required if I2Cdev I2CDEV_ARDUINO_WIRE implementation
@@ -120,11 +128,11 @@ Copyright (c) 2018 Vojtěch Průša
 #endif
 #ifdef ESP32_RIGHT
 
-#define SENSORS_COUNT 5
+#define SENSORS_COUNT 6
 // SENSORs <0,4>
 #define FIRST_SENSOR 0
 // or set LAST_SENSOR to 4
-#define LAST_SENSOR 4
+#define LAST_SENSOR 5
 // time for internal interrupt to trigger in loop - working up to 50 ms but freezes may occure - so reset MPU's FIFO more ften (20ms each?)
 #define SWITCH_SENSORS_MS 0
 
@@ -156,7 +164,7 @@ Copyright (c) 2018 Vojtěch Průša
 #define SENSOR_PIN_EU EU
 #define SENSOR_PIN_EU_COMPENSATION 14
 #define SENSOR_PIN_HP HP // HAND PALM
-//#define SENSOR_PIN_HP_COMPENSATION 13
+#define SENSOR_PIN_HP_COMPENSATION 2
 #define SENSOR_PIN_NF NF
 
 //#define SENSOR_PIN_OFFSET 3
@@ -205,8 +213,8 @@ Copyright (c) 2018 Vojtěch Průša
 #define MIN_TIME_TO_RESET 30
 #define MAX_FIFO_USAGE_FOR_RESET 900
 #define MIN_FIFO_USAGE_FOR_RESET 500
-#define FIFO_PACKET_SIZE 42
-#define FIFO_SIZE 42
+#define FIFO_PACKET_SIZE FIFO_APCKET_GLOBAL_SIZE
+#define FIFO_SIZE FIFO_APCKET_GLOBAL_SIZE
 //#define USE_BT
 #define USE_USB
 #define USE_BT_MASTER
@@ -220,8 +228,8 @@ Copyright (c) 2018 Vojtěch Průša
 // comparing to nano MPU6050 needs to be reset more often
 #define MAX_TIME_TO_RESET 15
 #define MIN_TIME_TO_RESET 5
-#define MAX_FIFO_USAGE_FOR_RESET 200
-#define MIN_FIFO_USAGE_FOR_RESET 100
+#define MAX_FIFO_USAGE_FOR_RESET 100
+#define MIN_FIFO_USAGE_FOR_RESET 50
 #else
 // values for arduino nano using 400KHz I2C
 #define MAX_TIME_TO_RESET 50
@@ -229,8 +237,9 @@ Copyright (c) 2018 Vojtěch Průša
 #define MAX_FIFO_USAGE_FOR_RESET 900
 #define MIN_FIFO_USAGE_FOR_RESET 500
 #endif
-#define FIFO_PACKET_SIZE 42
-#define FIFO_SIZE 42
+#define FIFO_PACKET_SIZE FIFO_APCKET_GLOBAL_SIZE
+#define FIFO_M_PACKET_SIZE FIFO_APCKET_GLOBAL_SIZE
+#define FIFO_SIZE FIFO_APCKET_GLOBAL_SIZE
 #endif
 //#define USE_BT
 
@@ -283,7 +292,8 @@ AltSoftSerial hc05Master; //(RX_MASTER, TX_MASTER);
 // MPU control/status vars
 //uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
 uint8_t devStatus;   // return status after each device operation (0 = success, !0 = error)
-uint16_t packetSize = FIFO_PACKET_SIZE; // expected DMP packet size (default is 42 bytes)
+uint16_t packetSizeS = FIFO_PACKET_SIZE; // expected DMP packet size (default is 42 bytes)
+uint16_t packetSizeM = FIFO_M_PACKET_SIZE; // expected DMP packet size (default is 42 bytes)
 uint16_t fifoCount;  // count of all bytes currently in FIFO
 
 // packet structure for InvenSense teapot demo
@@ -308,7 +318,7 @@ enum SENSOR
     SENSOR_PIN_FU = 2,
     SENSOR_PIN_MU = 3,
     SENSOR_PIN_EU = 4,
-    //SENSOR_PIN_HP = 5, // hadn palm
+    SENSOR_PIN_HP = 5, // hadn palm
     SENSOR_PIN_NF=-1,
     
 };
@@ -322,6 +332,8 @@ struct Gyro
     uint8_t fifoBuffer[FIFO_SIZE];                                      // FIFO storage buffer
     int AD0_pin;
     MPU6050 *mpu;
+    //MPU6050 *mpuM;
+    MPU6050 *mpuM;
     // orientation/motion vars
     Quaternion q;        // [w, x, y, z]         quaternion container
     bool dmpReady = false; // set true if DMP init was successful
@@ -529,11 +541,15 @@ void setup() {
     for (int i = FIRST_SENSOR; i <= LAST_SENSOR; i++) {
         selectedSENSOR = (SENSOR)i;
         enableSingleMPU(selectedSENSOR);
-        gyros[selectedSENSOR].mpu = new MPU6050(0x69);
-        //MPU6050 mpu(0x69); // <-- use for AD0 high
+        if(i == LAST_SENSOR) {
+            //gyros[selectedSENSOR].mpuM = new MPU6050(MPU6050_ADDRESS_AD0_HIGH); // MPU6050_ADDRESS_AD0_LOW / MPU6050_ADDRESS_AD0_HIGH
+            gyros[selectedSENSOR].mpuM = new MPU6050(MPU6050_ADDRESS_AD0_HIGH); // MPU6050_ADDRESS_AD0_LOW / MPU6050_ADDRESS_AD0_HIGH
+        } else {
+            //gyros[selectedSENSOR].mpu = new MPU6050(MPU6050_ADDRESS_AD0_HIGH);//   0x68 / 0x69
+            gyros[selectedSENSOR].mpu = new MPU6050(MPU6050_ADDRESS_AD0_HIGH);//   0x68 / 0x69
+        }
 
-
-         int selectorOffsettedPin = SENSOR_PIN_OFFSET + i;
+        int selectorOffsettedPin = SENSOR_PIN_OFFSET + i;
         
         #ifdef SENSOR_PIN_TU_COMPENSATION
         if (i == SENSOR_PIN_TU) {
@@ -579,8 +595,7 @@ void setup() {
 }
 
 int initMPUAndDMP(int attempt) {
-    if (attempt <= 0)
-    {
+    if (attempt <= 0) {
         return 0;
     }
 // initialize device
@@ -590,73 +605,137 @@ int initMPUAndDMP(int attempt) {
 #ifdef USE_USB
     MASTER_SERIAL_NAME.println(F("USB: Initializing I2C devices..."));
 #endif
-    MPU6050 mpu = *gyros[selectedSENSOR].mpu;
-    mpu.initialize();
-#ifdef USE_USB
-    MASTER_SERIAL_NAME.println(F("Testing device connections..."));
-    MASTER_SERIAL_NAME.println(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
+    if(selectedSENSOR == LAST_SENSOR) {
+        MPU6050 mpu = *gyros[selectedSENSOR].mpuM;
+        //mpu.initialize();
+        mpu.initialize();
 
-    // wait for ready
-    MASTER_SERIAL_NAME.println(F("\nSend any character to begin DMP programming and demo: "));
-    // load and configure the DMP
-    MASTER_SERIAL_NAME.println(F("Initializing DMP..."));
-#endif
-    devStatus = mpu.dmpInitialize();
-    MASTER_SERIAL_NAME.print(F("DMP initialized..."));
+    #ifdef USE_USB
+        MASTER_SERIAL_NAME.println(F("Testing device connections..."));
+        MASTER_SERIAL_NAME.println(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
 
-    // supply your own gyro offsets here for each mpu, scaled for min sensitivity
-    // lets ignore this considering we want realtive values anyway
-    //mpu.setXGyroOffset(220);
-    //mpu.setYGyroOffset(76);
-    //mpu.setZGyroOffset(-85);
-    //mpu.setZAccelOffset(1788); // 1688 factory default for my test chip
+        // wait for ready
+        MASTER_SERIAL_NAME.println(F("\nSend any character to begin DMP programming and demo: "));
+        // load and configure the DMP
+        MASTER_SERIAL_NAME.println(F("Initializing DMP..."));
+    #endif
+        //devStatus = mpu.dmpInitialize();
+        devStatus = mpu.dmpInitialize();
+        MASTER_SERIAL_NAME.print(F("DMP initialized..."));
 
-    // make sure it worked (returns 0 if so)
-    //if (devStatus == 0) {
-    if (true) {
-// turn on the DMP, now that it's ready
-// initialize device
-#ifdef USE_BT
-        hc05.print(F("Enabling DMP... "));
-        hc05.println(selectedSENSOR);
-        mpu.setDMPEnabled(true);
+        // supply your own gyro offsets here for each mpu, scaled for min sensitivity
+        // lets ignore this considering we want realtive values anyway
+        //mpu.setXGyroOffset(220);
+        //mpu.setYGyroOffset(76);
+        //mpu.setZGyroOffset(-85);
+        //mpu.setZAccelOffset(1788); // 1688 factory default for my test chip
 
-        // set our DMP Ready flag so the main loop() function knows it's okay to use it
-        hc05.println(F("DMP ready! Getting packet size..."));
-        gyros[selectedSENSOR].dmpReady = true;
-        // get expected DMP packet size for later comparison
-        hc05.print(F("packet size: "));
-        hc05.print(packetSize);
-        hc05.println(F(""));
-#endif
-#ifdef USE_USB
-        MASTER_SERIAL_NAME.print(F("Enabling DMP... "));
-        MASTER_SERIAL_NAME.println(selectedSENSOR);
-        mpu.setDMPEnabled(true);
+        // make sure it worked (returns 0 if so)
+        //if (devStatus == 0) {
+        if (true) {
+  
+    #ifdef USE_USB
+            MASTER_SERIAL_NAME.print(F("Enabling DMP... "));
+            MASTER_SERIAL_NAME.println(selectedSENSOR);
+            mpu.setDMPEnabled(true);
 
-        // set our DMP Ready flag so the main loop() function knows it's okay to use it
-        MASTER_SERIAL_NAME.println(F("DMP ready! Getting packet size..."));
-        gyros[selectedSENSOR].dmpReady = true;
-        MASTER_SERIAL_NAME.print(F("packet size: "));
-        MASTER_SERIAL_NAME.print(packetSize);
-        MASTER_SERIAL_NAME.println(F(""));
-#endif
+            // set our DMP Ready flag so the main loop() function knows it's okay to use it
+            MASTER_SERIAL_NAME.println(F("DMP ready! Getting packet size..."));
+            gyros[selectedSENSOR].dmpReady = true;
+            MASTER_SERIAL_NAME.print(F("packet size: "));
+            MASTER_SERIAL_NAME.print(packetSizeM);
+            MASTER_SERIAL_NAME.println(F(""));
+    #endif
+        } else {
+    // ERROR!
+    // 1 = initial memory load failed
+    // 2 = DMP configuration updates failed
+    // (if it's going to break, usually the code will be 1)
+    #ifdef USE_BT
+            hc05.print(F("DMP Initialization failed (code "));
+            hc05.print(devStatus);
+            hc05.println(F(")"));
+    #endif
+    #ifdef USE_USB
+            MASTER_SERIAL_NAME.print(F("DMP Initialization failed (code "));
+            MASTER_SERIAL_NAME.print(devStatus);
+            MASTER_SERIAL_NAME.println(F(")"));
+    #endif
+            initMPUAndDMP(attempt - 1);
+        }
+
+
+
     } else {
-// ERROR!
-// 1 = initial memory load failed
-// 2 = DMP configuration updates failed
-// (if it's going to break, usually the code will be 1)
-#ifdef USE_BT
-        hc05.print(F("DMP Initialization failed (code "));
-        hc05.print(devStatus);
-        hc05.println(F(")"));
-#endif
-#ifdef USE_USB
-        MASTER_SERIAL_NAME.print(F("DMP Initialization failed (code "));
-        MASTER_SERIAL_NAME.print(devStatus);
-        MASTER_SERIAL_NAME.println(F(")"));
-#endif
-        initMPUAndDMP(attempt - 1);
+        MPU6050 mpu = *gyros[selectedSENSOR].mpu;
+        mpu.initialize();
+
+    #ifdef USE_USB
+        MASTER_SERIAL_NAME.println(F("Testing device connections..."));
+        MASTER_SERIAL_NAME.println(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
+
+        // wait for ready
+        MASTER_SERIAL_NAME.println(F("\nSend any character to begin DMP programming and demo: "));
+        // load and configure the DMP
+        MASTER_SERIAL_NAME.println(F("Initializing DMP..."));
+    #endif
+        devStatus = mpu.dmpInitialize();
+        MASTER_SERIAL_NAME.print(F("DMP initialized..."));
+
+        // supply your own gyro offsets here for each mpu, scaled for min sensitivity
+        // lets ignore this considering we want realtive values anyway
+        //mpu.setXGyroOffset(220);
+        //mpu.setYGyroOffset(76);
+        //mpu.setZGyroOffset(-85);
+        //mpu.setZAccelOffset(1788); // 1688 factory default for my test chip
+
+        // make sure it worked (returns 0 if so)
+        //if (devStatus == 0) {
+        if (true) {
+    // turn on the DMP, now that it's ready
+    // initialize device
+    #ifdef USE_BT
+            hc05.print(F("Enabling DMP... "));
+            hc05.println(selectedSENSOR);
+            mpu.setDMPEnabled(true);
+
+            // set our DMP Ready flag so the main loop() function knows it's okay to use it
+            hc05.println(F("DMP ready! Getting packet size..."));
+            gyros[selectedSENSOR].dmpReady = true;
+            // get expected DMP packet size for later comparison
+            hc05.print(F("packet size: "));
+            hc05.print(packetSizeS);
+            hc05.println(F(""));
+    #endif
+    #ifdef USE_USB
+            MASTER_SERIAL_NAME.print(F("Enabling DMP... "));
+            MASTER_SERIAL_NAME.println(selectedSENSOR);
+            mpu.setDMPEnabled(true);
+
+            // set our DMP Ready flag so the main loop() function knows it's okay to use it
+            MASTER_SERIAL_NAME.println(F("DMP ready! Getting packet size..."));
+            gyros[selectedSENSOR].dmpReady = true;
+            MASTER_SERIAL_NAME.print(F("packet size: "));
+            MASTER_SERIAL_NAME.print(packetSizeS);
+            MASTER_SERIAL_NAME.println(F(""));
+    #endif
+        } else {
+    // ERROR!
+    // 1 = initial memory load failed
+    // 2 = DMP configuration updates failed
+    // (if it's going to break, usually the code will be 1)
+    #ifdef USE_BT
+            hc05.print(F("DMP Initialization failed (code "));
+            hc05.print(devStatus);
+            hc05.println(F(")"));
+    #endif
+    #ifdef USE_USB
+            MASTER_SERIAL_NAME.print(F("DMP Initialization failed (code "));
+            MASTER_SERIAL_NAME.print(devStatus);
+            MASTER_SERIAL_NAME.println(F(")"));
+    #endif
+            initMPUAndDMP(attempt - 1);
+        }
     }
     return 0;
 }
@@ -714,14 +793,24 @@ void automaticFifoReset() {
         #endif
         ) {
             int selectedNow = setOrRotateSelectedGyro(i);
-            MPU6050 mpu = *gyros[selectedNow].mpu;
-                
-            int localFifoCount = mpu.getFIFOCount();
-            if(( localFifoCount >= MAX_FIFO_USAGE_FOR_RESET || 
-                ( gyros[i].lastResetTime + MAX_TIME_TO_RESET < now && 
-                localFifoCount >= MIN_FIFO_USAGE_FOR_RESET) ) ){
-                mpu.resetFIFO();
-                gyros[selectedNow].lastResetTime = now;
+            if(selectedNow != LAST_SENSOR){
+                MPU6050 mpu = *gyros[selectedNow].mpu;
+                int localFifoCount = mpu.getFIFOCount();
+                if(( localFifoCount >= MAX_FIFO_USAGE_FOR_RESET || 
+                    ( gyros[i].lastResetTime + MAX_TIME_TO_RESET < now && 
+                    localFifoCount >= MIN_FIFO_USAGE_FOR_RESET) ) ){
+                    mpu.resetFIFO();
+                    gyros[selectedNow].lastResetTime = now;
+                }
+            } else{
+                MPU6050 mpu = *gyros[selectedNow].mpuM;
+                int localFifoCount = mpu.getFIFOCount();
+                if(( localFifoCount >= MAX_FIFO_USAGE_FOR_RESET || 
+                    ( gyros[i].lastResetTime + MAX_TIME_TO_RESET < now && 
+                    localFifoCount >= MIN_FIFO_USAGE_FOR_RESET) ) ){
+                    mpu.resetFIFO();
+                    gyros[selectedNow].lastResetTime = now;
+                }
             }
        }
     }
@@ -757,25 +846,161 @@ volatile int readAligned = 1;
 #endif
 volatile float time2, timePrev2;
 
+
+
+uint8_t buffer_m[6];
+
+int16_t ax, ay, az;
+int16_t gx, gy, gz;
+int16_t   mx, my, mz;
+
+float heading;
+float tiltheading;
+
+float Axyz[3];
+float Gxyz[3];
+float Mxyz[3];
+
+void getAccel_Data(MPU6050 * mpuI) {
+    MPU6050 mpu = *mpuI;
+    mpu.getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
+    Axyz[0] = (double) ax / 16384;
+    Axyz[1] = (double) ay / 16384;
+    Axyz[2] = (double) az / 16384;
+}
+uint8_t buffer[16];
+void getGyro_Data(MPU6050 * mpuI) {
+    MPU6050 mpu = *mpuI;
+    //mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);//, &mx, &my, &mz);
+   mpu.getRotation(&gx, &gy, &gz);//, &mx, &my, &mz);
+    I2Cdev::readBytes(0x68, MPU6050_RA_GYRO_XOUT_H, 6, buffer);
+    
+    gx = (((int16_t)buffer[0]) << 8) | buffer[1];
+    gy = (((int16_t)buffer[2]) << 8) | buffer[3];
+    gz = (((int16_t)buffer[4]) << 8) | buffer[5];
+    
+    /*Gxyz[0] = (double) gx * 250 / 32768;
+    Gxyz[1] = (double) gy * 250 / 32768;
+    Gxyz[2] = (double) gz * 250 / 32768;*/
+}
+
 bool loadDataFromFIFO(int forceLoad = false) {
-    MPU6050 mpu = *gyros[selectedSENSOR].mpu;
-    if(!gyros[selectedSENSOR].hasDataReady || forceLoad){
-        fifoCount = mpu.getFIFOCount();
-        uint8_t *fifoBuffer = gyros[selectedSENSOR].fifoBuffer; // FIFO storage buffer
-        
-        if (fifoCount >= packetSize && fifoCount <= 1024 && fifoCount != 0 ) // if (mpuIntStatus & 0x02) 
-        {
-            // wait for correct available data length, should be a VERY short wait
-            while (fifoCount >= packetSize/* && _BV(MPU6050_INTERRUPT_DMP_INT_BIT)*/)
-            {
-                mpu.getFIFOBytes(fifoBuffer, packetSize);
-                fifoCount -= packetSize;
+    if(selectedSENSOR != LAST_SENSOR){
+        MPU6050 mpu = *gyros[selectedSENSOR].mpu;
+        if(!gyros[selectedSENSOR].hasDataReady || forceLoad){
+            fifoCount = mpu.getFIFOCount();
+            uint8_t *fifoBuffer = gyros[selectedSENSOR].fifoBuffer; // FIFO storage buffer
+            int packetSize = packetSizeS; 
+            if (fifoCount >= packetSize && fifoCount <= 1024 && fifoCount != 0 ) {
+                // wait for correct available data length, should be a VERY short wait
+                while (fifoCount >= packetSize/* && _BV(MPU6050_INTERRUPT_DMP_INT_BIT)*/) {
+                    mpu.getFIFOBytes(fifoBuffer, packetSize);
+                    fifoCount -= packetSize;
+                }
+                gyros[selectedSENSOR].hasDataReady=true;
+                return true;
             }
-            gyros[selectedSENSOR].hasDataReady=true;
-            return true;
+        }
+    } else{
+       /* MPU6050 mpu = *gyros[selectedSENSOR].mpuM;
+        Serial.println("MPU6050");
+        if(!gyros[selectedSENSOR].hasDataReady || forceLoad) {
+            //getAccel_Data(gyros[selectedSENSOR].mpuM);
+            getGyro_Data(gyros[selectedSENSOR].mpuM);
+            uint8_t *fifoBuffer = gyros[selectedSENSOR].fifoBuffer; // FIFO storage buffer*/
+            /*
+            fifoBuffer[0] = 1;
+            fifoBuffer[1] = 1;
+            
+            fifoBuffer[4] = gx & 0xFF;
+            fifoBuffer[5] = gx >> 8;
+            
+            fifoBuffer[8] = gy & 0xFF;
+            fifoBuffer[9] = gy >> 8;
+            
+
+            fifoBuffer[12] = gz & 0xFF;
+            fifoBuffer[13] = gz >> 8;
+            */
+           /*
+            fifoBuffer[0] = 1;
+            fifoBuffer[1] = 1;
+            
+            fifoBuffer[4] = buffer[0];
+            fifoBuffer[5] = buffer[1];
+            
+            fifoBuffer[8] = buffer[2];
+            fifoBuffer[9] = buffer[3];
+            
+            fifoBuffer[12] = buffer[4];
+            fifoBuffer[13] = buffer[5];*/
+            /*
+    gx = (((int16_t)buffer[0]) << 8) | buffer[1];
+    gy = (((int16_t)buffer[2]) << 8) | buffer[3];
+    gz = (((int16_t)buffer[4]) << 8) | buffer[5];
+    */
+               /* for(int ii = 0;  ii < packetSizeM;  ii++) {
+                    Serial.print(fifoBuffer[ii]);
+                    Serial.print(" ");
+                }
+                Serial.print("OK");
+                gyros[selectedSENSOR].hasDataReady=true;
+*/
+            //fifoBuffer[] = a & 0xFF;
+            //fifoBuffer[] = a >> 8;
+
+  /*
+            packet[2] = selectedSENSOR;
+            packet[3] = fifoBuffer[0];
+            packet[4] = fifoBuffer[1];
+            packet[5] = fifoBuffer[4];
+            packet[6] = fifoBuffer[5];
+            packet[7] = fifoBuffer[8];
+            packet[8] = fifoBuffer[9];
+            packet[9] = fifoBuffer[12];
+            packet[10] = fifoBuffer[13];
+            */
+            /*
+            fifoCount = mpu.getFIFOCount();
+            Serial.print("fifoCount: ");
+            Serial.println(fifoCount);
+            uint8_t *fifoBuffer = gyros[selectedSENSOR].fifoBuffer; // FIFO storage buffer
+            int packetSize = packetSizeM; 
+            if (fifoCount >= packetSize && fifoCount <= 1024 && fifoCount != 0 ) {
+                while (fifoCount >= packetSize) {
+                    mpu.getFIFOBytes(fifoBuffer, packetSize);
+                    fifoCount -= packetSize;
+                }
+                for(int ii = 0;  ii < packetSize;  ii++) {
+                    Serial.print(fifoBuffer[ii]);
+                }
+                Serial.print("OK");
+                gyros[selectedSENSOR].hasDataReady=true;
+                return true;
+            }*/
+        MPU6050 mpu = *gyros[selectedSENSOR].mpuM;
+        if(!gyros[selectedSENSOR].hasDataReady || forceLoad){
+            fifoCount = mpu.getFIFOCount();
+            Serial.print("fifoCount: ");
+            Serial.println(fifoCount);
+            uint8_t *fifoBuffer = gyros[selectedSENSOR].fifoBuffer; // FIFO storage buffer
+            int packetSize = packetSizeS; 
+            if (fifoCount >= packetSize && fifoCount <= 1024 && fifoCount != 0 ) {
+                // wait for correct available data length, should be a VERY short wait
+                while (fifoCount >= packetSize/* && _BV(MPU6050_INTERRUPT_DMP_INT_BIT)*/) {
+                    mpu.getFIFOBytes(fifoBuffer, packetSize);
+                    fifoCount -= packetSize;
+                }
+                for(int ii = 0;  ii < packetSize;  ii++) {
+                    Serial.print(fifoBuffer[ii]);
+                    Serial.print(" ");
+                }
+                Serial.print("OK");
+                gyros[selectedSENSOR].hasDataReady=true;
+                return true;
+            }
         }
     }
-
     return false;
 }
 
@@ -946,7 +1171,6 @@ void loadSlaveHandData() {
 // ===                    MAIN PROGRAM LOOP                     ===
 // ================================================================
 void loop() {
-
     // if programming failed, don't try to do anything
     //if (!dmpReady)
     //   return;

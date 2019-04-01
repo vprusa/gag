@@ -3,41 +3,13 @@ Copyright (c) 2018 Vojtěch Průša, Lukrécia Mertová
 */
 package cz.gag.common;
 
-//import peasy.*;
-import processing.serial.*;
-import processing.*;
-import processing.core.PApplet;
-//import processing.opengl.*;
-//import toxi.color.RGBAccessor;
-
-import toxi.geom.*;
-//import toxi.processing.*;
-
 import java.awt.Color;
-import java.io.*;
-import java.nio.ByteBuffer;
-import java.nio.FloatBuffer;
-import java.text.SimpleDateFormat;
-import java.text.DateFormat;
-import java.text.ParseException;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.IdentityHashMap;
 import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.NavigableSet;
-import java.util.OptionalDouble;
-import java.util.OptionalLong;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
 
 import cz.gag.recognition.BothHandsGesture;
 import cz.gag.recognition.Sensor;
@@ -48,10 +20,11 @@ import cz.gag.visualization.KeyboardRecorder;
 import cz.gag.visualization.LineData;
 import cz.gag.visualization.Point3D;
 import cz.gag.visualization.RePlayer;
-
-import java.nio.file.Paths;
-
-import jssc.SerialPortEvent;
+import processing.core.PApplet;
+//import processing.opengl.*;
+//import toxi.color.RGBAccessor;
+//import peasy.*;
+import processing.serial.Serial;
 
 /**
  * @author Vojtech Prusa
@@ -1128,21 +1101,13 @@ public class ProcessingApplet extends PApplet {
 
         }
         if (keyCode == 'L') {
-            printCamera();
+            //printCamera();
             // camera(1, 0.3f, 1, 0, 0, 0, 1, 1, 0);
         }
         if (keyCode == 'R') {
-            printCamera();
+            //printCamera();
             // camera(-0.1f, 0.3f, 1f, 0, 0, 0, 1, 1, 0f);
         }
-        /*
-         * if (millis() - lastPressed > 100) { if (keyCode == LEFT) {
-         * Configuration.globesRotationCoeficientY += 0.2; } if (keyCode == RIGHT) {
-         * Configuration.globesRotationCoeficientY -= 0.2; } if (keyCode == UP) {
-         * Configuration.globesRotationCoeficientX += 0.2; } if (keyCode == DOWN) {
-         * Configuration.globesRotationCoeficientX -= 0.2; } lastPressed = millis(); }
-         */
-        // System.out.println("t");
 
     }
 
