@@ -98,7 +98,8 @@ public class RecordedDataFilter extends DataFileParser<GestLineData> {
         }
 
         public GestLineData get(Hand h, Sensor s, int i) {
-            if (lastNDataOfEachSensorOfHand.get(h).get(s).size() < i)
+            int size = lastNDataOfEachSensorOfHand.get(h).get(s).size();
+            if (lastNDataOfEachSensorOfHand.get(h).get(s).size() > i)
                 return lastNDataOfEachSensorOfHand.get(h).get(s).get(i);
             return null;
         }
@@ -140,7 +141,7 @@ public class RecordedDataFilter extends DataFileParser<GestLineData> {
         // check if time matches filtered samples rate per sensor on hand
 
         GestLineData prevLine = bhw.getTop(line.hand, line.sensor);
-        long timeToSkip = (long) (1000.0f / samplesPerSensorPerSecond);
+        long timeToSkip = (long) (10000.0f / samplesPerSensorPerSecond);
         int i = 0;
         while (prevLine != null) {
             if(line.date.getTime() - prevLine.date.getTime() < timeToSkip) {
