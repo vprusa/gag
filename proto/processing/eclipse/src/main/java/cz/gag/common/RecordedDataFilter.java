@@ -86,7 +86,6 @@ public class RecordedDataFilter extends DataFileParser<GestLineData> {
                     lastNDataOfEachSensor.put(s, new HistoryArrayList<GestLineData>(historyCountPerSensorOnHand));
                 }
             }
-
         }
 
         public void add(GestLineData line) {
@@ -106,8 +105,9 @@ public class RecordedDataFilter extends DataFileParser<GestLineData> {
     /**
      * Pls document this method.. also with ideas, TODO, etc. Parametrize whatever
      * you seem useful
+     * Using float type for samplesPerSensorPerSecond so i could have gestures with rate in minutes as well
      */
-    private void filter(int samplesPerSensorPerSecond, boolean findEdges /* parameters */) {
+    private void filter(float samplesPerSensorPerSecond, boolean findEdges /* parameters */) {
         // TODO Lukrecias magic
         filteredData = new ArrayList<GestLineData>();
         bhw = new BothHandsWrapper(25);
@@ -128,19 +128,23 @@ public class RecordedDataFilter extends DataFileParser<GestLineData> {
         }
     }
 
-    private boolean isLineValid(GestLineData line, int samplesPerSensorPerSecond, boolean findEdges) {
+    private boolean isLineValid(GestLineData line, float samplesPerSensorPerSecond, boolean findEdges) {
         // check if time matches filtered samples rate per sensor on hand
+        if() {
+            
+        }
         
         // check if this value is edge value because then this and/or last one in
         // history of this sensor of hand has to added as well
-        return false;
+            
+        return true;
     }
 
     // TODO add methods that call filter(<parameters>) and name them smth like
     // filter<Basic|Minimal|Maximal|TimeOnly|etc.>(<parameters>) based on parameters
     // example
     private void filterBasic(/* less parameters */) {
-        filter(20, false);
+        filter(5, false);
     }
 
 }
