@@ -41,10 +41,11 @@ public class LineData {
         this(date, quat, new float[] { 0, 0, 0 }, sensor, hand);
     }
 
+    @Override
     public String toString() {
-        String report = "MPU " + hand + " f: " + sensor.ordinal() + acc != null
+        String report = "MPU " + hand + " f: " + sensor.ordinal() + (acc != null
                 ? (" Acc:" + acc[0] + " " + acc[1] + " " + acc[2])
-                : "" + " Gyro: " + quat[0] + " " + quat[1] + " " + quat[2] + " " + quat[3];
+                : "") + " Gyro: " + quat[0] + " " + quat[1] + " " + quat[2] + " " + quat[3];
         return report;
     }
 

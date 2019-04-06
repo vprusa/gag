@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -34,6 +35,9 @@ import cz.gag.visualization.GestLineData;
  * 
  *         2019-01-08_11:55:39.386 * 1 0.70202637 -0.30603027 -0.31201172
  *         0.56225586 0.0 0.0 0.0
+ * 
+ *         TODO fix samplesPerSensorPerSecond - its messed up and do not
+ *         contains values reliable considering variables name.. rename it?
  *
  */
 public class RecordedDataFilter extends DataFileParser<GestLineData> {
@@ -77,14 +81,21 @@ public class RecordedDataFilter extends DataFileParser<GestLineData> {
 
         public Map<Hand, Map<Sensor, List<GestLineData>>> lastNDataOfEachSensorOfHand = new HashMap<Hand, Map<Sensor, List<GestLineData>>>();
 
+        public Map<Hand, Map<Sensor, GestLineData>> lastFilteredDataOfEachSensorOfHand = new HashMap<Hand, Map<Sensor, GestLineData>>();
+
         public BothHandsWrapper(int historyCountPerSensorOnHand) {
             this.historyCountPerSensorOnHand = historyCountPerSensorOnHand;
             for (Hand h : Hand.values()) {
                 HashMap<Sensor, List<GestLineData>> lastNDataOfEachSensor = new HashMap<Sensor, List<GestLineData>>();
                 lastNDataOfEachSensorOfHand.put(h, lastNDataOfEachSensor);
+
+                HashMap<Sensor, GestLineData> lastFilteredDataOfEachSensor = new HashMap<Sensor, GestLineData>();
+                lastFilteredDataOfEachSensorOfHand.put(h, lastFilteredDataOfEachSensor);
+
                 for (Sensor s : Sensor.values()) {
                     // Map<Sensor,List<GestLineData>>
                     lastNDataOfEachSensor.put(s, new HistoryArrayList<GestLineData>(historyCountPerSensorOnHand));
+                    lastFilteredDataOfEachSensor.put(s, null);
                 }
             }
         }
@@ -99,9 +110,17 @@ public class RecordedDataFilter extends DataFileParser<GestLineData> {
 
         public GestLineData get(Hand h, Sensor s, int i) {
             int size = lastNDataOfEachSensorOfHand.get(h).get(s).size();
-            if (lastNDataOfEachSensorOfHand.get(h).get(s).size() > i)
-                return lastNDataOfEachSensorOfHand.get(h).get(s).get(i);
+            if (i >= 0 && size > i)
+                return lastNDataOfEachSensorOfHand.get(h).get(s).get(size - 1 - i);
             return null;
+        }
+
+        public GestLineData getLastFiltered(Hand h, Sensor s) {
+            return bhw.lastFilteredDataOfEachSensorOfHand.get(h).get(s);
+        }
+
+        public void setLastFiltered(GestLineData line) {
+            lastFilteredDataOfEachSensorOfHand.get(line.hand).put(line.sensor, line);
         }
     }
 
@@ -119,7 +138,7 @@ public class RecordedDataFilter extends DataFileParser<GestLineData> {
         // assuming that GestLineData time has +- equal distribution rate per second it
         // sould be enough to multiple samplesPerSensorPerSecond with constant derived
         // from this rate ... g.e. 25 * 1 where 1 is sensor?
-        bhw = new BothHandsWrapper((int) samplesPerSensorPerSecond * 5);
+        bhw = new BothHandsWrapper((int) samplesPerSensorPerSecond * 2);
 
         // use this.parseLine() for loading per line or anything else, although it would
         // be useful to have 2 implementation
@@ -130,38 +149,44 @@ public class RecordedDataFilter extends DataFileParser<GestLineData> {
 
         while ((line = this.parseLine()) != null) {
             // TODO Lukrecias magic
-            bhw.add(line);
             if (this.isLineValid(line, samplesPerSensorPerSecond, findEdges)) {
                 filteredData.add(line);
+                bhw.setLastFiltered(line);
             }
+            bhw.add(line);
         }
+        int i = 1;
     }
 
     private boolean isLineValid(GestLineData line, float samplesPerSensorPerSecond, boolean findEdges) {
         // check if time matches filtered samples rate per sensor on hand
-
-        GestLineData prevLine = bhw.getTop(line.hand, line.sensor);
-        long timeToSkip = (long) (10000.0f / samplesPerSensorPerSecond);
-        int i = 0;
-        while (prevLine != null) {
-            if(line.date.getTime() - prevLine.date.getTime() < timeToSkip) {
-                prevLine = bhw.get(line.hand, line.sensor, ++i);
-            } else {
-                return false;
-            }
+        GestLineData prevLine = bhw.getLastFiltered(line.hand, line.sensor);
+        long timeToSkip = (long) (1000.0f * samplesPerSensorPerSecond);
+        if (prevLine == null) {
+            return true;
+        }
+        long lineDate = line.date.getTime();
+        long prevLineDate = prevLine.date.getTime();
+        long diffDates = lineDate - prevLineDate;
+        if (diffDates > timeToSkip) {
+            return true;
         }
 
         // TODO check if this value is edge value because then this and/or last one in
         // history of this sensor of hand has to added as well
+        // using:
+        // bhw.lastNDataOfEachSensorOfHand ..BothHandsWrapper.
+        // bhw.get()
+        // bhw.getTop(h, s)
 
-        return true;
+        return false;
     }
 
     // TODO add methods that call filter(<parameters>) and name them smth like
     // filter<Basic|Minimal|Maximal|TimeOnly|etc.>(<parameters>) based on parameters
     // example
     public void filterBasic(/* less parameters */) {
-        filter(5, false);
+        filter(0.5f, false);
     }
 
     public void saveFilteredToFile(String filePath) throws IOException {
@@ -172,18 +197,11 @@ public class RecordedDataFilter extends DataFileParser<GestLineData> {
         File file = new File(filePath);
         FileWriter fr = new FileWriter(file, append);
         BufferedWriter br = new BufferedWriter(fr);
-        
+
         Iterator<GestLineData> iter = filteredData.iterator();
-        while(iter.hasNext()) {
-            br.write(iter.next().toFileString() + (iter.hasNext() ? '\n': ""));
+        while (iter.hasNext()) {
+            br.write(iter.next().toFileString() + (iter.hasNext() ? '\n' : ""));
         }
-        /*
-        filteredData.iterator<GestLineData>().forEachRemaining(a -> {
-            try {
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        });*/
 
         br.close();
         fr.close();
