@@ -48,7 +48,7 @@ public class RecordedDataFilter extends DataFileParser<GestLineData> {
         // TODO Lukrecias magic
 
         // use this.parseLine() for loading per line or anything else, although it would
-        // be usefull to have 2 implementation
+        // be useful to have 2 implementation
         // 1. can consume whatever amount of ram
         // 2. should not load everything in memory at once but somehow store just last n
         // lines at most... for future real-time comparing? idk here
