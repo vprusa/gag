@@ -64,7 +64,7 @@ public class Configuration {
 
     // Print what date is today!
     // System.out.println("Report Date: " + reportDate);
-
+    
     static public String outputFile = "output-" + gestureName + "-" + deviceRight + "-{date}.log";
 
     static public boolean showGlobesDots = System.getProperty("showGlobesDots") == null ? false
