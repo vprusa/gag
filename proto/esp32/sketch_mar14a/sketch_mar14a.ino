@@ -1,21 +1,23 @@
-/*
-  Blink
-*/
-
-// ledPin refers to ESP32 GPIO 23
-const int ledPin = 2;
-
-// the setup function runs once when you press reset or power the board
+#include "BluetoothSerial.h"
+ 
+BluetoothSerial SerialBT;
+ 
+void callback(esp_spp_cb_event_t event, esp_spp_cb_param_t *param){
+  if(event == ESP_SPP_SRV_OPEN_EVT){
+    Serial.println("Client Connected");
+  }
+}
+ 
 void setup() {
-  // initialize digital pin ledPin as an output.
-  pinMode(ledPin, OUTPUT);
+  Serial.begin(115200);
+ 
+  SerialBT.register_callback(callback);
+ 
+  if(!SerialBT.begin("ESP32")){
+    Serial.println("An error occurred initializing Bluetooth");
+  }else{
+    Serial.println("Bluetooth initialized");
+  }
 }
-
-// the loop function runs over and over again forever
-void loop() {
-  digitalWrite(ledPin, HIGH);   // turn the LED on (HIGH is the voltage level)
-  delay(1000);                  // wait for a second
-  digitalWrite(ledPin, LOW);    // turn the LED off by making the voltage LOW
-  delay(1000);                  // wait for a second
-}
-
+ 
+void loop() {}
