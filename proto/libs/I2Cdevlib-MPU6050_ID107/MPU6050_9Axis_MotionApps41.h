@@ -40,7 +40,50 @@ THE SOFTWARE.
 #define MPU9250_INCLUDE_DMP_MOTIONAPPS41
 
 #include "MPU9250.h"
-//#include <avr/pgmspace.h>
+#include <avr/pgmspace.h>
+
+
+    // Teensy 3.0 library conditional PROGMEM code from Paul Stoffregen
+    #ifdef __PGMSPACE_H_
+        #define __PGMSPACE_H_ 1
+        #include <inttypes.h>
+
+        #define PROGMEM
+        #define PGM_P  const char *
+        #define PSTR(str) (str)
+        #define F(x) x
+
+        typedef void prog_void;
+        typedef char prog_char;
+        typedef unsigned char prog_uchar;
+        //vprusa
+        //typedef int8_t prog_int8_t;
+        typedef uint8_t prog_uint8_t;
+        typedef int16_t prog_int16_t;
+        typedef uint16_t prog_uint16_t;
+        
+        //vprusa
+        //typedef int32_t prog_int32_t;
+        //typedef uint32_t prog_uint32_t;
+        
+        #define strcpy_P(dest, src) strcpy((dest), (src))
+        #define strcat_P(dest, src) strcat((dest), (src))
+        #define strcmp_P(a, b) strcmp((a), (b))
+        
+        #define pgm_read_byte(addr) (*(const unsigned char *)(addr))
+        #define pgm_read_word(addr) (*(const unsigned short *)(addr))
+        #define pgm_read_dword(addr) (*(const unsigned long *)(addr))
+        #define pgm_read_float(addr) (*(const float *)(addr))
+        
+        #define pgm_read_byte_near(addr) pgm_read_byte(addr)
+        #define pgm_read_word_near(addr) pgm_read_word(addr)
+        #define pgm_read_dword_near(addr) pgm_read_dword(addr)
+        #define pgm_read_float_near(addr) pgm_read_float(addr)
+        #define pgm_read_byte_far(addr) pgm_read_byte(addr)
+        #define pgm_read_word_far(addr) pgm_read_word(addr)
+        #define pgm_read_dword_far(addr) pgm_read_dword(addr)
+        #define pgm_read_float_far(addr) pgm_read_float(addr)
+    #endif
 
 // NOTE! Enabling DEBUG adds about 3.3kB to the flash program size.
 // Debug output is now working even on ATMega328P MCUs (e.g. Arduino Uno)
@@ -61,8 +104,8 @@ THE SOFTWARE.
 #endif
 
 #define MPU9250_DMP_CODE_SIZE       1962    // dmpMemory[]
-#define MPU9250_DMP_CONFIG_SIZE     232     // dmpConfig[]
-#define MPU9250_DMP_UPDATES_SIZE    140     // dmpUpdates[]
+#define MPU9250_DMP_CONFIG_SIZE     232     // dmpConfig2[]
+#define MPU9250_DMP_UPDATES_SIZE    140     // dmpUpdates2[]
 
 /* ================================================================================================ *
  | Default MotionApps v4.1 48-byte FIFO packet structure:                                           |
@@ -375,7 +418,7 @@ uint8_t MPU9250::dmpInitialize() {
     DEBUG_PRINT(F("Writing DMP code to MPU memory banks ("));
     DEBUG_PRINT(MPU9250_DMP_CODE_SIZE);
     DEBUG_PRINTLN(F(" bytes)"));
-    if (writeProgMemoryBlock(dmpMemory, MPU9250_DMP_CODE_SIZE)) {
+    if (writeProgMemoryBlock(dmpMemory2, MPU9250_DMP_CODE_SIZE)) {
         DEBUG_PRINTLN(F("Success! DMP code written and verified."));
 
         DEBUG_PRINTLN(F("Configuring DMP and related settings..."));
@@ -384,7 +427,7 @@ uint8_t MPU9250::dmpInitialize() {
         DEBUG_PRINT(F("Writing DMP configuration to MPU memory banks ("));
         DEBUG_PRINT(MPU9250_DMP_CONFIG_SIZE);
         DEBUG_PRINTLN(F(" bytes in config def)"));
-        if (writeProgDMPConfigurationSet(dmpConfig, MPU9250_DMP_CONFIG_SIZE)) {
+        if (writeProgDMPConfigurationSet(dmpConfig2, MPU9250_DMP_CONFIG_SIZE)) {
             DEBUG_PRINTLN(F("Success! DMP configuration written and verified."));
 
             DEBUG_PRINTLN(F("Setting DMP and FIFO_OFLOW interrupts enabled..."));
@@ -425,11 +468,11 @@ uint8_t MPU9250::dmpInitialize() {
             DEBUG_PRINTLN(F("Writing final memory update 1/19 (function unknown)..."));
             uint8_t dmpUpdate[16], j;
             uint16_t pos = 0;
-            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates[pos]);
+            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
 
             DEBUG_PRINTLN(F("Writing final memory update 2/19 (function unknown)..."));
-            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates[pos]);
+            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
 
             DEBUG_PRINTLN(F("Resetting FIFO..."));
@@ -444,11 +487,11 @@ uint8_t MPU9250::dmpInitialize() {
             //getFIFOBytes(fifoBuffer, fifoCount);
 
             DEBUG_PRINTLN(F("Writing final memory update 3/19 (function unknown)..."));
-            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates[pos]);
+            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
 
             DEBUG_PRINTLN(F("Writing final memory update 4/19 (function unknown)..."));
-            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates[pos]);
+            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
 
             DEBUG_PRINTLN(F("Disabling all standby flags..."));
@@ -506,29 +549,29 @@ uint8_t MPU9250::dmpInitialize() {
             I2Cdev::writeByte(0x68, MPU9250_RA_USER_CTRL, 0xE8);
 
             DEBUG_PRINTLN(F("Writing final memory update 5/19 (function unknown)..."));
-            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates[pos]);
+            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
             DEBUG_PRINTLN(F("Writing final memory update 6/19 (function unknown)..."));
-            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates[pos]);
+            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
             DEBUG_PRINTLN(F("Writing final memory update 7/19 (function unknown)..."));
-            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates[pos]);
+            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
             DEBUG_PRINTLN(F("Writing final memory update 8/19 (function unknown)..."));
-            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates[pos]);
+            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
             DEBUG_PRINTLN(F("Writing final memory update 9/19 (function unknown)..."));
-            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates[pos]);
+            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
             DEBUG_PRINTLN(F("Writing final memory update 10/19 (function unknown)..."));
-            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates[pos]);
+            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
             DEBUG_PRINTLN(F("Writing final memory update 11/19 (function unknown)..."));
-            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates[pos]);
+            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
             
             DEBUG_PRINTLN(F("Reading final memory update 12/19 (function unknown)..."));
-            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates[pos]);
+            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             readMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
             #ifdef DEBUG
                 DEBUG_PRINT(F("Read bytes: "));
@@ -540,19 +583,19 @@ uint8_t MPU9250::dmpInitialize() {
             #endif
 
             DEBUG_PRINTLN(F("Writing final memory update 13/19 (function unknown)..."));
-            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates[pos]);
+            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
             DEBUG_PRINTLN(F("Writing final memory update 14/19 (function unknown)..."));
-            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates[pos]);
+            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
             DEBUG_PRINTLN(F("Writing final memory update 15/19 (function unknown)..."));
-            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates[pos]);
+            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
             DEBUG_PRINTLN(F("Writing final memory update 16/19 (function unknown)..."));
-            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates[pos]);
+            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
             DEBUG_PRINTLN(F("Writing final memory update 17/19 (function unknown)..."));
-            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates[pos]);
+            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
 
             DEBUG_PRINTLN(F("Waiting for FIRO count >= 46..."));
@@ -563,7 +606,7 @@ uint8_t MPU9250::dmpInitialize() {
             getIntStatus();
 
             DEBUG_PRINTLN(F("Writing final memory update 18/19 (function unknown)..."));
-            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates[pos]);
+            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
 
             DEBUG_PRINTLN(F("Waiting for FIRO count >= 48..."));
@@ -580,7 +623,7 @@ uint8_t MPU9250::dmpInitialize() {
             getIntStatus();
 
             DEBUG_PRINTLN(F("Writing final memory update 19/19 (function unknown)..."));
-            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates[pos]);
+            for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
 
             DEBUG_PRINTLN(F("Disabling DMP (you turn it on later)..."));

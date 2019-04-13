@@ -8,7 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import cz.gag.common.Hand;
-import cz.gag.visualization.GestLineData;
+import cz.gag.visualization.GestDataLine;
 import toxi.geom.Quaternion;
 
 public class BothHandsGesture implements Gesture  {
@@ -22,7 +22,7 @@ public class BothHandsGesture implements Gesture  {
     }
     
     @Override
-    public float matchesBy(Map<Date, GestLineData> data) {
+    public float matchesBy(Map<Date, GestDataLine> data) {
         return 0.5f;
     }
     

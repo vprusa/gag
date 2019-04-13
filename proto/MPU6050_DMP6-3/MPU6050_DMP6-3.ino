@@ -5,20 +5,24 @@ Copyright (c) 2018 Vojtěch Průša
 // Based on example of MPU6050 from https://github.com/jrowberg/i2cdevlib
 // from 6/21/2012 by Jeff Rowberg <jeff@rowberg.net>
 // 
-#define ESP32_RIGHT // master to left, slave to pc
+//#define ESP32_RIGHT 1// master to left, slave to pc
 
 
 #ifdef ESP32_RIGHT
 //#include "/home/vprusa/.arduino15/packages/esp32/hardware/esp32/1.0.1/libraries/Wire/src/Wire.h"
-#include "Wire.h"
+//#include "Wire.h"
+
 #endif
 
 #define FIFO_APCKET_GLOBAL_SIZE 42
 // for both classes must be in the include path of your project
 //#include "I2Cdev.h"
 #include "MPU6050_6Axis_MotionApps20.h"
-#include "MPU6050_9Axis_MotionApps41.h"
+//#include "/home/vprusa/Arduino/libraries/MPU6050/MPU6050.h"
+//#include "/home/vprusa/Arduino/libraries/MPU6050/MPU6050.cpp"
 
+#include "MPU6050_9Axis_MotionApps41.h"
+//#include "MPU6050_MPU9250_9Axis_MotionApps41.h"
 //#include "MPU6050_9Axis_MotionApps41.h"
 //#include "/home/vprusa/.platformio/lib/i2cdevlib/Arduino/MPU6050/MPU6050.h"
 //#include "MPU6050.h"
@@ -34,6 +38,7 @@ Copyright (c) 2018 Vojtěch Průša
 //#include "Wire.h"
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
 #include "Wire.h"
+//#include "/home/vprusa/.arduino15/packages/arduino/hardware/avr/1.6.23/libraries/Wire/src/Wire.h"
 #endif
 #endif
 
@@ -110,8 +115,8 @@ Copyright (c) 2018 Vojtěch Průša
 
 //#define ARDUHAL_LOG_LEVEL ARDUHAL_LOG_LEVEL_ERROR
 //#define CORE_DEBUG_LEVEL
-#define ARDUHAL_LOG_LEVEL (1)
-#define CORE_DEBUG_LEVEL 
+//#define ARDUHAL_LOG_LEVEL (1)
+//#define CORE_DEBUG_LEVEL 
 
 // uncomment "OUTPUT_TEAPOT" if you want output that matches the
 // format used for the InvenSense teapot demo
@@ -210,10 +215,10 @@ Copyright (c) 2018 Vojtěch Průša
 // (9600 38400 57600 74880 115200 230400 250000 57600 38400 chosen because it is required for Teapot Demo output, but it's
 
 #ifdef LEFT_HAND
-#define MAX_TIME_TO_RESET 50
-#define MIN_TIME_TO_RESET 30
-#define MAX_FIFO_USAGE_FOR_RESET 900
-#define MIN_FIFO_USAGE_FOR_RESET 500
+#define MAX_TIME_TO_RESET 80
+#define MIN_TIME_TO_RESET 20
+#define MAX_FIFO_USAGE_FOR_RESET 400
+#define MIN_FIFO_USAGE_FOR_RESET 250
 #define FIFO_PACKET_SIZE FIFO_APCKET_GLOBAL_SIZE
 #define FIFO_SIZE FIFO_APCKET_GLOBAL_SIZE
 //#define USE_BT
@@ -244,27 +249,47 @@ Copyright (c) 2018 Vojtěch Průša
 #endif
 //#define USE_BT
 
+
+//#define ESP_BT_BAUD 115200
+//#include "BluetoothSerial.h"
+#define MASTER_SERIAL_NAME Serial2
+
+//#if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
+//#error Bluetooth is not enabled! Please run `make menuconfig` to and enable it
+//#endif
+
+//BluetoothSerial btSerial;
+
+#ifdef  ESP32_RIGHT
+
+//#define BT_BAUD 57600
+#define MASTER_SERIAL_NAME Serial2
+#define USB_BAUD 115200
+#define USE_USB
+
+//#define PC_SERIAL_NAME hc05Master
+
+#else
 #ifdef RIGHT_HAND
 //#define USE_BT
 #define USE_USB
 #endif
+
 //#define USE_BT
 
 //#define LIB_SW_SERIAL
-#define LIB_ALT_SW_SERIAL 1
+//#define LIB_ALT_SW_SERIAL 1
 
 // 115200 57600
+
 #ifdef LEFT_HAND
 #define USB_BAUD 57600
 #define BT_BAUD 115200
-#define MASTER_SERIAL_NAME hc05Master
-#define PC_SERIAL_NAME Serial
-#else
-#define USB_BAUD 115200
-//#define BT_BAUD 57600
 #define MASTER_SERIAL_NAME Serial
-//#define PC_SERIAL_NAME hc05Master
+#define PC_SERIAL_NAME Serial
 #endif
+#endif
+// TODO remove so many ifs ...
 
 #ifdef LEFT_HAND
 #ifdef USE_BT_MASTER
@@ -274,6 +299,7 @@ Copyright (c) 2018 Vojtěch Průša
 #ifdef LIB_ALT_SW_SERIAL
 #include <AltSoftSerial.h>
 #endif
+
 
 //#define RX_MASTER 8
 //#define TX_MASTER 9
@@ -286,8 +312,8 @@ SoftwareSerial hc05Master(RX_MASTER, TX_MASTER);
 #ifdef LIB_ALT_SW_SERIAL
 AltSoftSerial hc05Master; //(RX_MASTER, TX_MASTER);
 #endif
-
 #endif
+
 #endif
 
 // MPU control/status vars
@@ -390,19 +416,10 @@ void enableSingleMPU(int SENSORToEnable) {
         }
         #endif
         
-        /*
-        MASTER_SERIAL_NAME.print(SENSORToEnable);
-        MASTER_SERIAL_NAME.print(" "); 
-        MASTER_SERIAL_NAME.print(i);
-        MASTER_SERIAL_NAME.print(" ");
-*/
-        if ( i != SENSORToEnable )//i == 0 || i == 1) //SENSORToEnable)
-        {
-          //  MASTER_SERIAL_NAME.print("H");
+        if ( i != SENSORToEnable ) {
             digitalWrite(selectorOffsettedPin, HIGH);
         }
-       // MASTER_SERIAL_NAME.print(" ");
-       // MASTER_SERIAL_NAME.println(selectorOffsettedPin);
+     
 
     }
 
@@ -441,35 +458,23 @@ void enableSingleMPU(int SENSORToEnable) {
         }
         #endif
         
-        /*
-        MASTER_SERIAL_NAME.print(SENSORToEnable);
-        MASTER_SERIAL_NAME.print(" "); 
-        MASTER_SERIAL_NAME.print(i);
-        MASTER_SERIAL_NAME.print(" ");
-*/
-        if ( i == SENSORToEnable )//i == 0 || i == 1) //SENSORToEnable)
-        {
-            // MASTER_SERIAL_NAME.print("L");
-            digitalWrite(selectorOffsettedPin, LOW);
-            
+        if ( i == SENSORToEnable ) {
+            digitalWrite(selectorOffsettedPin, LOW);     
         }
-       // MASTER_SERIAL_NAME.print(" ");
-       // MASTER_SERIAL_NAME.println(selectorOffsettedPin);
-       
-
     }
-    //Wire.flush();
-    //delay(1);
 }
 
+//#include "soc/soc.h"
+//#include "soc/rtc_cntl_reg.h"
+
 void setup() {
-#ifdef USE_USB
+//    WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
+#ifdef ESP32_RIGHT
     MASTER_SERIAL_NAME.begin(USB_BAUD);
     #ifdef RIGHT_HAND
     while (!MASTER_SERIAL_NAME)
         ; // wait for Leonardo enumeration, others continue immediately
     #endif
-    //Serial.write('');
     MASTER_SERIAL_NAME.println(F("USB up"));
 #endif
     for (int i = FIRST_SENSOR; i <= LAST_SENSOR; i++) {
@@ -520,9 +525,9 @@ void setup() {
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
     Wire.begin();
     //TWBR = 24; // 400kHz I2C clock (200kHz if CPU is 8MHz)
-    Wire.setClock(400000); // 400kHz I2C clock. Comment this line if having compilation difficulties#elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
+    Wire.setClock(200000); // 400kHz I2C clock. Comment this line if having compilation difficulties#elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
 #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
-    Fastwire::setup(400, true);
+    //Fastwire::setup(400, true);
 #endif
 #endif
 // initialize serial communication
@@ -604,7 +609,7 @@ int initMPUAndDMP(int attempt) {
         return 0;
     }
 // initialize device
-#ifdef USE_BTlea
+#ifdef USE_BT
     hc05.println(F("BT: Initializing I2C devices..."));
 #endif
 #ifdef USE_USB
@@ -882,47 +887,19 @@ double q[4];
 uint8_t buffer[16];
     uint16_t qI[4];
 
-void getGyro_Data(MPU9250 * mpuI) {
+void getMPU9250Data(MPU9250 * mpuI) {
     MPU9250 mpu = *mpuI;
-    mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);//, &mx, &my, &mz);
-    //mpu.resetFIFO();
-    //mpu.resetFIFO();
-    //mpu.getRotation(&gx, &gy, &gz);//, &mx, &my, &mz);
-   // mpu.getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
-    //mpu.reset();
-    //mpu.initialize();
-    //I2Cdev::readBytes(0x68, MPU6050_RA_GYRO_XOUT_H, 6, buffer);
-    /*
-    gx = (((int16_t)buffer[0]) << 8) | buffer[1];
-    gy = (((int16_t)buffer[2]) << 8) | buffer[3];
-    gz = (((int16_t)buffer[4]) << 8) | buffer[5];
-    */
+    mpu.getMotion9(&ax, &ay, &az, &gx, &gy, &gz,&mx, &my, &mz);
+
+    // TODO fix
+    // 8192 16384 32768 65536
     Gxyz[0] += (float) gx / (65536) ;
     Gxyz[1] += (float) gy / (65536) ;
     Gxyz[2] += (float) gz / (65536) ;
-    // 8192 16384 32768 65536
-/*
-    Gxyz[0] = gx;//(double) gx * 250 / 32768;
-    Gxyz[1] = gy;//(double) gy * 250 / 32768;
-    Gxyz[2] = gz;//(double) gz * 250 / 32768;
-   */
-    
-
-
-    Serial.println("serialsx");
-    Serial.println(Gxyz[0]);
-    Serial.println(Gxyz[1]);
-    Serial.println(Gxyz[2]);
-
-    Serial.println("serialsz");
-    Serial.println(gx);
-    Serial.println(gy);
-    Serial.println(gz);
 
     float yaw = Gxyz[2];
     float pitch = Gxyz[1];
     float roll = Gxyz[0];
-    // Abbreviations for the various angular functions
     float cy = cos(yaw * 0.5);
     float sy = sin(yaw * 0.5);
     float cp = cos(pitch * 0.5);
@@ -934,45 +911,25 @@ void getGyro_Data(MPU9250 * mpuI) {
     q[1] = cy * cp * sr - sy * sp * cr;
     q[2] = sy * cp * sr + cy * sp * cr;
     q[3] = sy * cp * cr - cy * sp * sr;
-    //return q;
-
-    //qI[] = (uint8_t)q[];
-    // 250 / 32768
-    /*
-    qI[0] = (uint8_t)(q[0]*65536);
-    qI[1] = (uint8_t)(q[1]*65536);
-    qI[2] = (uint8_t)(q[2]*65536);
-    qI[3] = (uint8_t)(q[3]*65536);
-    */
-   /*
-    qI[0] = (uint16_t)(q[0]*16384);
-    qI[1] = (uint16_t)(q[1]*16384);
-    qI[2] = (uint16_t)(q[2]*16384);
-    qI[3] = (uint16_t)(q[3]*16384);
-    */
     qI[0] = (uint16_t)(q[0]*1024);
     qI[1] = (uint16_t)(q[1]*1024);
     qI[2] = (uint16_t)(q[2]*1024);
     qI[3] = (uint16_t)(q[3]*1024);
-/*
-    qI[0] = (uint16_t)(q[0]);
-    qI[1] = (uint16_t)(q[1]);
-    qI[2] = (uint16_t)(q[2]);
-    qI[3] = (uint16_t)(q[3]);
-    */
-    //qI[] =  q[];
-    Serial.println("serials");
-    Serial.println(q[0]);
-    Serial.println(q[1]);
-    Serial.println(q[2]);
-    Serial.println(q[3]);
 
+    uint8_t *fifoBuffer = gyros[selectedSENSOR].fifoBuffer; // FIFO storage buffer*/
 
-    Serial.println("serialsI");
-    Serial.println(qI[0]);
-    Serial.println(qI[1]);
-    Serial.println(qI[2]);
-    Serial.println(qI[3]);
+    fifoBuffer[1] = qI[0] & 0xFF;
+    fifoBuffer[0] = qI[0]>> 8;
+    
+    fifoBuffer[5] = qI[1] & 0xFF;
+    fifoBuffer[4] = qI[1]>> 8;
+    
+    fifoBuffer[9] = qI[2] & 0xFF;
+    fifoBuffer[8] = qI[2] >> 8;
+    
+
+    fifoBuffer[13] = qI[3] & 0xFF;
+    fifoBuffer[12] = qI[3] >> 8;
 }
 
 bool loadDataFromFIFO(int forceLoad = false) {
@@ -986,7 +943,7 @@ bool loadDataFromFIFO(int forceLoad = false) {
             int packetSize = packetSizeS; 
             if (fifoCount >= packetSize && fifoCount <= 1024 && fifoCount != 0 ) {
                 // wait for correct available data length, should be a VERY short wait
-                while (fifoCount >= packetSize/* && _BV(MPU6050_INTERRUPT_DMP_INT_BIT)*/) {
+                while (fifoCount >= packetSize) {
                     mpu.getFIFOBytes(fifoBuffer, packetSize);
                     fifoCount -= packetSize;
                 }
@@ -1003,157 +960,12 @@ bool loadDataFromFIFO(int forceLoad = false) {
         }
     } else {
         MPU9250 mpu = *gyros[selectedSENSOR].mpuM;
-        Serial.println("MPU6050");
         forceLoad = true;
         if(!gyros[selectedSENSOR].hasDataReady || forceLoad) {
-            //getAccel_Data(gyros[selectedSENSOR].mpuM);
-            getGyro_Data(gyros[selectedSENSOR].mpuM);
-            uint8_t *fifoBuffer = gyros[selectedSENSOR].fifoBuffer; // FIFO storage buffer*/
-            
-
-    fifoBuffer[1] = qI[0] & 0xFF;
-    fifoBuffer[0] = qI[0]>> 8;
-    
-    fifoBuffer[5] = qI[1] & 0xFF;
-    fifoBuffer[4] = qI[1]>> 8;
-    
-    fifoBuffer[9] = qI[2] & 0xFF;
-    fifoBuffer[8] = qI[2] >> 8;
-    
-
-    fifoBuffer[13] = qI[3] & 0xFF;
-    fifoBuffer[12] = qI[3] >> 8;
-    //mpu.resetFIFO();
-
-/*
-
-    fifoBuffer[0] = qI[0] & 0xFF;
-    fifoBuffer[1] = qI[0] >> 8;
-    
-    fifoBuffer[4] = qI[1] & 0xFF;
-    fifoBuffer[5] = qI[1] >> 8;
-    
-    fifoBuffer[8] = qI[2] & 0xFF;
-    fifoBuffer[9] = qI[2] >> 8;
-    
-
-    fifoBuffer[12] = qI[3] & 0xFF;
-    fifoBuffer[13] = qI[3] >> 8;
-*/
-/*
-    fifoBuffer[0] = qI[0] & 0xFF;
-    fifoBuffer[1] = qI[0] >> 8;
-    
-    fifoBuffer[4] = qI[1] & 0xFF;
-    fifoBuffer[5] = qI[1] >> 8;
-    
-    fifoBuffer[8] = qI[2] & 0xFF;
-    fifoBuffer[9] = qI[2] >> 8;
-    
-
-    fifoBuffer[12] = qI[3] & 0xFF;
-    fifoBuffer[13] = qI[3] >> 8;
-*/
-
-gyros[selectedSENSOR].hasDataReady=true;
-gyros[selectedSENSOR].alreadySentData=false;
-
-                return true;
-
-            /*
-            fifoBuffer[0] = 1;
-            fifoBuffer[1] = 1;
-            
-            fifoBuffer[4] = gx & 0xFF;
-            fifoBuffer[5] = gx >> 8;
-            
-            fifoBuffer[8] = gy & 0xFF;
-            fifoBuffer[9] = gy >> 8;
-            
-
-            fifoBuffer[12] = gz & 0xFF;
-            fifoBuffer[13] = gz >> 8;
-            */
-
-            /*
-            fifoBuffer[0] = 1;
-            fifoBuffer[1] = 1;
-            
-            fifoBuffer[4] = buffer[0];
-            fifoBuffer[5] = buffer[1];
-            
-            fifoBuffer[8] = buffer[2];
-            fifoBuffer[9] = buffer[3];
-            
-            fifoBuffer[12] = buffer[4];
-            fifoBuffer[13] = buffer[5];*/
-            /*
-            gx = (((int16_t)buffer[0]) << 8) | buffer[1];
-            gy = (((int16_t)buffer[2]) << 8) | buffer[3];
-            gz = (((int16_t)buffer[4]) << 8) | buffer[5];
-            */
-               /* for(int ii = 0;  ii < packetSizeM;  ii++) {
-                    Serial.print(fifoBuffer[ii]);
-                    Serial.print(" ");
-                }
-                Serial.print("OK");
-                gyros[selectedSENSOR].hasDataReady=true;
-            */
-            //fifoBuffer[] = a & 0xFF;
-            //fifoBuffer[] = a >> 8;
-
-            /*
-            packet[2] = selectedSENSOR;
-            packet[3] = fifoBuffer[0];
-            packet[4] = fifoBuffer[1];
-            packet[5] = fifoBuffer[4];
-            packet[6] = fifoBuffer[5];
-            packet[7] = fifoBuffer[8];
-            packet[8] = fifoBuffer[9];
-            packet[9] = fifoBuffer[12];
-            packet[10] = fifoBuffer[13];
-            */
-            /*
-            fifoCount = mpu.getFIFOCount();
-            Serial.print("fifoCount: ");
-            Serial.println(fifoCount);
-            uint8_t *fifoBuffer = gyros[selectedSENSOR].fifoBuffer; // FIFO storage buffer
-            int packetSize = packetSizeM; 
-            if (fifoCount >= packetSize && fifoCount <= 1024 && fifoCount != 0 ) {
-                while (fifoCount >= packetSize) {
-                    mpu.getFIFOBytes(fifoBuffer, packetSize);
-                    fifoCount -= packetSize;
-                }
-                for(int ii = 0;  ii < packetSize;  ii++) {
-                    Serial.print(fifoBuffer[ii]);
-                }
-                Serial.print("OK");
-                gyros[selectedSENSOR].hasDataReady=true;
-                return true;
-            }*/
-            /*
-        MPU9250 mpu = *gyros[selectedSENSOR].mpuM;
-        if(!gyros[selectedSENSOR].hasDataReady || forceLoad){
-            fifoCount = mpu.getFIFOCount();
-            Serial.print("fifoCount:1 ");
-            Serial.println(fifoCount);
-            uint8_t *fifoBuffer = gyros[selectedSENSOR].fifoBuffer; // FIFO storage buffer
-            int packetSize = packetSizeM; 
-            if (fifoCount >= packetSize && fifoCount <= 1024 && fifoCount != 0 ) {
-                // wait for correct available data length, should be a VERY short wait
-                while (fifoCount >= packetSize) {
-                    mpu.getFIFOBytes(fifoBuffer, packetSize);
-                    fifoCount -= packetSize;
-                }
-                for(int ii = 0;  ii < packetSize;  ii++) {
-                    Serial.print(fifoBuffer[ii]);
-                    Serial.print(" ");
-                }
-                // Serial.print("OK");
-                mpu.resetFIFO();
-                gyros[selectedSENSOR].hasDataReady=true;
-                return true;
-            }*/
+            getMPU9250Data(gyros[selectedSENSOR].mpuM);
+            gyros[selectedSENSOR].hasDataReady=true;
+            gyros[selectedSENSOR].alreadySentData=false;
+            return true;
         }
     }
     return false;
@@ -1384,7 +1196,7 @@ void loop() {
 #endif
     automaticFifoReset();
 #ifdef USE_BT_MASTER
-    loadSlaveHandData();
+    //loadSlaveHandData();
 #endif
 
 }

@@ -14,10 +14,10 @@ import java.util.Iterator;
 import cz.gag.recognition.BothHandsGesture;
 import cz.gag.recognition.Sensor;
 import cz.gag.visualization.Button;
-import cz.gag.visualization.GestLineData;
+import cz.gag.visualization.GestDataLine;
 import cz.gag.visualization.HandData;
 import cz.gag.visualization.KeyboardRecorder;
-import cz.gag.visualization.LineData;
+import cz.gag.visualization.DataLine;
 import cz.gag.visualization.Point3D;
 import cz.gag.visualization.RePlayer;
 import processing.core.PApplet;
@@ -982,11 +982,11 @@ public class ProcessingApplet extends PApplet {
                                     aligned = 0;
                                     return;
                                 }
-                                LineData dl = null;
+                                DataLine dl = null;
                                 try {
                                     if (teapotPacket != null) {
                                         if (teapotPacket[0] == '*') {
-                                            dl = new LineData(Calendar.getInstance().getTime(), localQuat, localAcc,
+                                            dl = new DataLine(Calendar.getInstance().getTime(), localQuat, localAcc,
                                                     Sensor.values()[sensor], Hand.LEFT);
                                             // println("Left: " + dl.toString());
                                             if (Configuration.useFilter && (dl.quatO.w > 1 || dl.quatO.x > 1
@@ -998,7 +998,7 @@ public class ProcessingApplet extends PApplet {
                                                 leftHandData.setSensorData(dl);
                                             }
                                         } else if (teapotPacket[0] == '$') {
-                                            dl = new LineData(Calendar.getInstance().getTime(), localQuat, localAcc,
+                                            dl = new DataLine(Calendar.getInstance().getTime(), localQuat, localAcc,
                                                     Sensor.values()[sensor], Hand.RIGHT);
                                             // println("Right: " + dl.toString());
                                             if (Configuration.useFilter && (dl.quatO.w > 1 || dl.quatO.x > 1

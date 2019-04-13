@@ -14,10 +14,10 @@ import cz.gag.recognition.Sensor;
  *  Used in @RePlayer
  *  
  */
-class ReplayLine extends LineData {
+class ReplayDataLine extends DataLine {
     char[] fakeTeapotPacket = new char[21];
 
-    ReplayLine(Date date, float[] quat, Sensor sensor, Hand hand) {
+    ReplayDataLine(Date date, float[] quat, Sensor sensor, Hand hand) {
         super(date, quat, sensor, hand);
 
         // TODO (from times long before men started to use unit tests)

@@ -9,16 +9,16 @@ import java.util.Map;
 
 import cz.gag.common.Hand;
 import cz.gag.visualization.DataFileParser;
-import cz.gag.visualization.GestLineData;
+import cz.gag.visualization.GestDataLine;
 
 public class SensorOnHandGestureI extends SensorOnHandGestureA {
 
-    SensorOnHandGestureI(Hand hand, Sensor sensor, DataFileParser<GestLineData> parser) {
+    SensorOnHandGestureI(Hand hand, Sensor sensor, DataFileParser<GestDataLine> parser) {
         super(hand, sensor, parser);
     }
 
     @Override
-    public float matchesBy(Map<Date, GestLineData> data) {
+    public float matchesBy(Map<Date, GestDataLine> data) {
         // TODO Auto-generated method stub
         return 0;
     }

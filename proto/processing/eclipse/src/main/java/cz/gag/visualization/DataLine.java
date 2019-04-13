@@ -15,7 +15,7 @@ import toxi.geom.Quaternion;
  *         TODO - should also contain smth about MPU90** magnetometer - should
  *         also contain smth about vibration feedback? -> brainstorm
  */
-public class LineData {
+public class DataLine {
     public final Date date;
     public final float[] quat;
     public final Quaternion quatO;
@@ -23,7 +23,7 @@ public class LineData {
     public final Sensor sensor;
     public final Hand hand;
 
-    public LineData(Date date, float[] quat, float[] acc, Sensor sensor, Hand hand) {
+    public DataLine(Date date, float[] quat, float[] acc, Sensor sensor, Hand hand) {
         this.date = date;
         this.quat = quat;
         // TODO check array size == 4
@@ -37,7 +37,7 @@ public class LineData {
         this.sensor = sensor;
     }
 
-    public LineData(Date date, float[] quat, Sensor sensor, Hand hand) {
+    public DataLine(Date date, float[] quat, Sensor sensor, Hand hand) {
         this(date, quat, new float[] { 0, 0, 0 }, sensor, hand);
     }
 

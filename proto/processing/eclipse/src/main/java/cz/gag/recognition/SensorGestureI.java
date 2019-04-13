@@ -6,7 +6,7 @@ package cz.gag.recognition;
 import java.util.Date;
 import java.util.Map;
 
-import cz.gag.visualization.GestLineData;
+import cz.gag.visualization.GestDataLine;
 
 public class SensorGestureI extends SensorGestureA {
 
@@ -21,7 +21,7 @@ public class SensorGestureI extends SensorGestureA {
   
 
     @Override
-    public float matchesBy(Map<Date, GestLineData> data) {
+    public float matchesBy(Map<Date, GestDataLine> data) {
         return 0.5f;
     }
 }

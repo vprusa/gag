@@ -11,7 +11,7 @@ import java.util.Map;
 
 import cz.gag.common.Hand;
 import cz.gag.visualization.DataFileParser;
-import cz.gag.visualization.GestLineData;
+import cz.gag.visualization.GestDataLine;
 
 /**
  * @author Vojtech Prusa
@@ -24,16 +24,16 @@ public abstract class SensorOnHandGestureA implements SensorGesture, HandGesture
     private Sensor sensor;
     private Hand hand;
 
-    private DataFileParser<GestLineData> parser;
+    private DataFileParser<GestDataLine> parser;
 
-    public ArrayList<GestLineData> data;
+    public ArrayList<GestDataLine> data;
 
     SensorOnHandGestureA(Hand hand, Sensor sensor) {
         this.sensor = sensor;
         this.hand = hand;
     }
 
-    SensorOnHandGestureA(Hand hand, Sensor sensor, DataFileParser<GestLineData> parser) {
+    SensorOnHandGestureA(Hand hand, Sensor sensor, DataFileParser<GestDataLine> parser) {
         this(hand, sensor);
         this.parser = parser;
         loadData();
@@ -49,7 +49,7 @@ public abstract class SensorOnHandGestureA implements SensorGesture, HandGesture
     }
 
     @Override
-    public float matchesBy(Map<Date, GestLineData> data) {
+    public float matchesBy(Map<Date, GestDataLine> data) {
         // actually i should read from all values just those related to current
         // sensor...
         // data.
@@ -59,8 +59,8 @@ public abstract class SensorOnHandGestureA implements SensorGesture, HandGesture
     public void loadData() {
         parser.reset();
         System.out.println("Loading ref data");
-        data = new ArrayList<GestLineData>();
-        GestLineData rl = null;
+        data = new ArrayList<GestDataLine>();
+        GestDataLine rl = null;
         while ((rl = parser.parseLine()) != null) {
             if (rl.sensor == sensor && rl.hand == hand) {
                 data.add(rl);

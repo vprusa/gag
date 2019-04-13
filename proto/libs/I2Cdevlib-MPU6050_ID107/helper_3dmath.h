@@ -32,12 +32,15 @@ THE SOFTWARE.
 #ifndef _HELPER_3DMATH_H_
 #define _HELPER_3DMATH_H_
 
-uint8_t min(uint8_t f, uint8_t s){
+#define min(a,b) ((a)<(b)?(a):(b))
+
+/*uint8_t min(uint8_t f, uint8_t s){
     if( f > s){
         return s;
     }
     return f;
 }
+*/
 class Quaternion {
     public:
         float w;
