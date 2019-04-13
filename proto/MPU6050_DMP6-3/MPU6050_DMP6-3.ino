@@ -937,6 +937,8 @@ bool loadDataFromFIFO(int forceLoad = false) {
         MPU6050 mpu = *gyros[selectedSENSOR].mpu;
         if(!gyros[selectedSENSOR].hasDataReady || forceLoad){
             fifoCount = mpu.getFIFOCount();
+           // Serial.print("fifoCount:2 ");
+            ///Serial.println(fifoCount);
             uint8_t *fifoBuffer = gyros[selectedSENSOR].fifoBuffer; // FIFO storage buffer
             int packetSize = packetSizeS; 
             if (fifoCount >= packetSize && fifoCount <= 1024 && fifoCount != 0 ) {
@@ -945,6 +947,13 @@ bool loadDataFromFIFO(int forceLoad = false) {
                     mpu.getFIFOBytes(fifoBuffer, packetSize);
                     fifoCount -= packetSize;
                 }
+                
+                /*for(int ii = 0;  ii < packetSize;  ii++) {
+                    Serial.print(fifoBuffer[ii]);
+                    Serial.print(" ");
+                }
+                Serial.print("OK");
+                //mpu.resetFIFO();*/
                 gyros[selectedSENSOR].hasDataReady=true;
                 return true;
             }

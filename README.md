@@ -54,9 +54,59 @@ If ```java.lang.UnsatisfiedLinkError: jssc.SerialNativeInterface.openPort(Ljava/
 [BT serial](https://unix.stackexchange.com/questions/92255/how-do-i-connect-and-send-data-to-a-bluetooth-serial-port-on-linux)
 
 ### BT commands
-[MLT-BT05-AT](http://denethor.wlu.ca/arduino/MLT-[better one](BT05-AT-commands-TRANSLATED.pdf)
+[old MLT-BT05-AT](http://denethor.wlu.ca/arduino/MLT-BT05-AT-commands-TRANSLATED.pdf)
+[better one BT-06](https://mcuoneclipse.com/2013/06/19/using-the-hc-06-bluetooth-module/)
 
-https://img.banggood.com/file/products/20150104013200BLE-CC41-A_AT%20Command.pdf)
+[also](https://img.banggood.com/file/products/20150104013200BLE-CC41-A_AT%20Command.pdf)
+
+
+```
+AT+HELP
+*************************************************************
+******
+* Command             Description\0x09\0x09\0x09           
+*-------------------------------------------------------------
+---
+* AT                  Check if the command terminal work norma
+lly 
+* AT+DEFAULT          Restore factory default\0x09\0x09\0x09   
+\0x00
+* AT+BAUD             Get/Set baud rate\0x09\0x09           
+* AT+RESET            Software reboot\0x09\0x09\0x09\0x09   
+* AT+ROLE             Get/Set current role.\0x09                  
+ 
+* AT+DISC             Disconnect connection                       
+* AT+ADVEN            Broadcast switch  \0x09\0x09           
+* AT+ADVI             Broadcast interval\0x09\0x09           
+* AT+NINTERVAL        Connection interval                     
+    
+* AT+POWE             Get/Set RF transmit power \0x09\0x09   
+* AT+NAME             Get/Set local device name             
+      
+* AT+LADDR            Get local bluetooth address\0x09\0x09   
+* AT+VERSION          Get firmware, bluetooth, HCI and LMP ver
+sion
+* AT+TYPE             Binding and pairing settings\0x09\0x09   
+* AT+PIN              Get/Set pin code for pairing            
+    
+* AT+UUID             Get/Set system SERVER_UUID .            \0x09
+   
+* AT+CHAR             Get/Set system CHAR_UUID .            \0x09  
+ 
+* AT+INQ              Search from device\0x09\0x09           
+* AT+RSLV             Read the scan list MAC address\0x09\0x09   
+* AT+CONN             Connected scan list device\0x09\0x09   
+* AT+CONA             Connection specified MAC\0x09\0x09           
+* AT+BAND             Binding from device\0x09\0x09           
+* AT+CLRBAND          Cancel binding    \0x09\0x09           
+* AT+GETDCN           Number of scanned list devices\0x09\0x09   
+* AT+SLEEP            Sleep mode \0x09\0x09                   
+* AT+HELP             List all the commands\0x09\0x09           
+* -------------------------------------------------------------
+-- 
+****************************************************************
+**
+```
 
 #### TODO
 

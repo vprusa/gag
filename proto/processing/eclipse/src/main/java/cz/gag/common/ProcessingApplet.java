@@ -225,7 +225,8 @@ public class ProcessingApplet extends PApplet {
                 System.out.println("Started data requester");
                 while (true) {
                     try {
-                        Serial p = null; // portRight;//portLeft;//portRight; // portLeft;
+                        Serial p = (Configuration.forceDataRequest == null ? null
+                                : (Configuration.forceDataRequest == Hand.LEFT ? portLeft : portRight));
                         if (p != null && p.active()) {
                             // portRight.write(new byte[] { '$', (byte) 0x99, (byte) rightHandSensorIndex
                             // });
@@ -760,27 +761,27 @@ public class ProcessingApplet extends PApplet {
                     stroke(255, 255, 255, 50);
 
                     for (Hand hval : Hand.values()) {
-                        for (int i = 1; i < sensorsCount + 1; i++) {
+                        for (int i = 0; i < sensorsCount; i++) {
                             // for(int si = 0; si < refHandsGesture.left.sensoresGestrues.length; si++) {
-                            ArrayList<GestDataLine> data = refHandsGesture.left.sensoresGestrues[i - 1].data;
-                            GestDataLine line = null;
-                            Iterator<GestDataLine> iterator = data.iterator();
+                            ArrayList<GestLineData> data = refHandsGesture.left.sensoresGestrues[i].data;
+                            GestLineData line = null;
+                            Iterator<GestLineData> iterator = data.iterator();
 
                             while (iterator.hasNext() && (line = iterator.next()) != null) {
                                 pushMatrix();
                                 noStroke();
-                                fill(getColorForSensor(i - 1, 20));
+                                fill(getColorForSensor(i, 20));
                                 stroke(color(20, 20, 20, 10));
                                 // stroke(getColorForSensor(i-1,10));
                                 float[] axis = line.quatO.toAxisAngle();
                                 Point3D newP = new Point3D(axis[1] * scale, axis[2] * scale, axis[3] * scale);
 
-                                Iterator<Point3D> it = (hval == Hand.LEFT ? leftHandData : rightHandData).points[i - 1]
-                                        .iterator();
+                                HandData currentHandData = (hval == Hand.LEFT ? leftHandData : rightHandData);
+                                Iterator<Point3D> it = currentHandData.points[i].iterator();
                                 while (it.hasNext()) {
                                     Point3D toCmp = it.next();
                                     if (distanceTo(toCmp, newP) < Configuration.refSensorValueDistanceLimit) {
-                                        stroke(getColorForSensor(i - 1));
+                                        stroke(getColorForSensor(i));
                                     }
                                 }
                                 // Point3D newP = new Point3D(axis[1], axis[2], axis[3]);
@@ -947,7 +948,8 @@ public class ProcessingApplet extends PApplet {
                                 float q1 = ((teapotPacket[5] << 8) | teapotPacket[6]);
                                 float q2 = ((teapotPacket[7] << 8) | teapotPacket[8]);
                                 float q3 = ((teapotPacket[9] << 8) | teapotPacket[10]);
-
+                                System.out.println("T: " + sensor);
+                                System.out.println("q0: " + q0 + " q1 " + q1 + " q2 " + q2 + " q3 " + q3);
                                 /*
                                  * float q0 = ((teapotPacket[4] << 8) | teapotPacket[3]); float q1 =
                                  * ((teapotPacket[6] << 8) | teapotPacket[5]); float q2 = ((teapotPacket[8] <<
@@ -1101,11 +1103,11 @@ public class ProcessingApplet extends PApplet {
 
         }
         if (keyCode == 'L') {
-            //printCamera();
+            // printCamera();
             // camera(1, 0.3f, 1, 0, 0, 0, 1, 1, 0);
         }
         if (keyCode == 'R') {
-            //printCamera();
+            // printCamera();
             // camera(-0.1f, 0.3f, 1f, 0, 0, 0, 1, 1, 0f);
         }
 
