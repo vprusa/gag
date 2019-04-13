@@ -32,7 +32,7 @@ import cz.gag.recognition.Sensor;
  *        methods in given context. TODO .. fix constructors
  * 
  */
-public class DataFileParser<T extends LineData> {
+public class DataFileParser<T extends DataLine> {
     FileReader fr;
     BufferedReader br;
 
@@ -95,14 +95,14 @@ public class DataFileParser<T extends LineData> {
                  */
                 // System.out.println("Return Type: " + c.getName());
                 if (lineDataClass != null) {
-                    if (lineDataClass.equals(ReplayLine.class)) {
-                        return (T) new ReplayLine(fakeDate, fakequaternionODataArr, Sensor.values()[sensor], thisHand);
-                    } else if (lineDataClass.equals(GestLineData.class)) {
-                        return (T) new GestLineData(fakeDate, fakequaternionODataArr, Sensor.values()[sensor],
+                    if (lineDataClass.equals(ReplayDataLine.class)) {
+                        return (T) new ReplayDataLine(fakeDate, fakequaternionODataArr, Sensor.values()[sensor], thisHand);
+                    } else if (lineDataClass.equals(GestDataLine.class)) {
+                        return (T) new GestDataLine(fakeDate, fakequaternionODataArr, Sensor.values()[sensor],
                                 thisHand);
                     }
                 }
-                return (T) new LineData(fakeDate, fakequaternionODataArr, Sensor.values()[sensor], thisHand);
+                return (T) new DataLine(fakeDate, fakequaternionODataArr, Sensor.values()[sensor], thisHand);
 
                 // return new (fakeDate, fakequaternionODataArr, Sensor.values()[sensor],
                 // thisHand);

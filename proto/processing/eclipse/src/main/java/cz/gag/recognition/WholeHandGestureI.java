@@ -7,17 +7,17 @@ import java.util.Map;
 
 import cz.gag.common.Hand;
 import cz.gag.visualization.DataFileParser;
-import cz.gag.visualization.GestLineData;
+import cz.gag.visualization.GestDataLine;
 import toxi.geom.Quaternion;
 
 public class WholeHandGestureI extends HandGestureA {
 
     public SensorOnHandGestureI[] sensoresGestrues = new SensorOnHandGestureI[Sensor.values().length];
-    private DataFileParser<GestLineData> parser;
+    private DataFileParser<GestDataLine> parser;
 
     WholeHandGestureI(Hand hand, String file) {
         super(hand);
-        parser = new DataFileParser(file, GestLineData.class);  
+        parser = new DataFileParser(file, GestDataLine.class);  
         for (int i = 0; i < sensoresGestrues.length; i++) {
             sensoresGestrues[i] = new SensorOnHandGestureI(hand, Sensor.values()[i], parser);
         }
@@ -31,7 +31,7 @@ public class WholeHandGestureI extends HandGestureA {
      * @see ProcessingApplet.Basic.Gesture#matchesBy(java.util.HashMap)
      */
     @Override
-    public float matchesBy(Map<Date, GestLineData> data) {
+    public float matchesBy(Map<Date, GestDataLine> data) {
         // because I have not used lambda in some time..
         // for (SensorOnHandGestureI sensorGesture : sensoresGestrues) {
         // float sensorMatch = sensorGesture.matches(data);

@@ -7,7 +7,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-import cz.gag.visualization.GestLineData;
+import cz.gag.visualization.GestDataLine;
 import toxi.geom.Quaternion;
 
 public interface Gesture {
@@ -21,7 +21,7 @@ public interface Gesture {
      * @param data
      * @return
      */
-    float matchesBy(Map<Date, GestLineData> data);
+    float matchesBy(Map<Date, GestDataLine> data);
 
     /**
      * If matches gesture
@@ -29,7 +29,7 @@ public interface Gesture {
      * @param data
      * @return
      */
-    default boolean matches(Map<Date, GestLineData> data) {
+    default boolean matches(Map<Date, GestDataLine> data) {
         return matchesBy(data) > getAllowedMatch();
     }
 

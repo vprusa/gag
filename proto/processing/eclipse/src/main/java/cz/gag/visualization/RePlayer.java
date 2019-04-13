@@ -14,17 +14,17 @@ import cz.gag.common.ProcessingApplet;
  * 
  *         This class instance replays data to view
  */
-public class RePlayer extends DataFileParser<ReplayLine> implements Runnable {
+public class RePlayer extends DataFileParser<ReplayDataLine> implements Runnable {
 
     public RePlayer(String file) {
-        super(file, ReplayLine.class);
+        super(file, ReplayDataLine.class);
     }
 
     @Override
     public void run() {
         System.out.println("Player running");
-        ReplayLine flNew = null;
-        ReplayLine flOld = null;
+        ReplayDataLine flNew = null;
+        ReplayDataLine flOld = null;
 
         while (true) {
             if (Configuration.paused) {
@@ -35,7 +35,7 @@ public class RePlayer extends DataFileParser<ReplayLine> implements Runnable {
                 }
                 continue;
             }
-            flNew = (ReplayLine) parseLine();
+            flNew = (ReplayDataLine) parseLine();
 
             if (flNew == null) {
                 br = new BufferedReader(fr);

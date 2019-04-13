@@ -1,6 +1,7 @@
 {
-    "board": "esp32:esp32:esp32wrover",
-    "configuration": "PartitionScheme=default,FlashMode=qio,FlashFreq=80,UploadSpeed=921600,DebugLevel=none",
+    "board": "arduino:avr:pro",
+    "configuration": "cpu=8MHzatmega328",
     "sketch": "MPU6050_DMP6-3.ino",
-    "port": "/dev/ttyUSB0"
+    "port": "/dev/ttyUSB0",
+    "programmer": "AVR ISP"
 }

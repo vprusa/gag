@@ -14,9 +14,9 @@ import cz.gag.recognition.Sensor;
  * Used in gesture recognition to as one record in gesture
  * TODO fix access to variables across inheritance
  */
-public class GestLineData extends LineData {
+public class GestDataLine extends DataLine {
 
-    public GestLineData(Date date, float[] quat, Sensor sensor, Hand hand) {
+    public GestDataLine(Date date, float[] quat, Sensor sensor, Hand hand) {
         super(date, quat, null, sensor, hand);
     }
     

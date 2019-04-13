@@ -6,7 +6,7 @@ package cz.gag.common;
 import java.io.File;
 
 import cz.gag.visualization.DataFileParser;
-import cz.gag.visualization.GestLineData;
+import cz.gag.visualization.GestDataLine;
 
 /**
  * @author Vojtech Prusa, Lukrecia Mertova
@@ -25,7 +25,7 @@ import cz.gag.visualization.GestLineData;
  *         0.56225586 0.0 0.0 0.0
  *
  */
-public class RecordedDataFilter extends DataFileParser<GestLineData> {
+public class RecordedDataFilter extends DataFileParser<GestDataLine> {
 
     public static void main(String... args) {
         if (args.length > 1 && (new File(args[1])).exists()) {
@@ -52,7 +52,7 @@ public class RecordedDataFilter extends DataFileParser<GestLineData> {
         // 1. can consume whatever amount of ram
         // 2. should not load everything in memory at once but somehow store just last n
         // lines at most... for future real-time comparing? idk here
-        GestLineData line = null;
+        GestDataLine line = null;
         while ((line = this.parseLine()) != null) {
             // TODO Lukrecias magic
         }
