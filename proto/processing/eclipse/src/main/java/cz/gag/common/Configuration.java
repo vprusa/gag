@@ -10,6 +10,9 @@ import java.util.Date;
 
 public class Configuration {
 
+    public static final Hand forceDataRequest = (System.getProperty("forceDataRequest") == null ? null
+            : (System.getProperty("forceDataRequest").matches("left") ? Hand.LEFT : Hand.RIGHT));
+
     static public boolean logToFile = System.getProperty("logToFile") == null ? true
             : Boolean.valueOf(System.getProperty("logToFile"));
 
@@ -36,7 +39,7 @@ public class Configuration {
     // static String portNameLeft = prefixPath + deviceLeft;
     // static int baudRateLeft = 115200; // 38400 9600 115200 57600
 
-    static public String portNameLeft = System.getProperty("portNameLeft",prefixPath + deviceLeft);
+    static public String portNameLeft = System.getProperty("portNameLeft", prefixPath + deviceLeft);
     static public int baudRateLeft = System.getProperty("baudRateLeft") == null ? 115200 // 115200 38400
             : Integer.valueOf(System.getProperty("baudRateLeft"));
 
@@ -64,7 +67,7 @@ public class Configuration {
 
     // Print what date is today!
     // System.out.println("Report Date: " + reportDate);
-
+    
     static public String outputFile = "output-" + gestureName + "-" + deviceRight + "-{date}.log";
 
     static public boolean showGlobesDots = System.getProperty("showGlobesDots") == null ? false
@@ -73,12 +76,12 @@ public class Configuration {
             : Boolean.valueOf(System.getProperty("showGlobesBody"));
     static public boolean showRefHandsSensorValues = System.getProperty("showRefBodies") == null ? false
             : Boolean.valueOf(System.getProperty("showRefBodies"));
-    
+
     static public boolean showGlobesLines = System.getProperty("showGlobesLines") == null ? false
             : Boolean.valueOf(System.getProperty("showGlobesLines"));
-    static public float globesRotationCoeficientX = System.getProperty("globesRotationCoeficientX") == null ? 3.2f//1.0f
+    static public float globesRotationCoeficientX = System.getProperty("globesRotationCoeficientX") == null ? 3.2f// 1.0f
             : Float.valueOf(System.getProperty("globesRotationCoeficientX"));
-    static public float globesRotationCoeficientY = System.getProperty("globesRotationCoeficientY") == null ? -0.5f//1.0f
+    static public float globesRotationCoeficientY = System.getProperty("globesRotationCoeficientY") == null ? -0.5f// 1.0f
             : Float.valueOf(System.getProperty("showGlobesBody"));
 
     static public boolean useFilter = System.getProperty("useFilter") == null ? true
@@ -88,6 +91,6 @@ public class Configuration {
             : Integer.valueOf(System.getProperty("dotsKeepN"));
 
     static public int refSensorValueDistanceLimit = 50;
-    
+
     static public ProcessingApplet app;
 }

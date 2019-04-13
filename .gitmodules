@@ -1,3 +1,6 @@
 [submodule "proto/esp32/arduino-esp32"]
 	path = proto/esp32/arduino-esp32
 	url = https://github.com/espressif/arduino-esp32
+[submodule "gag-web"]
+	path = gag-web
+	url = https://gitlab.com/vprusa/gag-web
