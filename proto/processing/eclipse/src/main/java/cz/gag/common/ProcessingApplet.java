@@ -948,7 +948,8 @@ public class ProcessingApplet extends PApplet {
                                 float q1 = ((teapotPacket[5] << 8) | teapotPacket[6]);
                                 float q2 = ((teapotPacket[7] << 8) | teapotPacket[8]);
                                 float q3 = ((teapotPacket[9] << 8) | teapotPacket[10]);
-
+                                System.out.println("T: " + sensor);
+                                System.out.println("q0: " + q0 + " q1 " + q1 + " q2 " + q2 + " q3 " + q3);
                                 /*
                                  * float q0 = ((teapotPacket[4] << 8) | teapotPacket[3]); float q1 =
                                  * ((teapotPacket[6] << 8) | teapotPacket[5]); float q2 = ((teapotPacket[8] <<
