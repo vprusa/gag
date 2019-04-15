@@ -40,7 +40,7 @@ import cz.gag.visualization.GestDataLine;
  *         contains values reliable considering variables name.. rename it?
  *
  */
-public class RecordedDataFilter extends DataFileParser<GestLineData> {
+public class RecordedDataFilter extends DataFileParser<GestDataLine> {
     // TODO add class variables for filtering data ... do not pass them via method
     // parameters ...
     public final static Logger log = Logger.getLogger(RecordedDataFilter.class.getSimpleName());
@@ -55,7 +55,7 @@ public class RecordedDataFilter extends DataFileParser<GestLineData> {
     }
 
     public RecordedDataFilter(String file) {
-        super(file, GestLineData.class);
+        super(file, GestDataLine.class);
     }
 
     class HistoryArrayList<T> extends ArrayList<T> {
@@ -79,52 +79,52 @@ public class RecordedDataFilter extends DataFileParser<GestLineData> {
 
         int historyCountPerSensorOnHand = 25;
 
-        public Map<Hand, Map<Sensor, List<GestLineData>>> lastNDataOfEachSensorOfHand = new HashMap<Hand, Map<Sensor, List<GestLineData>>>();
+        public Map<Hand, Map<Sensor, List<GestDataLine>>> lastNDataOfEachSensorOfHand = new HashMap<Hand, Map<Sensor, List<GestDataLine>>>();
 
-        public Map<Hand, Map<Sensor, GestLineData>> lastFilteredDataOfEachSensorOfHand = new HashMap<Hand, Map<Sensor, GestLineData>>();
+        public Map<Hand, Map<Sensor, GestDataLine>> lastFilteredDataOfEachSensorOfHand = new HashMap<Hand, Map<Sensor, GestDataLine>>();
 
         public BothHandsWrapper(int historyCountPerSensorOnHand) {
             this.historyCountPerSensorOnHand = historyCountPerSensorOnHand;
             for (Hand h : Hand.values()) {
-                HashMap<Sensor, List<GestLineData>> lastNDataOfEachSensor = new HashMap<Sensor, List<GestLineData>>();
+                HashMap<Sensor, List<GestDataLine>> lastNDataOfEachSensor = new HashMap<Sensor, List<GestDataLine>>();
                 lastNDataOfEachSensorOfHand.put(h, lastNDataOfEachSensor);
 
-                HashMap<Sensor, GestLineData> lastFilteredDataOfEachSensor = new HashMap<Sensor, GestLineData>();
+                HashMap<Sensor, GestDataLine> lastFilteredDataOfEachSensor = new HashMap<Sensor, GestDataLine>();
                 lastFilteredDataOfEachSensorOfHand.put(h, lastFilteredDataOfEachSensor);
 
                 for (Sensor s : Sensor.values()) {
-                    // Map<Sensor,List<GestLineData>>
-                    lastNDataOfEachSensor.put(s, new HistoryArrayList<GestLineData>(historyCountPerSensorOnHand));
+                    // Map<Sensor,List<GestDataLine>>
+                    lastNDataOfEachSensor.put(s, new HistoryArrayList<GestDataLine>(historyCountPerSensorOnHand));
                     lastFilteredDataOfEachSensor.put(s, null);
                 }
             }
         }
 
-        public void add(GestLineData line) {
+        public void add(GestDataLine line) {
             lastNDataOfEachSensorOfHand.get(line.hand).get(line.sensor).add(line);
         }
 
-        public GestLineData getTop(Hand h, Sensor s) {
+        public GestDataLine getTop(Hand h, Sensor s) {
             return get(h, s, 0);
         }
 
-        public GestLineData get(Hand h, Sensor s, int i) {
+        public GestDataLine get(Hand h, Sensor s, int i) {
             int size = lastNDataOfEachSensorOfHand.get(h).get(s).size();
             if (i >= 0 && size > i)
                 return lastNDataOfEachSensorOfHand.get(h).get(s).get(size - 1 - i);
             return null;
         }
 
-        public GestLineData getLastFiltered(Hand h, Sensor s) {
+        public GestDataLine getLastFiltered(Hand h, Sensor s) {
             return bhw.lastFilteredDataOfEachSensorOfHand.get(h).get(s);
         }
 
-        public void setLastFiltered(GestLineData line) {
+        public void setLastFiltered(GestDataLine line) {
             lastFilteredDataOfEachSensorOfHand.get(line.hand).put(line.sensor, line);
         }
     }
 
-    List<GestLineData> filteredData = null;
+    List<GestDataLine> filteredData = null;
     BothHandsWrapper bhw = null;
 
     /**
@@ -134,8 +134,8 @@ public class RecordedDataFilter extends DataFileParser<GestLineData> {
      */
     public void filter(float samplesPerSensorPerSecond, boolean findEdges /* parameters */) {
         // TODO Lukrecias magic
-        filteredData = new ArrayList<GestLineData>();
-        // assuming that GestLineData time has +- equal distribution rate per second it
+        filteredData = new ArrayList<GestDataLine>();
+        // assuming that GestDataLine time has +- equal distribution rate per second it
         // sould be enough to multiple samplesPerSensorPerSecond with constant derived
         // from this rate ... g.e. 25 * 1 where 1 is sensor?
         bhw = new BothHandsWrapper((int) samplesPerSensorPerSecond * 2);
@@ -157,9 +157,9 @@ public class RecordedDataFilter extends DataFileParser<GestLineData> {
         int i = 1;
     }
 
-    private boolean isLineValid(GestLineData line, float samplesPerSensorPerSecond, boolean findEdges) {
+    private boolean isLineValid(GestDataLine line, float samplesPerSensorPerSecond, boolean findEdges) {
         // check if time matches filtered samples rate per sensor on hand
-        GestLineData prevLine = bhw.getLastFiltered(line.hand, line.sensor);
+        GestDataLine prevLine = bhw.getLastFiltered(line.hand, line.sensor);
         long timeToSkip = (long) (1000.0f * samplesPerSensorPerSecond);
         if (prevLine == null) {
             return true;
@@ -197,7 +197,7 @@ public class RecordedDataFilter extends DataFileParser<GestLineData> {
         FileWriter fr = new FileWriter(file, append);
         BufferedWriter br = new BufferedWriter(fr);
 
-        Iterator<GestLineData> iter = filteredData.iterator();
+        Iterator<GestDataLine> iter = filteredData.iterator();
         while (iter.hasNext()) {
             br.write(iter.next().toFileString() + (iter.hasNext() ? '\n' : ""));
         }
