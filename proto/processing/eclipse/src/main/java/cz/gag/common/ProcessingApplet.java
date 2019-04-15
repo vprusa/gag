@@ -763,9 +763,9 @@ public class ProcessingApplet extends PApplet {
                     for (Hand hval : Hand.values()) {
                         for (int i = 0; i < sensorsCount; i++) {
                             // for(int si = 0; si < refHandsGesture.left.sensoresGestrues.length; si++) {
-                            ArrayList<GestLineData> data = refHandsGesture.left.sensoresGestrues[i].data;
-                            GestLineData line = null;
-                            Iterator<GestLineData> iterator = data.iterator();
+                            ArrayList<GestDataLine> data = refHandsGesture.left.sensoresGestrues[i].data;
+                            GestDataLine line = null;
+                            Iterator<GestDataLine> iterator = data.iterator();
 
                             while (iterator.hasNext() && (line = iterator.next()) != null) {
                                 pushMatrix();
