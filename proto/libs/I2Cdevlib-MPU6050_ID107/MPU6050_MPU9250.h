@@ -437,6 +437,8 @@ class MPU6050_MPU9250 {
     public:
         MPU6050_MPU9250(uint8_t address=MPU6050_MPU9250_DEFAULT_ADDRESS);
 
+        bool isMPU9250 = false;
+        
         void initialize();
         bool testConnection();
 

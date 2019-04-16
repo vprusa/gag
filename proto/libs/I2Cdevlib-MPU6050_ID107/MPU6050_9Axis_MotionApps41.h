@@ -40,8 +40,10 @@ THE SOFTWARE.
 #define MPU9250_INCLUDE_DMP_MOTIONAPPS41
 
 #include "MPU9250.h"
-#include <avr/pgmspace.h>
 
+#ifndef ESP32_RIGHT
+#include <avr/pgmspace.h>
+#endif
 
     // Teensy 3.0 library conditional PROGMEM code from Paul Stoffregen
     #ifdef __PGMSPACE_H_
