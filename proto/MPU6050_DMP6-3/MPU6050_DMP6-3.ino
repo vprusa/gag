@@ -5,7 +5,7 @@ Copyright (c) 2018 Vojtěch Průša
 // Based on example of MPU6050 from https://github.com/jrowberg/i2cdevlib
 // from 6/21/2012 by Jeff Rowberg <jeff@rowberg.net>
 // 
-//#define ESP32_RIGHT 1// master to left, slave to pc
+#define ESP32_RIGHT 1// master to left, slave to pc
 
 
 #ifdef ESP32_RIGHT
@@ -252,7 +252,7 @@ Copyright (c) 2018 Vojtěch Průša
 
 //#define ESP_BT_BAUD 115200
 //#include "BluetoothSerial.h"
-#define MASTER_SERIAL_NAME Serial2
+//#define MASTER_SERIAL_NAME Serial1
 
 //#if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
 //#error Bluetooth is not enabled! Please run `make menuconfig` to and enable it
@@ -263,7 +263,7 @@ Copyright (c) 2018 Vojtěch Průša
 #ifdef  ESP32_RIGHT
 
 //#define BT_BAUD 57600
-#define MASTER_SERIAL_NAME Serial2
+#define MASTER_SERIAL_NAME Serial
 #define USB_BAUD 115200
 #define USE_USB
 
