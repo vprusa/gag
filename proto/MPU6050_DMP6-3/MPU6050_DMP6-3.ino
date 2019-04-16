@@ -7,8 +7,8 @@ Copyright (c) 2018 Vojtěch Průša
 // 
 #define ESP32_RIGHT 1// master to left, slave to pc
 
-
 #ifdef ESP32_RIGHT
+#define USE_DISPLAY 1
 //#include "/home/vprusa/.arduino15/packages/esp32/hardware/esp32/1.0.1/libraries/Wire/src/Wire.h"
 //#include "Wire.h"
 
@@ -17,12 +17,12 @@ Copyright (c) 2018 Vojtěch Průša
 #define FIFO_APCKET_GLOBAL_SIZE 42
 // for both classes must be in the include path of your project
 //#include "I2Cdev.h"
-#include "MPU6050_6Axis_MotionApps20.h"
+//#include "MPU6050_6Axis_MotionApps20.h"
 //#include "/home/vprusa/Arduino/libraries/MPU6050/MPU6050.h"
 //#include "/home/vprusa/Arduino/libraries/MPU6050/MPU6050.cpp"
 
-#include "MPU6050_9Axis_MotionApps41.h"
-//#include "MPU6050_MPU9250_9Axis_MotionApps41.h"
+//#include "MPU6050_9Axis_MotionApps41.h"
+#include "MPU6050_MPU9250_9Axis_MotionApps41.h"
 //#include "MPU6050_9Axis_MotionApps41.h"
 //#include "/home/vprusa/.platformio/lib/i2cdevlib/Arduino/MPU6050/MPU6050.h"
 //#include "MPU6050.h"
@@ -358,9 +358,10 @@ struct Gyro
 {
     uint8_t fifoBuffer[FIFO_SIZE];                                      // FIFO storage buffer
     int AD0_pin;
-    MPU6050 *mpu;
+    //MPU6050 *mpu;
     //MPU6050 *mpuM;
-    MPU9250 *mpuM;
+    //MPU9250 *mpuM;
+    MPU6050_MPU9250 *mpu;
     // orientation/motion vars
     Quaternion q;        // [w, x, y, z]         quaternion container
     bool dmpReady = false; // set true if DMP init was successful
@@ -464,8 +465,35 @@ void enableSingleMPU(int SENSORToEnable) {
     }
 }
 
-//#include "soc/soc.h"
-//#include "soc/rtc_cntl_reg.h"
+#ifdef USE_DISPLAY
+
+//#include <TimeLib.h>
+
+// Include the correct display library
+// For a connection via I2C using Wire include
+//#include <Wire.h>  // Only needed for Arduino 1.6.5 and earlier
+#include "SSD1306Wire.h" // legacy include: `#include "SSD1306.h"`
+// or #include "SH1106Wire.h", legacy include: `#include "SH1106.h"`
+// For a connection via I2C using brzo_i2c (must be installed) include
+// #include <brzo_i2c.h> // Only needed for Arduino 1.6.5 and earlier
+// #include "SSD1306Brzo.h"
+// #include "SH1106Brzo.h"
+// For a connection via SPI include
+// #include <SPI.h> // Only needed for Arduino 1.6.5 and earlier
+// #include "SSD1306Spi.h"
+// #include "SH1106SPi.h"
+
+// Include the UI lib
+//#include "OLEDDisplay.h"
+//#include "OLEDDisplayUi.h"
+
+
+SSD1306Wire  display(0x3c, 18, 19);
+// SH1106 display(0x3c, D3, D5);
+
+//OLEDDisplayUi ui ( &display );
+#endif
+
 
 void setup() {
 //    WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
@@ -476,6 +504,25 @@ void setup() {
         ; // wait for Leonardo enumeration, others continue immediately
     #endif
     MASTER_SERIAL_NAME.println(F("USB up"));
+ 
+
+#ifdef USE_DISPLAY
+
+  display.init();
+  int lineHeight = 10;
+  // TODO for .. split strings by 26 chars per line
+  display.drawString(0, 0, "Lorem ipsum dolor sit amet,");
+  display.drawString(0, lineHeight, "consectetur adipiscing elit.");
+  display.drawString(0, lineHeight*2, "Etiam interd mauris libero");
+  display.drawString(0, lineHeight*3, "vel tempus turpis aliquet.");
+  display.drawString(0, lineHeight*4, "Nunc pretium gravida est,");
+  display.drawString(0, lineHeight*5, "cras consequat elementum. ");
+  display.drawString(0, lineHeight*6, "Vulputate ultrices erat justo.");
+  //display.drawString(0, lineHeight*7, "Morbi facilisis consequat.");
+  display.display();
+ 
+#endif
+
 #endif
     for (int i = FIRST_SENSOR; i <= LAST_SENSOR; i++) {
         int SENSORToEnable = SENSOR_PIN_OFFSET + i;
@@ -550,13 +597,15 @@ void setup() {
         enableSingleMPU(selectedSENSOR);
         if(i == HP) {
             //gyros[selectedSENSOR].mpuM = new MPU6050(MPU6050_ADDRESS_AD0_HIGH); // MPU6050_ADDRESS_AD0_LOW / MPU6050_ADDRESS_AD0_HIGH
-            gyros[selectedSENSOR].mpuM = new MPU9250(MPU6050_ADDRESS_AD0_LOW); // MPU6050_ADDRESS_AD0_LOW / MPU6050_ADDRESS_AD0_HIGH
+            //gyros[selectedSENSOR].mpuM = new MPU9250(MPU6050_ADDRESS_AD0_LOW); // MPU6050_ADDRESS_AD0_LOW / MPU6050_ADDRESS_AD0_HIGH
             //gyros[selectedSENSOR].mpuM->isMPU6050 = true;
+            gyros[selectedSENSOR].mpu = new MPU6050_MPU9250(MPU6050_MPU9250_ADDRESS_AD0_LOW);//   0x68 / 0x69
+            gyros[selectedSENSOR].mpu->isMPU9250 = true;
         } else {
             //gyros[selectedSENSOR].mpu = new MPU6050(MPU6050_ADDRESS_AD0_HIGH);//   0x68 / 0x69
-            gyros[selectedSENSOR].mpu = new MPU6050(MPU6050_ADDRESS_AD0_LOW);//   0x68 / 0x69
-          //  gyros[selectedSENSOR].mpu->isMPU6050 = true;
-
+            //gyros[selectedSENSOR].mpu = new MPU6050(MPU6050_ADDRESS_AD0_LOW);//   0x68 / 0x69
+            //gyros[selectedSENSOR].mpu->isMPU6050 = true;
+            gyros[selectedSENSOR].mpu = new MPU6050_MPU9250(MPU6050_MPU9250_ADDRESS_AD0_LOW);//   0x68 / 0x69
         }
 
         int selectorOffsettedPin = SENSOR_PIN_OFFSET + i;
@@ -616,7 +665,8 @@ int initMPUAndDMP(int attempt) {
     MASTER_SERIAL_NAME.println(F("USB: Initializing I2C devices..."));
 #endif
     if(selectedSENSOR == HP) {
-        MPU9250 mpu = *gyros[selectedSENSOR].mpuM;
+        //MPU9250 mpu = *gyros[selectedSENSOR].mpuM;
+        MPU6050_MPU9250 mpu = *gyros[selectedSENSOR].mpu;
         //mpu.initialize();
         mpu.initialize();
 
@@ -652,7 +702,7 @@ int initMPUAndDMP(int attempt) {
             MASTER_SERIAL_NAME.println(selectedSENSOR);
             mpu.setDMPEnabled(true);
 
-            // set our DMP Ready flag so the main loop() function knows it's okay to use it
+            // set our DMP Ready flag so the main loop( ) function knows it's okay to use it
             MASTER_SERIAL_NAME.println(F("DMP ready! Getting packet size..."));
             gyros[selectedSENSOR].dmpReady = true;
             MASTER_SERIAL_NAME.print(F("packet size: "));
@@ -680,7 +730,8 @@ int initMPUAndDMP(int attempt) {
 
 
     } else {
-        MPU6050 mpu = *gyros[selectedSENSOR].mpu;
+        //MPU6050 mpu = *gyros[selectedSENSOR].mpu;
+        MPU6050_MPU9250 mpu = *gyros[selectedSENSOR].mpu;
         mpu.initialize();
 
     #ifdef USE_USB
@@ -713,7 +764,7 @@ int initMPUAndDMP(int attempt) {
             hc05.println(selectedSENSOR);
             mpu.setDMPEnabled(true);
 
-            // set our DMP Ready flag so the main loop() function knows it's okay to use it
+            // set our DMP Ready flag so the main loop( ) function knows it's okay to use it
             hc05.println(F("DMP ready! Getting packet size..."));
             gyros[selectedSENSOR].dmpReady = true;
             // get expected DMP packet size for later comparison
@@ -726,7 +777,7 @@ int initMPUAndDMP(int attempt) {
             MASTER_SERIAL_NAME.println(selectedSENSOR);
             mpu.setDMPEnabled(true);
 
-            // set our DMP Ready flag so the main loop() function knows it's okay to use it
+            // set our DMP Ready flag so the main loop( ) function knows it's okay to use it
             MASTER_SERIAL_NAME.println(F("DMP ready! Getting packet size..."));
             gyros[selectedSENSOR].dmpReady = true;
             MASTER_SERIAL_NAME.print(F("packet size: "));
@@ -771,7 +822,9 @@ void resetMPUs(int around) {
     // reset n after (TODO without current?)
     if (around > 0) {
         for (int i = 0; i < around; i++) {
-            MPU6050 mpu = *gyros[selectedSENSOR].mpu;
+            //MPU6050 mpu = *gyros[selectedSENSOR].mpu;
+            MPU6050_MPU9250 mpu = *gyros[selectedSENSOR].mpu;
+
             mpu.resetFIFO();
             setOrRotateSelectedGyro(-1);
         }
@@ -789,7 +842,8 @@ void resetMPUs(int around) {
             setOrRotateSelectedGyro(-1);
         }
         for (; i < SENSORS_COUNT; i++) {
-            MPU6050 mpu = *gyros[selectedSENSOR].mpu;
+            //MPU6050 mpu = *gyros[selectedSENSOR].mpu;
+            MPU6050_MPU9250 mpu = *gyros[selectedSENSOR].mpu;
             mpu.resetFIFO();
             setOrRotateSelectedGyro(-1);
         }
@@ -808,7 +862,9 @@ void automaticFifoReset() {
         ) {
             int selectedNow = setOrRotateSelectedGyro(i);
             if(selectedNow != 5){
-                MPU6050 mpu = *gyros[selectedNow].mpu;
+                //MPU6050 mpu = *gyros[selectedNow].mpu;
+                MPU6050_MPU9250 mpu = *gyros[selectedSENSOR].mpu;
+
                 int localFifoCount = mpu.getFIFOCount();
                 if(( localFifoCount >= MAX_FIFO_USAGE_FOR_RESET || 
                     ( gyros[i].lastResetTime + MAX_TIME_TO_RESET < now && 
@@ -817,7 +873,9 @@ void automaticFifoReset() {
                     gyros[selectedNow].lastResetTime = now;
                 }
             } else{
-                MPU9250 mpu = *gyros[selectedNow].mpuM;
+                //MPU9250 mpu = *gyros[selectedNow].mpuM;
+                MPU6050_MPU9250 mpu = *gyros[selectedSENSOR].mpu;
+
                 int localFifoCount = mpu.getFIFOCount();
                 if(( localFifoCount >= MAX_FIFO_USAGE_FOR_RESET || 
                     ( gyros[i].lastResetTime + MAX_TIME_TO_RESET < now && 
@@ -864,6 +922,12 @@ volatile float time2, timePrev2;
 
 uint8_t buffer_m[6];
 
+/*
+int16_t ax, ay, az;
+int16_t gx, gy, gz;
+int16_t   mx, my, mz;
+*/
+
 int16_t ax, ay, az;
 int16_t gx, gy, gz;
 int16_t   mx, my, mz;
@@ -875,47 +939,87 @@ float Axyz[3];
 float Gxyz[3];
 float Mxyz[3];
 
-void getAccel_Data(MPU6050 * mpuI) {
-    MPU6050 mpu = *mpuI;
-    mpu.getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
+//void getAccel_Data(MPU6050 * mpuI) {
+    /*
+void getAccel_Data(MPU6050_MPU9250 * mpu) {
+    //MPU6050 mpu = *mpuI;
+   // MPU6050_MPU9250 mpu = *mpu;
+    mpu->getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
     Axyz[0] = (double) ax / 16384;
     Axyz[1] = (double) ay / 16384;
     Axyz[2] = (double) az / 16384;
-}
+}*/
 
-double q[4];
+float q[4];
 uint8_t buffer[16];
-    uint16_t qI[4];
+uint16_t qI[4];
 
-void getMPU9250Data(MPU9250 * mpuI) {
-    MPU9250 mpu = *mpuI;
-    mpu.getMotion9(&ax, &ay, &az, &gx, &gy, &gz,&mx, &my, &mz);
+//void getMPU9250Data(MPU9250 * mpuI) {
+void getMPU9250Data(MPU6050_MPU9250 * mpu) {
+    // MPU6050_MPU9250 mpu = *gyros[selectedSENSOR].mpu;
+    //MPU9250 mpu = *mpuI;
+    //MPU6050_MPU9250 mpu = *mpu;
+    //mpu->get
+    mpu->getMotion9(&ax, &ay, &az, &gx, &gy, &gz,&mx, &my, &mz);
 
     // TODO fix
     // 8192 16384 32768 65536
+    /*
     Gxyz[0] += (float) gx / (65536) ;
     Gxyz[1] += (float) gy / (65536) ;
     Gxyz[2] += (float) gz / (65536) ;
 
-    float yaw = Gxyz[2];
-    float pitch = Gxyz[1];
-    float roll = Gxyz[0];
+    */
+    float offsetDown = 65536;
+   
+    Gxyz[0] += (float) gx / (offsetDown) ;
+    Gxyz[1] += (float) gy / (offsetDown) ;
+    Gxyz[2] += (float) gz / (offsetDown) ;
+
+    /*
+    Gxyz[0] = (float) gx / (offsetUp) ;
+    Gxyz[1] = (float) gy / (offsetUp) ;
+    Gxyz[2] = (float) gz / (offsetUp) ;
+    */
+    float offsetDownQ = 16;
+
+    float yaw = Gxyz[2] / offsetDownQ;
+    float pitch = Gxyz[1]/ offsetDownQ;
+    float roll = Gxyz[0]/ offsetDownQ;
+    /*
     float cy = cos(yaw * 0.5);
     float sy = sin(yaw * 0.5);
     float cp = cos(pitch * 0.5);
     float sp = sin(pitch * 0.5);
     float cr = cos(roll * 0.5);
     float sr = sin(roll * 0.5);
+    */
+    float partition = 0.5;
+    float cy = cos(yaw * partition );
+    float sy = sin(yaw * partition );
+    float cp = cos(pitch * partition );
+    float sp = sin(pitch * partition);
+    float cr = cos(roll * partition );
+    float sr = sin(roll * partition );
 
     q[0] = cy * cp * cr + sy * sp * sr;
     q[1] = cy * cp * sr - sy * sp * cr;
     q[2] = sy * cp * sr + cy * sp * cr;
     q[3] = sy * cp * cr - cy * sp * sr;
-    qI[0] = (uint16_t)(q[0]*1024);
-    qI[1] = (uint16_t)(q[1]*1024);
-    qI[2] = (uint16_t)(q[2]*1024);
-    qI[3] = (uint16_t)(q[3]*1024);
 
+    float offsetUp =1024;
+    
+    qI[0] = (uint16_t)(q[0]*offsetUp);
+    qI[1] = (uint16_t)(q[1]*offsetUp);
+    qI[2] = (uint16_t)(q[2]*offsetUp);
+    qI[3] = (uint16_t)(q[3]*offsetUp);
+
+/*
+    qI[0] += (uint16_t)(q[0]*offsetDown);
+    qI[1] += (uint16_t)(q[1]*offsetDown);
+    qI[2] += (uint16_t)(q[2]*offsetDown);
+    qI[3] += (uint16_t)(q[3]*offsetDown);
+    */
     uint8_t *fifoBuffer = gyros[selectedSENSOR].fifoBuffer; // FIFO storage buffer*/
 
     fifoBuffer[1] = qI[0] & 0xFF;
@@ -934,7 +1038,9 @@ void getMPU9250Data(MPU9250 * mpuI) {
 
 bool loadDataFromFIFO(int forceLoad = false) {
     if(selectedSENSOR != LAST_SENSOR){
-        MPU6050 mpu = *gyros[selectedSENSOR].mpu;
+        //MPU6050 mpu = *gyros[selectedSENSOR].mpu;
+        MPU6050_MPU9250 mpu = *gyros[selectedSENSOR].mpu;
+
         if(!gyros[selectedSENSOR].hasDataReady || forceLoad){
             fifoCount = mpu.getFIFOCount();
            // Serial.print("fifoCount:2 ");
@@ -959,10 +1065,14 @@ bool loadDataFromFIFO(int forceLoad = false) {
             }
         }
     } else {
-        MPU9250 mpu = *gyros[selectedSENSOR].mpuM;
+        //MPU9250 mpu = *gyros[selectedSENSOR].mpuM;
+        //MPU6050_MPU9250 mpu = *gyros[selectedSENSOR].mpu;
+
         forceLoad = true;
         if(!gyros[selectedSENSOR].hasDataReady || forceLoad) {
-            getMPU9250Data(gyros[selectedSENSOR].mpuM);
+            //getMPU9250Data(gyros[selectedSENSOR].mpuM);
+            getMPU9250Data(gyros[selectedSENSOR].mpu);
+            //gyros[selectedSENSOR].mpu->dmpGet6AxisQuaternion()
             gyros[selectedSENSOR].hasDataReady=true;
             gyros[selectedSENSOR].alreadySentData=false;
             return true;
@@ -1138,6 +1248,19 @@ void loadSlaveHandData() {
 // ===                    MAIN PROGRAM LOOP                     ===
 // ================================================================
 void loop() {
+
+#ifdef USE_DISPLAY
+/*
+ int remainingTimeBudget = ui.update();
+
+  if (remainingTimeBudget > 0) {
+    // You can do some work here
+    // Don't do stuff if you are below your
+    // time budget.
+    delay(remainingTimeBudget);
+  }*/
+
+#endif
     //return;
     // if programming failed, don't try to do anything
     //if (!dmpReady)
