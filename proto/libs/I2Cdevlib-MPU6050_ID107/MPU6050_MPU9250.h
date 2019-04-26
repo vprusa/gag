@@ -922,7 +922,7 @@ class MPU6050_MPU9250 {
         #endif
 
         // special methods for MotionApps 4.1 implementation
-        #ifdef MPU6050_MPU9250_INCLUDE_DMP_MOTIONAPPS41
+        #ifdef MPU6050_MPU9250_INCLUDE_DMP_MOTIONAPPS41_vprusa_commented
 
             uint8_t dmpInitialize();
             bool dmpPacketAvailable();
