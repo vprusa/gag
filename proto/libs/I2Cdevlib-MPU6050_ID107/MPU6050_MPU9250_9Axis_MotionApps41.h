@@ -45,6 +45,51 @@ THE SOFTWARE.
 
 // Tom Carpenter's conditional PROGMEM code
 // http://forum.arduino.cc/index.php?topic=129407.0
+
+#ifndef ESP32_RIGHT 
+    #define __PGMSPACE_H_ 1
+    #include <inttypes.h>
+
+   // #define PROGMEM 
+    // wtf
+    //#define PGM_P  const char *
+    //#define PSTR(str) (str)
+    //#define F(x) x
+
+    typedef void prog_void;
+    typedef char prog_char;
+    typedef unsigned char prog_uchar;
+    //vprusa
+    typedef int8_t prog_int8_t;
+    typedef uint8_t prog_uint8_t;
+    typedef int16_t prog_int16_t;
+    typedef uint16_t prog_uint16_t;
+    
+    //vprusa
+    typedef int32_t prog_int32_t;
+    typedef uint32_t prog_uint32_t;
+    /*
+    #define strcpy_P(dest, src) strcpy((dest), (src))
+    #define strcat_P(dest, src) strcat((dest), (src))
+    #define strcmp_P(a, b) strcmp((a), (b))
+    
+    #define pgm_read_byte(addr) (*(const unsigned char *)(addr))
+    #define pgm_read_word(addr) (*(const unsigned short *)(addr))
+    #define pgm_read_dword(addr) (*(const unsigned long *)(addr))
+    #define pgm_read_float(addr) (*(const float *)(addr))
+    
+    #define pgm_read_byte_near(addr) pgm_read_byte(addr)
+    #define pgm_read_word_near(addr) pgm_read_word(addr)
+    #define pgm_read_dword_near(addr) pgm_read_dword(addr)
+    #define pgm_read_float_near(addr) pgm_read_float(addr)
+    #define pgm_read_byte_far(addr) pgm_read_byte(addr)
+    #define pgm_read_word_far(addr) pgm_read_word(addr)
+    #define pgm_read_dword_far(addr) pgm_read_dword(addr)
+    #define pgm_read_float_far(addr) pgm_read_float(addr)
+    */
+#endif
+
+//#define __AVR__
 #ifdef __AVR__
     #include <avr/pgmspace.h>
 #else
@@ -121,7 +166,7 @@ THE SOFTWARE.
 #define MPU6050_MPU9250_DMP_CODE_SIZE 512
 
 //#define MPU9250_DMP_CODE_SIZE       1962    // dmpMemory[]
-#define MPU9250_DMP_CODE_SIZE       1450    // dmpMemory[]
+#define MPU9250_DMP_CODE_SIZE       1450 //1450    // dmpMemory[]
 #define MPU9250_DMP_CONFIG_SIZE     232     // dmpConfig2[]
 #define MPU9250_DMP_UPDATES_SIZE    140     // dmpUpdates[]
 
@@ -383,7 +428,7 @@ const unsigned char dmpUpdatesMPU6050[MPU6050_DMP_UPDATES_SIZE] PROGMEM = {
 
 
 
-const prog_uchar dmpMemoryMPU9250[MPU9250_DMP_CODE_SIZE] PROGMEM = {
+const unsigned char dmpMemoryMPU9250[MPU9250_DMP_CODE_SIZE] PROGMEM = {
     // bank 0, 256 bytes
     /*
     0xFB, 0x00, 0x00, 0x3E, 0x00, 0x0B, 0x00, 0x36, 0x00, 0x01, 0x00, 0x02, 0x00, 0x03, 0x00, 0x00,
@@ -525,7 +570,7 @@ const prog_uchar dmpMemoryMPU9250[MPU9250_DMP_CODE_SIZE] PROGMEM = {
     0xDC, 0xB9, 0xA7, 0xF1, 0x26, 0x26, 0x26, 0xD8, 0xD8, 0xFF
 };
 
-const prog_uchar dmpConfigMPU9250[MPU9250_DMP_CONFIG_SIZE] PROGMEM = {
+const unsigned char dmpConfigMPU9250[MPU9250_DMP_CONFIG_SIZE] PROGMEM = {
 //  BANK    OFFSET  LENGTH  [DATA]
     0x02,   0xEC,   0x04,   0x00, 0x47, 0x7D, 0x1A,   // ?
     0x03,   0x82,   0x03,   0x4C, 0xCD, 0x6C,         // FCFG_1 inv_set_gyro_calibration
@@ -575,7 +620,7 @@ const prog_uchar dmpConfigMPU9250[MPU9250_DMP_CONFIG_SIZE] PROGMEM = {
     // the FIFO output at the desired rate. Handling FIFO overflow cleanly is also a good idea.
 };
 
-const prog_uchar dmpUpdatesMPU9250[MPU9250_DMP_UPDATES_SIZE] PROGMEM = {
+const unsigned char  dmpUpdatesMPU9250[MPU9250_DMP_UPDATES_SIZE] PROGMEM = {
     0x01,   0xB2,   0x02,   0xFF, 0xF5,
     0x01,   0x90,   0x04,   0x0A, 0x0D, 0x97, 0xC0,
     0x00,   0xA3,   0x01,   0x00,
@@ -693,7 +738,7 @@ uint8_t MPU6050_MPU9250::dmpInitialize() {
     DEBUG_PRINT(F("Writing DMP code to MPU memory banks ("));
     DEBUG_PRINTLN(F(" bytes)"));
     
-    const prog_uchar * dmpUpdates;
+    const unsigned char * dmpUpdates;
 
     
     bool writeProgMemoryBlockRes = false;
@@ -722,9 +767,11 @@ uint8_t MPU6050_MPU9250::dmpInitialize() {
         DEBUG_PRINTLN(F(" bytes in config def)"));
         bool writeProgDMPConfigurationSetRes = false;
         if(isMPU9250) {
+            DEBUG_PRINT("MPU9250");
             DEBUG_PRINT(MPU9250_DMP_CODE_SIZE);
             writeProgDMPConfigurationSetRes = writeProgDMPConfigurationSet(dmpConfigMPU9250, MPU9250_DMP_CONFIG_SIZE);
         }else{
+            DEBUG_PRINT("MPU6050");
             DEBUG_PRINT(MPU6050_DMP_CODE_SIZE);
             writeProgDMPConfigurationSetRes = writeProgDMPConfigurationSet(dmpConfigMPU6050, MPU6050_DMP_CONFIG_SIZE);
         }
@@ -1058,7 +1105,7 @@ bool MPU6050_MPU9250::dmpPacketAvailable() {
 // uint8_t MPU6050_MPU9250::dmpSendPacketNumber(uint_fast16_t accuracy);
 // uint8_t MPU6050_MPU9250::dmpSendQuantizedAccel(uint_fast16_t elements, uint_fast16_t accuracy);
 // uint8_t MPU6050_MPU9250::dmpSendEIS(uint_fast16_t elements, uint_fast16_t accuracy);
-
+/*
 uint8_t MPU6050_MPU9250::dmpGetAccel(int32_t *data, const uint8_t* packet) {
     // TODO: accommodate different arrangements of sent data (ONLY default supported now)
     if (packet == 0) packet = dmpPacketBuffer;
@@ -1072,7 +1119,7 @@ uint8_t MPU6050_MPU9250::dmpGetAccel(int32_t *data, const uint8_t* packet) {
         data[2] = ((packet[42] << 24) + (packet[43] << 16) + (packet[44] << 8) + packet[45]);
     }
     return 0;
-}
+}*/
 uint8_t MPU6050_MPU9250::dmpGetAccel(int16_t *data, const uint8_t* packet) {
     // TODO: accommodate different arrangements of sent data (ONLY default supported now)
     if (packet == 0) packet = dmpPacketBuffer;
@@ -1101,6 +1148,7 @@ uint8_t MPU6050_MPU9250::dmpGetAccel(VectorInt16 *v, const uint8_t* packet) {
     }
     return 0;
 }
+/*
 uint8_t MPU6050_MPU9250::dmpGetQuaternion(int32_t *data, const uint8_t* packet) {
     // TODO: accommodate different arrangements of sent data (ONLY default supported now)
     if (packet == 0) packet = dmpPacketBuffer;
@@ -1116,7 +1164,7 @@ uint8_t MPU6050_MPU9250::dmpGetQuaternion(int32_t *data, const uint8_t* packet) 
         data[3] = ((packet[12] << 24) + (packet[13] << 16) + (packet[14] << 8) + packet[15]);
     }
     return 0;
-}
+}*/
 uint8_t MPU6050_MPU9250::dmpGetQuaternion(int16_t *data, const uint8_t* packet) {
     // TODO: accommodate different arrangements of sent data (ONLY default supported now)
     if (packet == 0) packet = dmpPacketBuffer;\
@@ -1148,6 +1196,7 @@ uint8_t MPU6050_MPU9250::dmpGetQuaternion(Quaternion *q, const uint8_t* packet) 
 }
 // uint8_t MPU6050_MPU9250::dmpGet6AxisQuaternion(long *data, const uint8_t* packet);
 // uint8_t MPU6050_MPU9250::dmpGetRelativeQuaternion(long *data, const uint8_t* packet);
+/*
 uint8_t MPU6050_MPU9250::dmpGetGyro(int32_t *data, const uint8_t* packet) {
     // TODO: accommodate different arrangements of sent data (ONLY default supported now)
     if (packet == 0) packet = dmpPacketBuffer;
@@ -1161,7 +1210,7 @@ uint8_t MPU6050_MPU9250::dmpGetGyro(int32_t *data, const uint8_t* packet) {
         data[2] = ((packet[24] << 24) + (packet[25] << 16) + (packet[26] << 8) + packet[27]);
     }
     return 0;
-}
+}*/
 uint8_t MPU6050_MPU9250::dmpGetGyro(int16_t *data, const uint8_t* packet) {
     // TODO: accommodate different arrangements of sent data (ONLY default supported now)
     if (packet == 0) packet = dmpPacketBuffer;

@@ -5,104 +5,148 @@ Copyright (c) 2018 Vojtěch Průša
 // Based on example of MPU6050 from https://github.com/jrowberg/i2cdevlib
 // from 6/21/2012 by Jeff Rowberg <jeff@rowberg.net>
 // 
-#define ESP32_RIGHT 1// master to left, slave to pc
+//#define ESP32_RIGHT 1// master to left, slave to pc
+
+#include "MPU6050_MPU9250_9Axis_MotionApps41.h"
+
 
 #ifdef ESP32_RIGHT
 #define USE_DISPLAY 1
-//#include "/home/vprusa/.arduino15/packages/esp32/hardware/esp32/1.0.1/libraries/Wire/src/Wire.h"
-//#include "Wire.h"
+#include "Wire.h"
+
+#include <TimeLib.h>
+#include "SSD1306Wire.h" // legacy include: `#include "SSD1306.h"`
+//#include "OLEDDisplay.h"
+#include "OLEDDisplayUi.h"
 
 #endif
 
-#define FIFO_APCKET_GLOBAL_SIZE 42
-// for both classes must be in the include path of your project
-//#include "I2Cdev.h"
-//#include "MPU6050_6Axis_MotionApps20.h"
-//#include "/home/vprusa/Arduino/libraries/MPU6050/MPU6050.h"
-//#include "/home/vprusa/Arduino/libraries/MPU6050/MPU6050.cpp"
 
-//#include "MPU6050_9Axis_MotionApps41.h"
-#include "MPU6050_MPU9250_9Axis_MotionApps41.h"
-//#include "MPU6050_9Axis_MotionApps41.h"
-//#include "/home/vprusa/.platformio/lib/i2cdevlib/Arduino/MPU6050/MPU6050.h"
-//#include "MPU6050.h"
-//#include "/home/vprusa/.platformio/lib/i2cdevlib/Arduino/MPU6050/BMP180.h"
+#ifdef USE_DISPLAY
 
-//#include "MPU6050_9Axis_MotionApps20.h"
-//#include "MPU6050.h" // not necessary iq using MotionApps include file
+const unsigned char activeSymbol[] PROGMEM = {
+    B00000000,
+    B00000000,
+    B00011000,
+    B00100100,
+    B01000010,
+    B01000010,
+    B00100100,
+    B00011000
+};
 
-// Arduino Wire library is required if I2Cdev I2CDEV_ARDUINO_WIRE implementation
-// is used in I2Cdev.h
+const unsigned char inactiveSymbol[] PROGMEM = {
+    B00000000,
+    B00000000,
+    B00000000,
+    B00000000,
+    B00011000,
+    B00011000,
+    B00000000,
+    B00000000
+};
+
+// Initialize the OLED display using Wire library
+//SSD1306Wire  display(0x3c, D3, D5);
+SSD1306Wire display(0x3c, 18, 19);
+
+// SH1106 display(0x3c, D3, D5);
+
+OLEDDisplayUi ui ( &display );
+
+int screenW = 128;
+int screenH = 64;
+int clockCenterX = screenW/2;
+int clockCenterY = ((screenH-16)/2)+16;   // top yellow part is 16 px height
+int clockRadius = 23;
+
+// utility function for digital clock display: prints leading 0
+String twoDigits(int digits){
+  if(digits < 10) {
+    String i = '0'+String(digits);
+    return i;
+  }
+  else {
+    return String(digits);
+  }
+}
+
+void clockOverlay(OLEDDisplay *display, OLEDDisplayUiState* state) {
+}
+
+
+void analogClockFrame(OLEDDisplay *display, OLEDDisplayUiState* state, int16_t x, int16_t y) {
+  //  ui.disableIndicator();
+  // Draw the clock face
+  //  display->drawCircle(clockCenterX + x, clockCenterY + y, clockRadius);
+  display->drawCircle(clockCenterX + x, clockCenterY + y, 2);
+  //
+  //hour ticks
+  for( int z=0; z < 360;z= z + 30 ){
+  //Begin at 0° and stop at 360°
+    float angle = z ;
+    angle = ( angle / 57.29577951 ) ; //Convert degrees to radians
+    int x2 = ( clockCenterX + ( sin(angle) * clockRadius ) );
+    int y2 = ( clockCenterY - ( cos(angle) * clockRadius ) );
+    int x3 = ( clockCenterX + ( sin(angle) * ( clockRadius - ( clockRadius / 8 ) ) ) );
+    int y3 = ( clockCenterY - ( cos(angle) * ( clockRadius - ( clockRadius / 8 ) ) ) );
+    display->drawLine( x2 + x , y2 + y , x3 + x , y3 + y);
+  }
+
+  // display second hand
+  float angle = second() * 6 ;
+  angle = ( angle / 57.29577951 ) ; //Convert degrees to radians
+  int x3 = ( clockCenterX + ( sin(angle) * ( clockRadius - ( clockRadius / 5 ) ) ) );
+  int y3 = ( clockCenterY - ( cos(angle) * ( clockRadius - ( clockRadius / 5 ) ) ) );
+  display->drawLine( clockCenterX + x , clockCenterY + y , x3 + x , y3 + y);
+  //
+  // display minute hand
+  angle = minute() * 6 ;
+  angle = ( angle / 57.29577951 ) ; //Convert degrees to radians
+  x3 = ( clockCenterX + ( sin(angle) * ( clockRadius - ( clockRadius / 4 ) ) ) );
+  y3 = ( clockCenterY - ( cos(angle) * ( clockRadius - ( clockRadius / 4 ) ) ) );
+  display->drawLine( clockCenterX + x , clockCenterY + y , x3 + x , y3 + y);
+  //
+  // display hour hand
+  angle = hour() * 30 + int( ( minute() / 12 ) * 6 )   ;
+  angle = ( angle / 57.29577951 ) ; //Convert degrees to radians
+  x3 = ( clockCenterX + ( sin(angle) * ( clockRadius - ( clockRadius / 2 ) ) ) );
+  y3 = ( clockCenterY - ( cos(angle) * ( clockRadius - ( clockRadius / 2 ) ) ) );
+  display->drawLine( clockCenterX + x , clockCenterY + y , x3 + x , y3 + y);
+}
+
+void digitalClockFrame(OLEDDisplay *display, OLEDDisplayUiState* state, int16_t x, int16_t y) {
+  String timenow = String(hour())+":"+twoDigits(minute())+":"+twoDigits(second());
+  display->setTextAlignment(TEXT_ALIGN_CENTER);
+  display->setFont(ArialMT_Plain_24);
+  display->drawString(clockCenterX + x , clockCenterY + y, timenow );
+}
+
+// This array keeps function pointers to all frames
+// frames are the single views that slide in
+FrameCallback frames[] = { analogClockFrame, digitalClockFrame };
+
+// how many frames are there?
+int frameCount = 2;
+
+// Overlays are statically drawn on top of a frame eg. a clock
+OverlayCallback overlays[] = { clockOverlay };
+int overlaysCount = 1;
+#endif
+
+
+
+#define MPU6050_FIFO_PACKET_SIZE 42
+#define MPU9250_FIFO_PACKET_SIZE 48
+// TODO fix..
+#define FIFO_SIZE 48
+
+
 #ifndef ESP32_RIGHT
-//#include "/home/vprusa/.arduino15/packages/esp32/hardware/esp32/1.0.1/libraries/Wire/src/Wire.h"
-//#include "Wire.h"
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
 #include "Wire.h"
-//#include "/home/vprusa/.arduino15/packages/arduino/hardware/avr/1.6.23/libraries/Wire/src/Wire.h"
 #endif
 #endif
-
-// class default I2C address is 0x68
-// specific I2C addresses may be passed as a parameter here
-// AD0 low =e0x68 (default for SparkFun breakout and InvenSense evaluation board)
-// AD0 high = 0x69
-//MPU6050 mpu;
-//MPU6050 mpu(0x69); // <-- use for AD0 high
-
-/* =========================================================================
-   NOTE: In addition to connection 3.3v, GND, SDA, and SCL, this sketch
-   depends on the MPU-6050's INT pin being connected to the Arduino's
-   external interrupt #0 pin. On the Arduino Uno and Mega 2560, this is
-   digital I/O pin 2.
- * ========================================================================= */
-
-/* =========================================================================
-   NOTE: Arduino v1.0.1 with the Leonardo board generates a compile error
-   when using MASTER_SERIAL_NAME.write(buf, len). The Teapot output uses this method.
-   The solution requires a modification to the Arduino USBAPI.h file, which
-   is fortunately simple, but annoying. This will be fixed in the next IDE
-   release. For more info, see these links:
-
-   http://arduino.cc/forum/index.php/topic,109987.0.html
-   http://code.google.com/p/arduino/issues/detail?id=958
- * ========================================================================= */
-
-// uncomment "OUTPUT_READABLE_QUATERNION" if you want to see the actual
-// quaternion components in a [w, x, y, z] format (not best for parsing
-// on a remote host such as Processing or something though)
-//#define OUTPUT_READABLE_QUATERNION
-
-// uncomment "OUTPUT_READABLE_EULER" if you want to see Euler angles
-// (in degrees) calculated from the quaternions coming from the FIFO.
-// Note that Euler angles suffer from gimbal lock (for more info, see
-// http://en.wikipedia.org/wiki/Gimbal_lock)
-//#define OUTPUT_READABLE_EULER
-
-// uncomment "OUTPUT_READABLE_YAWPITCHROLL" if you want to see the yaw/
-// pitch/roll angles (in degrees) calculated from the quaternions coming
-// from the FIFO. Note this also requires gravity vector calculations.
-// Also note that yaw/pitch/roll angles suffer from gimbal lock (for
-// more info, see: http://en.wikipedia.org/wiki/Gimbal_lock)
-//#define OUTPUT_READABLE_YAWPITCHROLL
-
-// uncomment "OUTPUT_READABLE_REALACCEL" if you want to see acceleration
-// components with gravity removed. This acceleration reference frame is
-// not compensated for orientation, so +X is always +X according to the
-// sensor, just without the effects of gravity. If you want acceleration
-// compensated for orientation, us OUTPUT_READABLE_WORLDACCEL instead.
-//#define OUTPUT_READABLE_REALACCEL
-
-// uncomment "OUTPUT_READABLE_WORLDACCEL" if you want to see acceleration
-// components with gravity removed and adjusted for the world frame of
-// reference (yaw is relative to initial orientation, since no magnetometer
-// is present in this case). Could be quite handy in some cases.
-//#define OUTPUT_READABLE_WORLDACCEL
-
-// TODO switch usage usage of pins for BT_BAUD and USB_BAUD so communication between hands would go over usb and communication to pc/ntb would use AltSoftSerial
-
-
-//#define A_NANO_RIGHT
-//#define ESP32_RIGHT // master to left, slave to pc
 
 // Hand Switch: 
 // uncomment for using left hand or comment for using right hand
@@ -186,6 +230,7 @@ Copyright (c) 2018 Vojtěch Průša
 #define LAST_SENSOR 5
 // time for internal interrupt to trigger in loop - working up to 50 ms but freezes may occure - so reset MPU's FIFO more ften (20ms each?)
 #define SWITCH_SENSORS_MS 0
+/*
 #define SENSOR_PIN_TU TU
 #define SENSOR_PIN_SU SU
 #define SENSOR_PIN_FU FU
@@ -197,8 +242,25 @@ Copyright (c) 2018 Vojtěch Průša
 
 //#define SENSOR_PIN_OFFSET 3
 #define SENSOR_PIN_OFFSET 3
+*/
+#define SENSOR_PIN_TU TU
+#define SENSOR_PIN_TU_COMPENSATION 4 
+#define SENSOR_PIN_SU SU
+#define SENSOR_PIN_SU_COMPENSATION 7
+#define SENSOR_PIN_FU FU
+#define SENSOR_PIN_FU_COMPENSATION 10
+#define SENSOR_PIN_MU MU
+#define SENSOR_PIN_MU_COMPENSATION 11
+#define SENSOR_PIN_EU EU
+#define SENSOR_PIN_EU_COMPENSATION 12
+#define SENSOR_PIN_HP HP // HAND PALM
+#define SENSOR_PIN_HP_COMPENSATION 13
+#define SENSOR_PIN_NF NF
+
+//#define SENSOR_PIN_OFFSET 3
+#define SENSOR_PIN_OFFSET 0
 // 57600 115200
-#define BT_BAUD 57600
+#define BT_BAUD 115200
 
 #endif
 
@@ -217,10 +279,10 @@ Copyright (c) 2018 Vojtěch Průša
 #ifdef LEFT_HAND
 #define MAX_TIME_TO_RESET 80
 #define MIN_TIME_TO_RESET 20
-#define MAX_FIFO_USAGE_FOR_RESET 400
-#define MIN_FIFO_USAGE_FOR_RESET 250
-#define FIFO_PACKET_SIZE FIFO_APCKET_GLOBAL_SIZE
-#define FIFO_SIZE FIFO_APCKET_GLOBAL_SIZE
+#define MAX_FIFO_USAGE_FOR_RESET 300
+#define MIN_FIFO_USAGE_FOR_RESET 150
+//#define FIFO_PACKET_SIZE FIFO_APCKET_GLOBAL_SIZE
+//#define FIFO_SIZE FIFO_APCKET_GLOBAL_SIZE
 //#define USE_BT
 #define USE_USB
 #define USE_BT_MASTER
@@ -243,9 +305,9 @@ Copyright (c) 2018 Vojtěch Průša
 #define MAX_FIFO_USAGE_FOR_RESET 300
 #define MIN_FIFO_USAGE_FOR_RESET 200
 #endif
-#define FIFO_PACKET_SIZE FIFO_APCKET_GLOBAL_SIZE
-#define FIFO_M_PACKET_SIZE FIFO_APCKET_GLOBAL_SIZE
-#define FIFO_SIZE FIFO_APCKET_GLOBAL_SIZE
+//#define FIFO_PACKET_SIZE FIFO_APCKET_GLOBAL_SIZE
+//#define FIFO_M_PACKET_SIZE FIFO_APCKET_GLOBAL_SIZE
+//#define FIFO_SIZE FIFO_APCKET_GLOBAL_SIZE
 #endif
 //#define USE_BT
 
@@ -283,7 +345,7 @@ Copyright (c) 2018 Vojtěch Průša
 // 115200 57600
 
 #ifdef LEFT_HAND
-#define USB_BAUD 57600
+#define USB_BAUD 115200
 #define BT_BAUD 115200
 #define MASTER_SERIAL_NAME Serial
 #define PC_SERIAL_NAME Serial
@@ -319,8 +381,8 @@ AltSoftSerial hc05Master; //(RX_MASTER, TX_MASTER);
 // MPU control/status vars
 //uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
 uint8_t devStatus;   // return status after each device operation (0 = success, !0 = error)
-uint16_t packetSizeS = FIFO_PACKET_SIZE; // expected DMP packet size (default is 42 bytes)
-uint16_t packetSizeM = 48; // expected DMP packet size (default is 42 bytes)
+uint8_t packetSizeS = MPU6050_FIFO_PACKET_SIZE; // expected DMP packet size (default is 42 bytes)
+uint8_t packetSizeM = MPU9250_FIFO_PACKET_SIZE; // expected DMP packet size (default is 42 bytes)
 uint16_t fifoCount;  // count of all bytes currently in FIFO
 
 // packet structure for InvenSense teapot demo
@@ -349,22 +411,24 @@ enum SENSOR
     SENSOR_PIN_NF=-1,
     
 };
+/*
 char emptyArr[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 #ifdef SEND_ACC
 0, 0, 0, 0, 0, 0,
 #endif
 0x00, 0x00, 0, 0};
+*/
 struct Gyro
 {
     uint8_t fifoBuffer[FIFO_SIZE];                                      // FIFO storage buffer
-    int AD0_pin;
+    //int AD0_pin;
     //MPU6050 *mpu;
     //MPU6050 *mpuM;
     //MPU9250 *mpuM;
     MPU6050_MPU9250 *mpu;
     // orientation/motion vars
     Quaternion q;        // [w, x, y, z]         quaternion container
-    bool dmpReady = false; // set true if DMP init was successful
+   // bool dmpReady = false; // set true if DMP init was successful
     bool hasDataReady = false;
     bool alreadySentData = false;
     long lastResetTime=0;
@@ -465,35 +529,6 @@ void enableSingleMPU(int SENSORToEnable) {
     }
 }
 
-#ifdef USE_DISPLAY
-
-//#include <TimeLib.h>
-
-// Include the correct display library
-// For a connection via I2C using Wire include
-//#include <Wire.h>  // Only needed for Arduino 1.6.5 and earlier
-#include "SSD1306Wire.h" // legacy include: `#include "SSD1306.h"`
-// or #include "SH1106Wire.h", legacy include: `#include "SH1106.h"`
-// For a connection via I2C using brzo_i2c (must be installed) include
-// #include <brzo_i2c.h> // Only needed for Arduino 1.6.5 and earlier
-// #include "SSD1306Brzo.h"
-// #include "SH1106Brzo.h"
-// For a connection via SPI include
-// #include <SPI.h> // Only needed for Arduino 1.6.5 and earlier
-// #include "SSD1306Spi.h"
-// #include "SH1106SPi.h"
-
-// Include the UI lib
-//#include "OLEDDisplay.h"
-//#include "OLEDDisplayUi.h"
-
-
-SSD1306Wire  display(0x3c, 18, 19);
-// SH1106 display(0x3c, D3, D5);
-
-//OLEDDisplayUi ui ( &display );
-#endif
-
 
 void setup() {
 //    WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
@@ -504,10 +539,10 @@ void setup() {
         ; // wait for Leonardo enumeration, others continue immediately
     #endif
     MASTER_SERIAL_NAME.println(F("USB up"));
- 
+
 
 #ifdef USE_DISPLAY
-
+  /*
   display.init();
   int lineHeight = 10;
   // TODO for .. split strings by 26 chars per line
@@ -520,7 +555,50 @@ void setup() {
   display.drawString(0, lineHeight*6, "Vulputate ultrices erat justo.");
   //display.drawString(0, lineHeight*7, "Morbi facilisis consequat.");
   display.display();
- 
+  */
+
+	// The ESP is capable of rendering 60fps in 80Mhz mode
+	// but that won't give you much time for anything else
+	// run it in 160Mhz mode or just set it to 30 fps
+  ui.setTargetFPS(30);
+
+	// Customize the active and inactive symbol
+  ui.setActiveSymbol(activeSymbol);
+  ui.setInactiveSymbol(inactiveSymbol);
+
+  // You can change this to
+  // TOP, LEFT, BOTTOM, RIGHT
+  ui.setIndicatorPosition(TOP);
+
+  // Defines where the first frame is located in the bar.
+  ui.setIndicatorDirection(LEFT_RIGHT);
+
+  // You can change the transition that is used
+  // SLIDE_LEFT, SLIDE_RIGHT, SLIDE_UP, SLIDE_DOWN
+  ui.setFrameAnimation(SLIDE_LEFT);
+
+  // Add frames
+  ui.setFrames(frames, frameCount);
+
+  // Add overlays
+  ui.setOverlays(overlays, overlaysCount);
+  //#ifdef USE_DISPLAY
+
+  // Initialising the UI will init the display too.
+  ui.init();
+
+  display.flipScreenVertically();
+  //display.flipScreenHorizontally();
+
+  unsigned long secsSinceStart = millis();
+  // Unix time starts on Jan 1 1970. In seconds, that's 2208988800:
+  const unsigned long seventyYears = 2208988800UL;
+  // subtract seventy years:
+  unsigned long epoch = secsSinceStart - seventyYears * SECS_PER_HOUR;
+  setTime(epoch);
+
+//#endif
+
 #endif
 
 #endif
@@ -561,7 +639,7 @@ void setup() {
     }
 #ifdef ESP32_RIGHT
     Wire.begin(21 , 22, 200000);
-    Wire.setTimeOut(2);
+   // Wire.setTimeOut(2);
     //setTimeOut
     //Fastwire::setup(400, true);
     //Wire.begin();
@@ -572,7 +650,7 @@ void setup() {
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
     Wire.begin();
     //TWBR = 24; // 400kHz I2C clock (200kHz if CPU is 8MHz)
-    Wire.setClock(200000); // 400kHz I2C clock. Comment this line if having compilation difficulties#elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
+    Wire.setClock(400000); // 400kHz I2C clock. Comment this line if having compilation difficulties#elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
 #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
     //Fastwire::setup(400, true);
 #endif
@@ -581,6 +659,7 @@ void setup() {
 // (9600 38400 57600 74880 115200 230400 250000 57600 38400 chosen because it is required for Teapot Demo output, but it's
 // really up to you depending on your project)
 #ifdef USE_BT_MASTER
+    //TODO fix, rename
     PC_SERIAL_NAME.begin(BT_BAUD);
     // while (!hc05.available()){}
     // hc05Master.println(F("BT up"));
@@ -650,6 +729,8 @@ void setup() {
     timeNow = millis(); //Start counting time in milliseconds
 
     //delay(3000);
+//ui.init();
+  //ui.update();
 
 }
 
@@ -678,7 +759,7 @@ int initMPUAndDMP(int attempt) {
         MASTER_SERIAL_NAME.println(mpu.getDeviceID());
     
         // wait for ready
-        MASTER_SERIAL_NAME.println(F("\nSend any character to begin DMP programming and demo: "));
+        MASTER_SERIAL_NAME.println(F("Send any character to begin DMP programming and demo: "));
         // load and configure the DMP
         MASTER_SERIAL_NAME.println(F("Initializing DMP..."));
     #endif
@@ -704,7 +785,7 @@ int initMPUAndDMP(int attempt) {
 
             // set our DMP Ready flag so the main loop( ) function knows it's okay to use it
             MASTER_SERIAL_NAME.println(F("DMP ready! Getting packet size..."));
-            gyros[selectedSENSOR].dmpReady = true;
+            //gyros[selectedSENSOR].dmpReady = true;
             MASTER_SERIAL_NAME.print(F("packet size: "));
             MASTER_SERIAL_NAME.print(packetSizeM);
             MASTER_SERIAL_NAME.println(F(""));
@@ -766,7 +847,7 @@ int initMPUAndDMP(int attempt) {
 
             // set our DMP Ready flag so the main loop( ) function knows it's okay to use it
             hc05.println(F("DMP ready! Getting packet size..."));
-            gyros[selectedSENSOR].dmpReady = true;
+            //gyros[selectedSENSOR].dmpReady = true;
             // get expected DMP packet size for later comparison
             hc05.print(F("packet size: "));
             hc05.print(packetSizeS);
@@ -779,7 +860,7 @@ int initMPUAndDMP(int attempt) {
 
             // set our DMP Ready flag so the main loop( ) function knows it's okay to use it
             MASTER_SERIAL_NAME.println(F("DMP ready! Getting packet size..."));
-            gyros[selectedSENSOR].dmpReady = true;
+            //gyros[selectedSENSOR].dmpReady = true;
             MASTER_SERIAL_NAME.print(F("packet size: "));
             MASTER_SERIAL_NAME.print(packetSizeS);
             MASTER_SERIAL_NAME.println(F(""));
@@ -854,6 +935,7 @@ void resetMPUs(int around) {
 void automaticFifoReset() {
     long now = millis();
     int currentlySellectedSensor = selectedSENSOR;
+
     for(int i = 0; i < SENSORS_COUNT; i++){
         if(gyros[i].lastResetTime + MIN_TIME_TO_RESET < now 
         #ifdef RIGHT_HAND
@@ -864,8 +946,10 @@ void automaticFifoReset() {
             if(selectedNow != 5){
                 //MPU6050 mpu = *gyros[selectedNow].mpu;
                 MPU6050_MPU9250 mpu = *gyros[selectedSENSOR].mpu;
-
+               
                 int localFifoCount = mpu.getFIFOCount();
+                //Serial.println("localFifoCount");
+                //Serial.println(localFifoCount);
                 if(( localFifoCount >= MAX_FIFO_USAGE_FOR_RESET || 
                     ( gyros[i].lastResetTime + MAX_TIME_TO_RESET < now && 
                     localFifoCount >= MIN_FIFO_USAGE_FOR_RESET) ) ){
@@ -877,6 +961,8 @@ void automaticFifoReset() {
                 MPU6050_MPU9250 mpu = *gyros[selectedSENSOR].mpu;
 
                 int localFifoCount = mpu.getFIFOCount();
+                //Serial.println("localFifoCount");
+                //Serial.println(localFifoCount);
                 if(( localFifoCount >= MAX_FIFO_USAGE_FOR_RESET || 
                     ( gyros[i].lastResetTime + MAX_TIME_TO_RESET < now && 
                     localFifoCount >= MIN_FIFO_USAGE_FOR_RESET) ) ){
@@ -919,28 +1005,8 @@ volatile int readAligned = 1;
 volatile float time2, timePrev2;
 
 
-
-uint8_t buffer_m[6];
-
 /*
-int16_t ax, ay, az;
-int16_t gx, gy, gz;
-int16_t   mx, my, mz;
-*/
-
-int16_t ax, ay, az;
-int16_t gx, gy, gz;
-int16_t   mx, my, mz;
-
-float heading;
-float tiltheading;
-
-float Axyz[3];
-float Gxyz[3];
-float Mxyz[3];
-
-//void getAccel_Data(MPU6050 * mpuI) {
-    /*
+//void getAccel_Data(MPU6050 * mpuI) {  
 void getAccel_Data(MPU6050_MPU9250 * mpu) {
     //MPU6050 mpu = *mpuI;
    // MPU6050_MPU9250 mpu = *mpu;
@@ -949,13 +1015,22 @@ void getAccel_Data(MPU6050_MPU9250 * mpu) {
     Axyz[1] = (double) ay / 16384;
     Axyz[2] = (double) az / 16384;
 }*/
-
-float q[4];
-uint8_t buffer[16];
-uint16_t qI[4];
-
+float Axyz[3];
+float Gxyz[3];
+float Mxyz[3];
 //void getMPU9250Data(MPU9250 * mpuI) {
 void getMPU9250Data(MPU6050_MPU9250 * mpu) {
+
+   // uint8_t buffer_m[6];
+
+    int16_t ax, ay, az;
+    int16_t gx, gy, gz;
+    int16_t   mx, my, mz;
+
+    
+    //float q[4];
+    uint16_t qI[4];
+
     // MPU6050_MPU9250 mpu = *gyros[selectedSENSOR].mpu;
     //MPU9250 mpu = *mpuI;
     //MPU6050_MPU9250 mpu = *mpu;
@@ -970,8 +1045,8 @@ void getMPU9250Data(MPU6050_MPU9250 * mpu) {
     Gxyz[2] += (float) gz / (65536) ;
 
     */
-    float offsetDown = 65536;
-   
+    #define offsetDown 65536
+    
     Gxyz[0] += (float) gx / (offsetDown) ;
     Gxyz[1] += (float) gy / (offsetDown) ;
     Gxyz[2] += (float) gz / (offsetDown) ;
@@ -981,7 +1056,7 @@ void getMPU9250Data(MPU6050_MPU9250 * mpu) {
     Gxyz[1] = (float) gy / (offsetUp) ;
     Gxyz[2] = (float) gz / (offsetUp) ;
     */
-    float offsetDownQ = 16;
+    #define  offsetDownQ 16
 
     float yaw = Gxyz[2] / offsetDownQ;
     float pitch = Gxyz[1]/ offsetDownQ;
@@ -994,7 +1069,7 @@ void getMPU9250Data(MPU6050_MPU9250 * mpu) {
     float cr = cos(roll * 0.5);
     float sr = sin(roll * 0.5);
     */
-    float partition = 0.5;
+    #define partition 0.5
     float cy = cos(yaw * partition );
     float sy = sin(yaw * partition );
     float cp = cos(pitch * partition );
@@ -1002,19 +1077,27 @@ void getMPU9250Data(MPU6050_MPU9250 * mpu) {
     float cr = cos(roll * partition );
     float sr = sin(roll * partition );
 
+    /*
     q[0] = cy * cp * cr + sy * sp * sr;
     q[1] = cy * cp * sr - sy * sp * cr;
     q[2] = sy * cp * sr + cy * sp * cr;
     q[3] = sy * cp * cr - cy * sp * sr;
-
-    float offsetUp =1024;
+    
+    #define offsetUp 1024
     
     qI[0] = (uint16_t)(q[0]*offsetUp);
     qI[1] = (uint16_t)(q[1]*offsetUp);
     qI[2] = (uint16_t)(q[2]*offsetUp);
     qI[3] = (uint16_t)(q[3]*offsetUp);
+*/
+    #define offsetUp 1024
+    
+    qI[0] = (uint16_t)((cy * cp * cr + sy * sp * sr)*offsetUp);
+    qI[1] = (uint16_t)((cy * cp * sr - sy * sp * cr)*offsetUp);
+    qI[2] = (uint16_t)((sy * cp * sr + cy * sp * cr)*offsetUp);
+    qI[3] = (uint16_t)((sy * cp * cr - cy * sp * sr)*offsetUp);
 
-/*
+  /*
     qI[0] += (uint16_t)(q[0]*offsetDown);
     qI[1] += (uint16_t)(q[1]*offsetDown);
     qI[2] += (uint16_t)(q[2]*offsetDown);
@@ -1243,24 +1326,13 @@ void loadSlaveHandData() {
     }
 }
 #endif
+ int remainingTimeBudget =  0;
 
 // ================================================================
 // ===                    MAIN PROGRAM LOOP                     ===
 // ================================================================
 void loop() {
 
-#ifdef USE_DISPLAY
-/*
- int remainingTimeBudget = ui.update();
-
-  if (remainingTimeBudget > 0) {
-    // You can do some work here
-    // Don't do stuff if you are below your
-    // time budget.
-    delay(remainingTimeBudget);
-  }*/
-
-#endif
     //return;
     // if programming failed, don't try to do anything
     //if (!dmpReady)
@@ -1286,10 +1358,34 @@ void loop() {
     timeNow = millis(); // actual time read
     elapsedTime = (timeNow - timePrev);
  
-    // reset interrupt flag and get INT_STATUS byte
-    
+#ifdef USE_DISPLAY
+
+//if(elapsedTime > 10){
+    /* Serial.println("elapsedTime time budget:");
+    Serial.println(elapsedTime);
+    Serial.println("remainingTimeBudget time budget:");
+    Serial.println(remainingTimeBudget);
+    */
+    remainingTimeBudget = ui.update();
+
+    if (elapsedTime - remainingTimeBudget > 0) {
+    //  remainingTimeBudget = ui.update();
+
+    // You can do some work here
+    // Don't do stuff if you are below your
+    // time budget.
+   // Serial.println("Remaining time budget:");
+    //Serial.println(remainingTimeBudget);
+   // delay(remainingTimeBudget);
+
+  }
+  //return;
+  //}
+#endif
+
+// reset interrupt flag and get INT_STATUS byte
 #ifdef USE_BT_MASTER
-    loadSlaveHandData();
+    //loadSlaveHandData();
 #endif
 
 // TODO switch hands
@@ -1297,7 +1393,6 @@ void loop() {
 #endif
 
 #ifdef ESP32_RIGHT
-    
     gyros[selectedSENSOR].alreadySentData = false;
     //writePacket();
     loadDataAndSendPacket();
