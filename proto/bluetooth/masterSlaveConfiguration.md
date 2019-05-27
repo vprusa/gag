@@ -1,4 +1,4 @@
-# Configuration of HC05(master) connected to PC over Serial to USB converter to HC05(slave) on glove
+w# Configuration of HC05(master) connected to PC over Serial to USB converter to HC05(slave) on glove
 
 cutecom
 
@@ -103,8 +103,9 @@ AT+BAND544A1608D741
 # ver 3
 
 # left pro mini Master
+AT+ADDR?
 OK+ADDR:D43639D84C84
-AT+TYPE3
+AT+TYPE2
 AT+MODE0
 AT+ROLE1
 AT+PASS468531
@@ -115,7 +116,29 @@ AT+NAMEGAGLM
 # right slave to left master
 AT+NAMEGAGRS
 AT+BAUD4
+AT+TYPE2
 AT+PASS468531
 AT+MODE0
 AT+ROLE0
-AT+CO0
+AT+CO0D43639D84C84
+AT+COND43639D84C84
+
+# esp32 right slave to left master info
+
+OK+ADDR:D43639BC17C6
+
+
+# right hand slave at PC to "GAGGM"
+AT+NAMEGAGRHPC
+AT+BAUD4
+ADDR:
+30:AE:A4:FF:1B:A2
+30AEA4FF1BA2
+
+AT+CON30AEA4FF1BA2
+AT+BAND30AEA4FF1BA2
+
+30AEA4FF1BA2
+2AB1FF4AEA03
+AT+CON2AB1FF4AEA03
+AT+BAND2AB1FF4AEA03

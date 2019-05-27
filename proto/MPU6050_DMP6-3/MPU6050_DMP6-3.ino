@@ -5,15 +5,13 @@ Copyright (c) 2018 Vojtěch Průša
 // Based on example of MPU6050 from https://github.com/jrowberg/i2cdevlib
 // from 6/21/2012 by Jeff Rowberg <jeff@rowberg.net>
 // 
-//#define ESP32_RIGHT 1// master to left, slave to pc
+#define ESP32_RIGHT 1// master to left, slave to pc
 
 #include "MPU6050_MPU9250_9Axis_MotionApps41.h"
-
-
-#include "MPU6050_MPU9250_9Axis_MotionApps41.h"
-
 
 #ifdef ESP32_RIGHT
+#define MASTER_HAND
+
 #define USE_DISPLAY 1
 #include "Wire.h"
 
@@ -21,7 +19,21 @@ Copyright (c) 2018 Vojtěch Průša
 #include "SSD1306Wire.h" // legacy include: `#include "SSD1306.h"`
 //#include "OLEDDisplay.h"
 #include "OLEDDisplayUi.h"
+#else
+#define SLAVE_HAND
+#endif
 
+//#define GAG_DEBUG
+#ifdef GAG_DEBUG
+    #define DEBUG_PRINT(x) Serial.print(x)
+    #define DEBUG_PRINTF(x, y) Serial.print(x, y)
+    #define DEBUG_PRINTLN(x) Serial.println(x)
+    #define DEBUG_PRINTLNF(x, y) Serial.println(x, y)
+#else
+    #define DEBUG_PRINT(x)
+    #define DEBUG_PRINTF(x, y)
+    #define DEBUG_PRINTLN(x)
+    #define DEBUG_PRINTLNF(x, y)
 #endif
 
 
@@ -182,9 +194,9 @@ int overlaysCount = 1;
 #ifdef ESP32_RIGHT
 
 #define SENSORS_COUNT 6
-// SENSORs <0,4>
+// SENSORs <0,5>
 #define FIRST_SENSOR 0
-// or set LAST_SENSOR to 4
+// or set LAST_SENSOR to 5
 #define LAST_SENSOR 5
 // time for internal interrupt to trigger in loop - working up to 50 ms but freezes may occure - so reset MPU's FIFO more ften (20ms each?)
 #define SWITCH_SENSORS_MS 0
@@ -207,17 +219,17 @@ int overlaysCount = 1;
 // https://randomnerdtutorials.com/esp32-pinout-reference-gpios/
 
 #define SENSOR_PIN_TU TU
-#define SENSOR_PIN_TU_COMPENSATION 4
+#define SENSOR_PIN_TU_COMPENSATION 14 //4
 #define SENSOR_PIN_SU SU
-#define SENSOR_PIN_SU_COMPENSATION 15
+#define SENSOR_PIN_SU_COMPENSATION 13 //14
 #define SENSOR_PIN_FU FU
 #define SENSOR_PIN_FU_COMPENSATION 12
 #define SENSOR_PIN_MU MU
-#define SENSOR_PIN_MU_COMPENSATION 13
+#define SENSOR_PIN_MU_COMPENSATION 4 //13
 #define SENSOR_PIN_EU EU
-#define SENSOR_PIN_EU_COMPENSATION 14
+#define SENSOR_PIN_EU_COMPENSATION 2
 #define SENSOR_PIN_HP HP // HAND PALM
-#define SENSOR_PIN_HP_COMPENSATION 2
+#define SENSOR_PIN_HP_COMPENSATION 15
 #define SENSOR_PIN_NF NF
 
 //#define SENSOR_PIN_OFFSET 3
@@ -263,7 +275,7 @@ int overlaysCount = 1;
 //#define SENSOR_PIN_OFFSET 3
 #define SENSOR_PIN_OFFSET 0
 // 57600 115200
-#define BT_BAUD 115200
+#define PC_SERIAL_BAUD 115200
 
 #endif
 
@@ -274,27 +286,21 @@ int overlaysCount = 1;
 // TODO make left/right switch
 
 // TODO test if 2 should is enough
-#define REPEAT_RIGHT_HAND_READ_LIMIT 10
-#define REPEAT_LEFT_HAND_READ_LIMIT 10
+#define REPEAT_MASTER_HAND_READ_LIMIT 10
+#define REPEAT_SLAVE_HAND_READ_LIMIT 10
 
 // (9600 38400 57600 74880 115200 230400 250000 57600 38400 chosen because it is required for Teapot Demo output, but it's
 
-#ifdef LEFT_HAND
+#ifdef SLAVE_HAND
 #define MAX_TIME_TO_RESET 80
 #define MIN_TIME_TO_RESET 20
 #define MAX_FIFO_USAGE_FOR_RESET 300
 #define MIN_FIFO_USAGE_FOR_RESET 150
 //#define FIFO_PACKET_SIZE FIFO_APCKET_GLOBAL_SIZE
 //#define FIFO_SIZE FIFO_APCKET_GLOBAL_SIZE
-//#define USE_BT
-#define USE_USB
-#define USE_BT_MASTER
 #else
-#define RIGHT_HAND
-#define RIGHT_HAND_SLAVE
-#define RIGHT_HAND_TO_PC
 
-#ifdef ESP32_RIGHT
+#ifdef MASTER_HAND
 // values for ESP32 400KHz I2C
 // comparing to nano MPU6050 needs to be reset more often
 #define MAX_TIME_TO_RESET 15
@@ -325,46 +331,53 @@ int overlaysCount = 1;
 
 //BluetoothSerial btSerial;
 
-#ifdef  ESP32_RIGHT
+#ifdef  MASTER_HAND
 
-//#define BT_BAUD 57600
+#define MASTER_BT_SERIAL
+#ifdef MASTER_BT_SERIAL
+#define MASTER_BT_SERIAL_NAME "GAGGM"
+#include "BluetoothSerial.h"
+#if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
+#error Bluetooth is not enabled! Please run `make menuconfig` to and enable it
+#endif
+BluetoothSerial SerialBT;
+#define MASTER_SERIAL_NAME SerialBT
+#else
 #define MASTER_SERIAL_NAME Serial
-#define USB_BAUD 115200
-#define USE_USB
+#endif
+
+#define MASTER_SERIAL_BAUD 115200
+
+#define SLAVE_SERIAL_NAME Serial2
+#define SLAVE_SERIAL_BAUD 115200
 
 //#define PC_SERIAL_NAME hc05Master
 
 #else
-#ifdef RIGHT_HAND
-//#define USE_BT
-#define USE_USB
-#endif
-
-//#define USE_BT
 
 //#define LIB_SW_SERIAL
 //#define LIB_ALT_SW_SERIAL 1
 
 // 115200 57600
-
-#ifdef LEFT_HAND
-#define USB_BAUD 115200
-#define BT_BAUD 115200
-#define MASTER_SERIAL_NAME Serial
+#ifdef MASTER_HAND
+#define MASTER_SERIAL_NAME Serial2
 #define PC_SERIAL_NAME Serial
+#define MASTER_SERIAL_BAUD 115200
+#define PC_SERIAL_BAUD 115200
 #endif
 #endif
 // TODO remove so many ifs ...
 
-#ifdef LEFT_HAND
-#ifdef USE_BT_MASTER
+#ifdef SLAVE_HAND
+#define MASTER_SERIAL_NAME Serial
+#define MASTER_SERIAL_BAUD 115200
+
 #ifdef LIB_SW_SERIAL
 #include <SoftwareSerial.h>
 #endif
 #ifdef LIB_ALT_SW_SERIAL
 #include <AltSoftSerial.h>
 #endif
-
 
 //#define RX_MASTER 8
 //#define TX_MASTER 9
@@ -379,8 +392,6 @@ AltSoftSerial hc05Master; //(RX_MASTER, TX_MASTER);
 #endif
 #endif
 
-#endif
-
 // MPU control/status vars
 //uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
 uint8_t devStatus;   // return status after each device operation (0 = success, !0 = error)
@@ -389,7 +400,7 @@ uint8_t packetSizeM = MPU9250_FIFO_PACKET_SIZE; // expected DMP packet size (def
 uint16_t fifoCount;  // count of all bytes currently in FIFO
 
 // packet structure for InvenSense teapot demo
-#ifdef RIGHT_HAND
+#ifdef SLAVE_HAND
 uint8_t teapotPacket[PACKET_LENGTH] = {'$', 0x99, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 #ifdef SEND_ACC
                                        0, 0, 0, 0, 0, 0,
@@ -487,11 +498,9 @@ void enableSingleMPU(int SENSORToEnable) {
         if ( i != SENSORToEnable ) {
             digitalWrite(selectorOffsettedPin, HIGH);
         }
-     
-
     }
 
-  for (int i = 0; i < SENSORS_COUNT; i++) {
+    for (int i = 0; i < SENSORS_COUNT; i++) {
         int selectorOffsettedPin = SENSOR_PIN_OFFSET + i;
         
         #ifdef SENSOR_PIN_TU_COMPENSATION
@@ -535,14 +544,17 @@ void enableSingleMPU(int SENSORToEnable) {
 
 void setup() {
 //    WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
-#ifdef ESP32_RIGHT
-    MASTER_SERIAL_NAME.begin(USB_BAUD);
-    #ifdef RIGHT_HAND
+//#ifdef MASTER_HAND
+    #ifdef MASTER_HAND
+    #ifdef MASTER_BT_SERIAL
+    MASTER_SERIAL_NAME.begin(MASTER_BT_SERIAL_NAME);
+    #else
+    MASTER_SERIAL_NAME.begin(MASTER_SERIAL_BAUD);
     while (!MASTER_SERIAL_NAME)
         ; // wait for Leonardo enumeration, others continue immediately
     #endif
+    #endif
     MASTER_SERIAL_NAME.println(F("USB up"));
-
 
 #ifdef USE_DISPLAY
   /*
@@ -590,7 +602,7 @@ void setup() {
   // Initialising the UI will init the display too.
   ui.init();
 
-  display.flipScreenVertically();
+  //display.flipScreenVertically();
   //display.flipScreenHorizontally();
 
   unsigned long secsSinceStart = millis();
@@ -604,43 +616,42 @@ void setup() {
 
 #endif
 
-#endif
     for (int i = FIRST_SENSOR; i <= LAST_SENSOR; i++) {
-        int SENSORToEnable = SENSOR_PIN_OFFSET + i;
+        int sensorToEnable = SENSOR_PIN_OFFSET + i;
          
         #ifdef SENSOR_PIN_TU_COMPENSATION
         if (i == SENSOR_PIN_TU) {
-            SENSORToEnable = SENSOR_PIN_TU_COMPENSATION;
+            sensorToEnable = SENSOR_PIN_TU_COMPENSATION;
         }
         #endif
         #ifdef SENSOR_PIN_SU_COMPENSATION
         if (i == SENSOR_PIN_SU) {
-            SENSORToEnable = SENSOR_PIN_SU_COMPENSATION;
+            sensorToEnable = SENSOR_PIN_SU_COMPENSATION;
         }
         #endif
         #ifdef SENSOR_PIN_FU_COMPENSATION
         if (i == SENSOR_PIN_FU) {
-            SENSORToEnable = SENSOR_PIN_FU_COMPENSATION;
+            sensorToEnable = SENSOR_PIN_FU_COMPENSATION;
         }
         #endif
         #ifdef SENSOR_PIN_MU_COMPENSATION
         if (i == SENSOR_PIN_MU) {
-            SENSORToEnable = SENSOR_PIN_MU_COMPENSATION;
+            sensorToEnable = SENSOR_PIN_MU_COMPENSATION;
         }
         #endif
         #ifdef SENSOR_PIN_EU_COMPENSATION
         if (i == SENSOR_PIN_EU) {
-            SENSORToEnable = SENSOR_PIN_EU_COMPENSATION;
+            sensorToEnable = SENSOR_PIN_EU_COMPENSATION;
         }
         #endif
         #ifdef SENSOR_PIN_HP_COMPENSATION
         if (i == SENSOR_PIN_HP) {
-            SENSORToEnable = SENSOR_PIN_HP_COMPENSATION;
+            sensorToEnable = SENSOR_PIN_HP_COMPENSATION;
         }
         #endif
-        pinMode(SENSORToEnable, OUTPUT);
+        pinMode(sensorToEnable, OUTPUT);
     }
-#ifdef ESP32_RIGHT
+#ifdef MASTER_HAND
     Wire.begin(21 , 22, 200000);
    // Wire.setTimeOut(2);
     //setTimeOut
@@ -661,9 +672,9 @@ void setup() {
 // initialize serial communication
 // (9600 38400 57600 74880 115200 230400 250000 57600 38400 chosen because it is required for Teapot Demo output, but it's
 // really up to you depending on your project)
-#ifdef USE_BT_MASTER
+#ifdef MASTER_HAND
     //TODO fix, rename
-    PC_SERIAL_NAME.begin(BT_BAUD);
+    SLAVE_SERIAL_NAME.begin(SLAVE_SERIAL_BAUD);
     // while (!hc05.available()){}
     // hc05Master.println(F("BT up"));
 #endif
@@ -923,10 +934,7 @@ int initMPUAndDMP(int attempt) {
         return 0;
     }
 // initialize device
-#ifdef USE_BT
-    hc05.println(F("BT: Initializing I2C devices..."));
-#endif
-#ifdef USE_USB
+#ifdef MASTER_SERIAL_NAME
     MASTER_SERIAL_NAME.println(F("USB: Initializing I2C devices..."));
 #endif
     if(selectedSENSOR == HP) {
@@ -935,7 +943,7 @@ int initMPUAndDMP(int attempt) {
         //mpu.initialize();
         mpu.initialize();
 
-    #ifdef USE_USB
+    //#ifdef USE_USB
         MASTER_SERIAL_NAME.println(F("Testing device connections..."));
         MASTER_SERIAL_NAME.println(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
 
@@ -946,7 +954,7 @@ int initMPUAndDMP(int attempt) {
         MASTER_SERIAL_NAME.println(F("Send any character to begin DMP programming and demo: "));
         // load and configure the DMP
         MASTER_SERIAL_NAME.println(F("Initializing DMP..."));
-    #endif
+    //#endif
         //devStatus = mpu.dmpInitialize();
         //devStatus = mpu.dmpInitialize();
         MASTER_SERIAL_NAME.print(F("DMP initialized..."));
@@ -963,8 +971,8 @@ int initMPUAndDMP(int attempt) {
         // make sure it worked (returns 0 if so)
         //if (devStatus == 0) {
         if (true) {
-  
-    #ifdef USE_USB
+
+    //#ifdef MASTER_SERIAL_NAME
             MASTER_SERIAL_NAME.print(F("Enabling DMP... "));
             MASTER_SERIAL_NAME.println(selectedSENSOR);
             mpu.setDMPEnabled(true);
@@ -975,22 +983,17 @@ int initMPUAndDMP(int attempt) {
             MASTER_SERIAL_NAME.print(F("packet size: "));
             MASTER_SERIAL_NAME.print(packetSizeM);
             MASTER_SERIAL_NAME.println(F(""));
-    #endif
+    //#endif
         } else {
     // ERROR!
     // 1 = initial memory load failed
     // 2 = DMP configuration updates failed
     // (if it's going to break, usually the code will be 1)
-    #ifdef USE_BT
-            hc05.print(F("DMP Initialization failed (code "));
-            hc05.print(devStatus);
-            hc05.println(F(")"));
-    #endif
-    #ifdef USE_USB
+    //#ifdef USE_USB
             MASTER_SERIAL_NAME.print(F("DMP Initialization failed (code "));
             MASTER_SERIAL_NAME.print(devStatus);
             MASTER_SERIAL_NAME.println(F(")"));
-    #endif
+    //#endif
             initMPUAndDMP(attempt - 1);
         }
     } else {
@@ -998,7 +1001,8 @@ int initMPUAndDMP(int attempt) {
         MPU6050_MPU9250 mpu = *gyros[selectedSENSOR].mpu;
         mpu.initialize();
 
-    #ifdef USE_USB
+    // TODO
+    //#ifdef MASTER_SERIAL_NAME
         MASTER_SERIAL_NAME.println(F("Testing device connections..."));
         MASTER_SERIAL_NAME.println(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
         MASTER_SERIAL_NAME.println("testConnection");
@@ -1007,7 +1011,7 @@ int initMPUAndDMP(int attempt) {
         MASTER_SERIAL_NAME.println(F("\nSend any character to begin DMP programming and demo: "));
         // load and configure the DMP
         MASTER_SERIAL_NAME.println(F("Initializing DMP..."));
-    #endif
+    //#endif
         devStatus = mpu.dmpInitialize();
         MASTER_SERIAL_NAME.print(F("DMP initialized..."));
 
@@ -1025,20 +1029,7 @@ int initMPUAndDMP(int attempt) {
         if (true) {
     // turn on the DMP, now that it's ready
     // initialize device
-    #ifdef USE_BT
-            hc05.print(F("Enabling DMP... "));
-            hc05.println(selectedSENSOR);
-            mpu.setDMPEnabled(true);
-
-            // set our DMP Ready flag so the main loop( ) function knows it's okay to use it
-            hc05.println(F("DMP ready! Getting packet size..."));
-            //gyros[selectedSENSOR].dmpReady = true;
-            // get expected DMP packet size for later comparison
-            hc05.print(F("packet size: "));
-            hc05.print(packetSizeS);
-            hc05.println(F(""));
-    #endif
-    #ifdef USE_USB
+    //#ifdef MASTER_SERIAL_NAME 
             MASTER_SERIAL_NAME.print(F("Enabling DMP... "));
             MASTER_SERIAL_NAME.println(selectedSENSOR);
             mpu.setDMPEnabled(true);
@@ -1049,22 +1040,18 @@ int initMPUAndDMP(int attempt) {
             MASTER_SERIAL_NAME.print(F("packet size: "));
             MASTER_SERIAL_NAME.print(packetSizeS);
             MASTER_SERIAL_NAME.println(F(""));
-    #endif
+    //#endif
         } else {
     // ERROR!
     // 1 = initial memory load failed
     // 2 = DMP configuration updates failed
     // (if it's going to break, usually the code will be 1)
-    #ifdef USE_BT
-            hc05.print(F("DMP Initialization failed (code "));
-            hc05.print(devStatus);
-            hc05.println(F(")"));
-    #endif
-    #ifdef USE_USB
+
+    //#ifdef MASTER_SERIAL_NAME
             MASTER_SERIAL_NAME.print(F("DMP Initialization failed (code "));
             MASTER_SERIAL_NAME.print(devStatus);
             MASTER_SERIAL_NAME.println(F(")"));
-    #endif
+    //#endif
             initMPUAndDMP(attempt - 1);
         }
     }
@@ -1161,6 +1148,7 @@ void automaticFifoReset() {
 }
 
 void fifoToPacket(byte * fifoBuffer, byte * packet, int selectedSENSOR) {
+    DEBUG_PRINTLN("fifoToPacket");
     packet[2] = selectedSENSOR;
     packet[3] = fifoBuffer[0];
     packet[4] = fifoBuffer[1];
@@ -1172,23 +1160,22 @@ void fifoToPacket(byte * fifoBuffer, byte * packet, int selectedSENSOR) {
     packet[10] = fifoBuffer[13];
 }
 
-#ifdef USE_BT_MASTER
+#ifdef MASTER_HAND
 void sendDataRequest(int selectedSENSOR) {
-    PC_SERIAL_NAME.write('$');
-    PC_SERIAL_NAME.write(selectedSENSOR);
-    PC_SERIAL_NAME.write((byte)0x00); // 0x00 fails to compile
+    SLAVE_SERIAL_NAME.write('$');
+    SLAVE_SERIAL_NAME.write(selectedSENSOR);
+    SLAVE_SERIAL_NAME.write((byte)0x00); // 0x00 fails to compile
 }
 #endif
 
 volatile int readAlign = 0;
-#ifdef RIGHT_HAND_SLAVE 
+#ifdef SLAVE_HAND 
 volatile int readAligned = 0;
 #endif
-#ifdef LEFT_HAND 
+#ifdef MASTER_HAND 
 volatile int readAligned = 1;
 #endif
 volatile float time2, timePrev2;
-
 
 /*
 //void getAccel_Data(MPU6050 * mpuI) {  
@@ -1203,20 +1190,17 @@ void getAccel_Data(MPU6050_MPU9250 * mpu) {
 float Axyz[3];
 float Gxyz[3];
 float Mxyz[3];
-//void getMPU9250Data(MPU9250 * mpuI) {
+
 void getMPU9250Data(MPU6050_MPU9250 * mpu) {
-
-   // uint8_t buffer_m[6];
-
+    // uint8_t buffer_m[6];
     int16_t ax, ay, az;
     int16_t gx, gy, gz;
     int16_t   mx, my, mz;
-
     
     //float q[4];
     uint16_t qI[4];
 
-    // MPU6050_MPU9250 mpu = *gyros[selectedSENSOR].mpu;
+    //MPU6050_MPU9250 mpu = *gyros[selectedSENSOR].mpu;
     //MPU9250 mpu = *mpuI;
     //MPU6050_MPU9250 mpu = *mpu;
     //mpu->get
@@ -1352,7 +1336,7 @@ bool loadDataFromFIFO(int forceLoad = false) {
 void writePacket() {
     uint8_t *fifoBuffer = gyros[selectedSENSOR].fifoBuffer; // FIFO storage buffer
 
-#ifdef ESP32_RIGHT
+#ifdef MASTER_HAND
     MASTER_SERIAL_NAME.write(teapotPacket, PACKET_LENGTH);
 
     if(!gyros[selectedSENSOR].alreadySentData && gyros[selectedSENSOR].hasDataReady) {
@@ -1364,7 +1348,11 @@ void writePacket() {
         teapotPacket[PACKET_COUNTER_POSITION]++; // packetCount, loops at 0xFF on purpose
     }
 #else
-#ifdef RIGHT_HAND
+#ifdef SLAVE_HAND
+    DEBUG_PRINT("alreadySentData ");
+    DEBUG_PRINT(gyros[selectedSENSOR].alreadySentData);
+    DEBUG_PRINT(" hasDataReady ");
+    DEBUG_PRINTLN(gyros[selectedSENSOR].hasDataReady);
     if(!gyros[selectedSENSOR].alreadySentData && gyros[selectedSENSOR].hasDataReady){
         fifoToPacket(fifoBuffer, teapotPacket, selectedSENSOR);
         MASTER_SERIAL_NAME.write(teapotPacket, PACKET_LENGTH);
@@ -1376,7 +1364,7 @@ void writePacket() {
     readAlign = 0;
     readAligned = 0;
 #endif
-#ifdef LEFT_HAND
+#ifdef MASTER_HAND
     if(!gyros[selectedSENSOR].alreadySentData && gyros[selectedSENSOR].hasDataReady) {
         fifoToPacket(fifoBuffer, teapotPacket, selectedSENSOR);
         MASTER_SERIAL_NAME.write(teapotPacket, PACKET_LENGTH);
@@ -1393,7 +1381,7 @@ void writePacket() {
 void loadDataAndSendPacket() {
     loadDataFromFIFO(false);
     if(gyros[selectedSENSOR].hasDataReady) {
-
+/*
 #ifdef USE_BT
         if (hc05.availableForWrite()) {
             for (int i = 0; i < PACKET_LENGTH; i++) {
@@ -1401,17 +1389,21 @@ void loadDataAndSendPacket() {
             }
         }
 #endif
-#ifdef USE_USB
+*/
+//#ifdef USE_USB
     writePacket();       
-#endif
+//#endif
     }
 }
 
-#ifdef RIGHT_HAND_SLAVE     
+//#ifdef RIGHT_HAND_SLAVE     
+#ifdef SLAVE_HAND
 void slaveHandDataRequestHandler() {
-    int limit = REPEAT_LEFT_HAND_READ_LIMIT;
+    int limit = REPEAT_SLAVE_HAND_READ_LIMIT;
     readAlign = 0;
     readAligned = 0;
+    DEBUG_PRINTLN("slaveHandDataRequestHandler");
+
     while(limit > 0) {
         int ch = MASTER_SERIAL_NAME.read();
         if (ch != -1) {
@@ -1419,11 +1411,15 @@ void slaveHandDataRequestHandler() {
             if(readAlign<1) {
                 if(ch == '$') {
                     readAlign=1;
-                    //MASTER_SERIAL_NAME.println("$");
+                    DEBUG_PRINTLN("$ - readAlign=1");
                 }
             } else {
-                if(ch >= 0 && ch < SENSORS_COUNT) {
-                    //MASTER_SERIAL_NAME.println("al");
+                //if(ch >= 0 && ch < SENSORS_COUNT) {
+                if((ch >= 0 && ch < SENSORS_COUNT) || (ch >= '0' && ch <= '6' )) {    
+                    if(ch >= '0' && ch <= '6' ){
+                        ch = ch - 48;
+                    }
+                    DEBUG_PRINTLN("al");
                     readAligned = 1;
                     readAlign=0;//++;
                     setOrRotateSelectedGyro(ch);
@@ -1440,6 +1436,7 @@ void slaveHandDataRequestHandler() {
 
                     break;
                 }else {
+                    DEBUG_PRINTLN("readAlign=0");
                     readAlign=0;
                 }
             }    
@@ -1449,9 +1446,9 @@ void slaveHandDataRequestHandler() {
 }
 #endif
 
-#ifdef USE_BT_MASTER
+#ifdef MASTER_HAND
 void loadSlaveHandData() {
-    int limit = REPEAT_RIGHT_HAND_READ_LIMIT;
+    int limit = REPEAT_MASTER_HAND_READ_LIMIT;
     
     while(--limit>0){ 
         sendDataRequest(selectedSENSOR);
@@ -1480,7 +1477,7 @@ void loadSlaveHandData() {
                 break;
             }
 
-            int ch = PC_SERIAL_NAME.read();
+            int ch = SLAVE_SERIAL_NAME.read();
 
             if (ch != -1) {
                 if(ch == '$') {
@@ -1567,16 +1564,8 @@ void loop() {
   //}
 #endif
 
-// reset interrupt flag and get INT_STATUS byte
-#ifdef USE_BT_MASTER
-    //loadSlaveHandData();
-#endif
-
-// TODO switch hands
-#ifdef RIGHT_HAND_SLAVE 
-#endif
-
-#ifdef ESP32_RIGHT
+#ifdef MASTER_HAND
+    loadSlaveHandData();
     gyros[selectedSENSOR].alreadySentData = false;
     //writePacket();
     loadDataAndSendPacket();
@@ -1586,19 +1575,12 @@ void loop() {
     loadDataFromFIFO(true);
 #endif
 
-#ifdef LEFT_HAND
-        gyros[selectedSENSOR].alreadySentData = false;
-        //writePacket();
-        loadDataAndSendPacket();
-        int currentlySellectedSensor = selectedSENSOR;
-        setOrRotateSelectedGyro(-1);
-        loadDataFromFIFO(true);
-        //resetMPUs(-3);
-        //automaticFifoReset();
+#ifdef SLAVE_HAND
+    slaveHandDataRequestHandler();
 #endif
     automaticFifoReset();
-#ifdef USE_BT_MASTER
-    //loadSlaveHandData();
+#ifdef MASTER_HAND
+    loadSlaveHandData();
 #endif
 
 }

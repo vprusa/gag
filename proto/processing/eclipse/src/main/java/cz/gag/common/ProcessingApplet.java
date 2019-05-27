@@ -232,7 +232,7 @@ public class ProcessingApplet extends PApplet {
                             // });
                             for (int i = 0; i < 10; i++) {
                                 p.write(new byte[] { '$', /* (byte) 0x99, */ (byte) rightHandSensorIndex });
-                                Thread.sleep(1);
+                                //Thread.sleep(10);
                             }
                             p.write(new byte[] { '$', /* (byte) 0x99, */ (byte) rightHandSensorIndex++ });
                             if (rightHandSensorIndex >= Sensor.values().length) {
@@ -241,7 +241,7 @@ public class ProcessingApplet extends PApplet {
                             // System.out.println(".");
                         }
 
-                        Thread.sleep(1);
+                        //Thread.sleep(1);
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -985,7 +985,7 @@ public class ProcessingApplet extends PApplet {
                                 DataLine dl = null;
                                 try {
                                     if (teapotPacket != null) {
-                                        if (teapotPacket[0] == '*') {
+                                        if (teapotPacket[0] == '$') {
                                             dl = new DataLine(Calendar.getInstance().getTime(), localQuat, localAcc,
                                                     Sensor.values()[sensor], Hand.LEFT);
                                             // println("Left: " + dl.toString());
@@ -997,7 +997,7 @@ public class ProcessingApplet extends PApplet {
                                             } else {
                                                 leftHandData.setSensorData(dl);
                                             }
-                                        } else if (teapotPacket[0] == '$') {
+                                        } else if (teapotPacket[0] == '*') {
                                             dl = new DataLine(Calendar.getInstance().getTime(), localQuat, localAcc,
                                                     Sensor.values()[sensor], Hand.RIGHT);
                                             // println("Right: " + dl.toString());

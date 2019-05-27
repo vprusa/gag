@@ -59,6 +59,7 @@ THE SOFTWARE.
     typedef void prog_void;
     typedef char prog_char;
     typedef unsigned char prog_uchar;
+    #ifdef SLAVE_HAND
     //vprusa
     typedef int8_t prog_int8_t;
     typedef uint8_t prog_uint8_t;
@@ -68,6 +69,7 @@ THE SOFTWARE.
     //vprusa
     typedef int32_t prog_int32_t;
     typedef uint32_t prog_uint32_t;
+    #endif
     /*
     #define strcpy_P(dest, src) strcpy((dest), (src))
     #define strcat_P(dest, src) strcat((dest), (src))
