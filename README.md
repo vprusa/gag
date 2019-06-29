@@ -4,7 +4,7 @@
 
 ## Goal
 
-Gestrue recongition using
+Gestrue recongition glove
 
 ## Everything in progress ..
 
@@ -35,7 +35,7 @@ More specific info can be found in team [trello]( https://trello.com/b/3HKvK85J/
 ![Prototype #3 with display](./data/docs/protoNo3PairWithDisplay.jpg)
 ![Prototype #3 with display](./data/docs/protoNo3RightWithDisplayOn.jpg)
 
-![Prototype #1 with display](./data/docs/protoWithDisplay.png)
+![Prototype #1 with display](./data/docs/protoNo1WithDisplay.png)
 ![Replay screen](./data/docs/replay.png)
 ![Replay screen](./data/docs/replayEmpty.jpg)
 
