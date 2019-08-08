@@ -2,3 +2,4 @@
 *.log
 workspace.sh
 gag-web.test*
+test
