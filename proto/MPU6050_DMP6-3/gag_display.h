@@ -1,0 +1,37 @@
+/*
+*/
+#ifndef _GAG_DISPLAY_
+#define _GAG_DISPLAY_
+
+#include "Wire.h"
+#include <TimeLib.h>
+#include "SSD1306Wire.h" // legacy include: `#include "SSD1306.h"`
+//#include "OLEDDisplay.h"
+#include "OLEDDisplayUi.h"
+
+const unsigned char activeSymbol[] PROGMEM = {
+    B00000000,
+    B00000000,
+    B00011000,
+    B00100100,
+    B01000010,
+    B01000010,
+    B00100100,
+    B00011000
+};
+
+const unsigned char inactiveSymbol[] PROGMEM = {
+    B00000000,
+    B00000000,
+    B00000000,
+    B00000000,
+    B00011000,
+    B00011000,
+    B00000000,
+    B00000000
+};
+
+void displaySetup();
+
+
+#endif
