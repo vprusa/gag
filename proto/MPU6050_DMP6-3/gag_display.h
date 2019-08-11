@@ -1,7 +1,8 @@
 /*
 */
-#ifndef _GAG_DISPLAY_
-#define _GAG_DISPLAY_
+
+#ifndef _GAG_DISPLAY_H_
+#define _GAG_DISPLAY_H_
 
 #include "Wire.h"
 #include <TimeLib.h>

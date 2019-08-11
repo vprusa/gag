@@ -7,7 +7,16 @@ Copyright (c) 2018 Vojtěch Průša
 // 
 #define ESP32_RIGHT 1// master to left, slave to pc
 
+//#define MEASURE_OFFSETS
+
 #include "gag.h"
+
+#ifdef MEASURE_OFFSETS
+//#include "gag_offsetting.h"
+#endif
+
+
+
 
 void setup() {
 //    WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
@@ -86,8 +95,6 @@ void setup() {
 #ifdef MASTER_HAND
     //TODO fix, rename
     SLAVE_SERIAL_NAME.begin(SLAVE_SERIAL_BAUD);
-    // while (!hc05.available()){}
-    // hc05Master.println(F("BT up"));
 #endif
 
     // NOTE: 8MHz or slower host processors, like the Teensy @ 3.3v or Ardunio
@@ -158,12 +165,6 @@ void setup() {
   //ui.update();
 
 }
-
-//#define MEASURE_OFFSETS
-#ifdef MEASURE_OFFSETS
-#include "gag_offsetting.h"
-#endif
-
 
 
 // ================================================================
