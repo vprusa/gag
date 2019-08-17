@@ -4,6 +4,8 @@
 #ifndef _GAG_DISPLAY_H_
 #define _GAG_DISPLAY_H_
 
+#ifdef USE_DISPLAY
+
 #include "Wire.h"
 #include <TimeLib.h>
 #include "SSD1306Wire.h" // legacy include: `#include "SSD1306.h"`
@@ -35,4 +37,5 @@ const unsigned char inactiveSymbol[] PROGMEM = {
 void displaySetup();
 
 
+#endif
 #endif

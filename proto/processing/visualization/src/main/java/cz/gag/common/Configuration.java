@@ -29,9 +29,9 @@ public class Configuration {
     static public int packetSize = receiveAcc ? 21 : 15;
 
     static public String prefixPath = "/dev/";
-    static public String deviceRight = "rfcomm1"; // ttyUSB1 // /dev/rfcomm0
+    static public String deviceRight = "rfcomm0"; // ttyUSB1 // /dev/rfcomm0
     static public String portNameRight = System.getProperty("portNameRight", prefixPath + deviceRight);
-    static public int baudRateRight = System.getProperty("baudRateRight") == null ? 230400 
+    static public int baudRateRight = System.getProperty("baudRateRight") == null ? 230400
             // 230400 115200 57600 38400 19200 9600
             : Integer.valueOf(System.getProperty("baudRateRight"));
     // 38400 9600 115200 57600
@@ -68,7 +68,7 @@ public class Configuration {
 
     // Print what date is today!
     // System.out.println("Report Date: " + reportDate);
-    
+
     static public String outputFile = "output-" + gestureName + "-" + deviceRight + "-{date}.log";
 
     static public boolean showGlobesDots = System.getProperty("showGlobesDots") == null ? false

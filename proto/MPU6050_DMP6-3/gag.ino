@@ -5,7 +5,7 @@ Copyright (c) 2018 Vojtěch Průša
 // Based on example of MPU6050 from https://github.com/jrowberg/i2cdevlib
 // from 6/21/2012 by Jeff Rowberg <jeff@rowberg.net>
 // 
-#define ESP32_RIGHT 1// master to left, slave to pc
+//#define ESP32_RIGHT 1// master to left, slave to pc
 
 //#define MEASURE_OFFSETS
 

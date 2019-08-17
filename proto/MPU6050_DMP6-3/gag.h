@@ -124,7 +124,7 @@
 //#define SENSOR_PIN_OFFSET 3
 #define SENSOR_PIN_OFFSET 0
 // 57600 115200
-#define PC_SERIAL_BAUD 115200
+//#define PC_SERIAL_BAUD 115200
 
 #endif
 
@@ -212,14 +212,14 @@ BluetoothSerial SerialBT;
 #define MASTER_SERIAL_NAME Serial2
 #define PC_SERIAL_NAME Serial
 #define MASTER_SERIAL_BAUD 115200
-#define PC_SERIAL_BAUD 115200
+//#define PC_SERIAL_BAUD 115200
 #endif
 #endif
 // TODO remove so many ifs ...
 
 #ifdef SLAVE_HAND
 #define MASTER_SERIAL_NAME Serial
-#define MASTER_SERIAL_BAUD 115200
+#define MASTER_SERIAL_BAUD 57600
 
 #ifdef LIB_SW_SERIAL
 #include <SoftwareSerial.h>

@@ -87,7 +87,7 @@ public class ProcessingApplet extends PApplet {
     /*
      * ============================================ I2Cdev device library code is
      * placed under the MIT license Copyright (c) 2012 Jeff Rowberg
-     * 
+     *
      */
 
 // NOTE: requires ToxicLibs to be installed in order to run properly.
@@ -552,7 +552,7 @@ public class ProcessingApplet extends PApplet {
     // mouse button clicked
     /*
      * public void mousePressed() { if (on_button.MouseIsOver()) {
-     * 
+     *
      * // print some text to the console pane if the button is clicked
      * System.out.print("Clicked: "); System.out.println(clk++); } }
      */
@@ -562,16 +562,16 @@ public class ProcessingApplet extends PApplet {
      * public class Button { String label; // button label float x; // top left
      * corner x position float y; // top left corner y position float w; // width of
      * button float h; // height of button
-     * 
+     *
      * // constructor Button(String labelB, float xpos, float ypos, float widthB,
      * float heightB) { label = labelB; x = xpos; y = ypos; w = widthB; h = heightB;
      * }
-     * 
+     *
      * void Draw() { //translate(0, 0); fill(218); stroke(141);
-     * 
+     *
      * rect(x, y, w, h, 10); textAlign(CENTER, CENTER); fill(0); text(label, x + (w
      * / 2), y + (h / 2)); }
-     * 
+     *
      * boolean MouseIsOver() { if (mouseX > x && mouseX < (x + w) && mouseY > y &&
      * mouseY < (y + h)) { return true; } return false; } }
      */
@@ -893,7 +893,9 @@ public class ProcessingApplet extends PApplet {
                         // continue;
                     } else {
                         print((char) ch);
+                        System.out.print((char)ch);
                     }
+
 
                     // out.close();
                     if (ch == '*' || ch == '$') {

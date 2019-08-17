@@ -3,6 +3,7 @@
 
 #include "gag_display.h"
 
+#ifdef USE_DISPLAY
 // Initialize the OLED display using Wire library
 //SSD1306Wire  display(0x3c, D3, D5);
 SSD1306Wire display(0x3c, 18, 19);
@@ -147,3 +148,4 @@ void displaySetup(){
   setTime(epoch);
 
 }
+#endif
