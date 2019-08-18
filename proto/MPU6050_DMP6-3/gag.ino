@@ -5,17 +5,30 @@ Copyright (c) 2018 Vojtěch Průša
 // Based on example of MPU6050 from https://github.com/jrowberg/i2cdevlib
 // from 6/21/2012 by Jeff Rowberg <jeff@rowberg.net>
 // 
-//#define ESP32_RIGHT 1// master to left, slave to pc
+// master to left, slave to pc
 
 //#define MEASURE_OFFSETS
 
+
+#define ESP32_RIGHT 1
+//#define USE_DISPLAY 1
+//#define MEASURE_OFFSETS 1
+#include "definitions.h"
 #include "gag.h"
+/*
+extern SSD1306Wire display(0x3c, 18, 19);
+extern OLEDDisplayUi ui ( &display );
+extern int remainingTimeBudget = 0;
+*/
+
+extern SSD1306Wire display;
+extern OLEDDisplayUi ui;
+extern int remainingTimeBudget;
+
 
 #ifdef MEASURE_OFFSETS
 //#include "gag_offsetting.h"
 #endif
-
-
 
 
 void setup() {
@@ -37,38 +50,7 @@ void setup() {
 #endif
 
     for (int i = FIRST_SENSOR; i <= LAST_SENSOR; i++) {
-        int sensorToEnable = SENSOR_PIN_OFFSET + i;
-         
-        #ifdef SENSOR_PIN_TU_COMPENSATION
-        if (i == SENSOR_PIN_TU) {
-            sensorToEnable = SENSOR_PIN_TU_COMPENSATION;
-        }
-        #endif
-        #ifdef SENSOR_PIN_SU_COMPENSATION
-        if (i == SENSOR_PIN_SU) {
-            sensorToEnable = SENSOR_PIN_SU_COMPENSATION;
-        }
-        #endif
-        #ifdef SENSOR_PIN_FU_COMPENSATION
-        if (i == SENSOR_PIN_FU) {
-            sensorToEnable = SENSOR_PIN_FU_COMPENSATION;
-        }
-        #endif
-        #ifdef SENSOR_PIN_MU_COMPENSATION
-        if (i == SENSOR_PIN_MU) {
-            sensorToEnable = SENSOR_PIN_MU_COMPENSATION;
-        }
-        #endif
-        #ifdef SENSOR_PIN_EU_COMPENSATION
-        if (i == SENSOR_PIN_EU) {
-            sensorToEnable = SENSOR_PIN_EU_COMPENSATION;
-        }
-        #endif
-        #ifdef SENSOR_PIN_HP_COMPENSATION
-        if (i == SENSOR_PIN_HP) {
-            sensorToEnable = SENSOR_PIN_HP_COMPENSATION;
-        }
-        #endif
+        int sensorToEnable = selectSingleMPU(i);
         pinMode(sensorToEnable, OUTPUT);
     }
 #ifdef MASTER_HAND

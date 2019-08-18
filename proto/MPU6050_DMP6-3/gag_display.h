@@ -4,7 +4,8 @@
 #ifndef _GAG_DISPLAY_H_
 #define _GAG_DISPLAY_H_
 
-#ifdef USE_DISPLAY
+#include "definitions.h"
+//#ifdef USE_DISPLAY
 
 #include "Wire.h"
 #include <TimeLib.h>
@@ -36,6 +37,4 @@ const unsigned char inactiveSymbol[] PROGMEM = {
 
 void displaySetup();
 
-
-#endif
 #endif

@@ -1,16 +1,13 @@
 /*
 */
 
+#include "definitions.h"
 #include "gag_display.h"
 
-#ifdef USE_DISPLAY
-// Initialize the OLED display using Wire library
-//SSD1306Wire  display(0x3c, D3, D5);
 SSD1306Wire display(0x3c, 18, 19);
-
-// SH1106 display(0x3c, D3, D5);
-
 OLEDDisplayUi ui ( &display );
+int remainingTimeBudget = 0;
+//extern int remainingTimeBudget =  0;
 
 int screenW = 128;
 int screenH = 64;
@@ -89,7 +86,6 @@ int frameCount = 2;
 // Overlays are statically drawn on top of a frame eg. a clock
 OverlayCallback overlays[] = { clockOverlay };
 int overlaysCount = 1;
-int remainingTimeBudget =  0;
 
 void displaySetup(){
     /*
@@ -148,4 +144,4 @@ void displaySetup(){
   setTime(epoch);
 
 }
-#endif
+

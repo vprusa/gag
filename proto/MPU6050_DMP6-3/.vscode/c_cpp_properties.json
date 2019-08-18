@@ -3,6 +3,7 @@
         {
             "name": "Linux",
             "includePath": [
+                "/home/vprusa/workspace/p/notes/work/projects/arduino/gag/proto/MPU6050_DMP6-3/**",
                 "/home/vprusa/.arduino15/packages/esp32/tools/**",
                 "/home/vprusa/.arduino15/packages/esp32/hardware/esp32/1.0.2/**",
                 "/home/vprusa/.arduino15/packages/arduino/hardware/avr/1.6.23/**",
@@ -10,7 +11,7 @@
                 "/home/vprusa/Arduino/libraries/**"
             ],
             "forcedInclude": [
-                "/home/vprusa/.arduino15/packages/arduino/hardware/avr/1.6.23/cores/arduino/Arduino.h"
+                "/home/vprusa/workspace/p/notes/work/projects/arduino/gag/proto/MPU6050_DMP6-3/"
             ],
             "intelliSenseMode": "gcc-x64",
             "compilerPath": "/usr/bin/gcc",
