@@ -10,21 +10,23 @@ Copyright (c) 2018 Vojtěch Průša
 //#define MEASURE_OFFSETS
 
 
-#define ESP32_RIGHT 1
+//#define ESP32_RIGHT 1
 //#define USE_DISPLAY 1
 //#define MEASURE_OFFSETS 1
 #include "definitions.h"
 #include "gag.h"
+#include "Wire.h"
 /*
 extern SSD1306Wire display(0x3c, 18, 19);
 extern OLEDDisplayUi ui ( &display );
 extern int remainingTimeBudget = 0;
 */
 
+#ifdef USE_DISPLAY
 extern SSD1306Wire display;
 extern OLEDDisplayUi ui;
 extern int remainingTimeBudget;
-
+#endif
 
 #ifdef MEASURE_OFFSETS
 //#include "gag_offsetting.h"
@@ -32,9 +34,12 @@ extern int remainingTimeBudget;
 
 
 void setup() {
-//    WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
-//#ifdef MASTER_HAND
-    #ifdef MASTER_HAND
+    // WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
+    //#ifdef MASTER_HAND    
+    //Serial.begin(115200);
+    //DEBUG_PRINT("setup");
+    
+    //#ifdef MASTER_HAND
     #ifdef MASTER_BT_SERIAL
     MASTER_SERIAL_NAME.begin(MASTER_BT_SERIAL_NAME);
     #else
@@ -42,9 +47,15 @@ void setup() {
     while (!MASTER_SERIAL_NAME)
         ; // wait for Leonardo enumeration, others continue immediately
     #endif
-    #endif
-    MASTER_SERIAL_NAME.println(F("USB up"));
-
+    //#endif
+    
+    
+    //MASTER_SERIAL_NAME.begin(MASTER_SERIAL_BAUD);
+    //MASTER_SERIAL_NAME.println(F("USB up"));
+    
+    //Serial.begin(115200);
+    //Serial.println(F("USB up"));
+    
 #ifdef USE_DISPLAY
     displaySetup();
 #endif
@@ -54,19 +65,24 @@ void setup() {
         pinMode(sensorToEnable, OUTPUT);
     }
 #ifdef MASTER_HAND
-    Wire.begin(21 , 22, 200000);
-   // Wire.setTimeOut(2);
+    Wire.begin();
+    //TWBR = 24; // 400kHz I2C clock (200kHz if CPU is 8MHz)
+    //Wire.setClock(400000); 
+    //Wire.setClock(400000); 
+    //Wire.begin(21 , 22, 200000);
+    //Wire.setTimeOut(2);
     //setTimeOut
     //Fastwire::setup(400, true);
     //Wire.begin();
     //TWBR = 24; // 400kHz I2C clock (200kHz if CPU is 8MHz)
-    //Wire.setClock(400000);
+    Wire.setClock(100000);
 #else
 // join I2C bus (I2Cdev library doesn't do this automatically)
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
     Wire.begin();
-    //TWBR = 24; // 400kHz I2C clock (200kHz if CPU is 8MHz)
-    Wire.setClock(400000); // 400kHz I2C clock. Comment this line if having compilation difficulties#elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
+    TWBR = 24; // 400kHz I2C clock (200kHz if CPU is 8MHz)
+   // Wire.setClock(400000); // 400kHz I2C clock. Comment this line if having compilation difficulties#elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
+   Wire.setClock(400000);
 #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
     //Fastwire::setup(400, true);
 #endif
@@ -86,7 +102,7 @@ void setup() {
     // crystal solution for the UART timer.
 
     for (int i = FIRST_SENSOR; i <= LAST_SENSOR; i++) {
-        selectedSensor = (Sensor)i;
+        selectedSensor = (Sensor) i;
         enableSingleMPU(selectedSensor);
         if(i == HP) {
             //gyros[selectedSensor].mpuM = new MPU6050(MPU6050_ADDRESS_AD0_HIGH); // MPU6050_ADDRESS_AD0_LOW / MPU6050_ADDRESS_AD0_HIGH
@@ -95,57 +111,31 @@ void setup() {
             gyros[selectedSensor].mpu = new MPU6050_MPU9250(MPU6050_MPU9250_ADDRESS_AD0_LOW);//   0x68 / 0x69
             gyros[selectedSensor].mpu->isMPU9250 = true;
         } else {
-            //gyros[selectedSensor].mpu = new MPU6050(MPU6050_ADDRESS_AD0_HIGH);//   0x68 / 0x69
-            //gyros[selectedSensor].mpu = new MPU6050(MPU6050_ADDRESS_AD0_LOW);//   0x68 / 0x69
+            //gyros[selectedSensor].mpu = new MPU6050(MPU6050_ADDRESS_AD0_HIGH); //   0x68 / 0x69
+            //gyros[selectedSensor].mpu = new MPU6050(MPU6050_ADDRESS_AD0_LOW); //   0x68 / 0x69
             //gyros[selectedSensor].mpu->isMPU6050 = true;
-            gyros[selectedSensor].mpu = new MPU6050_MPU9250(MPU6050_MPU9250_ADDRESS_AD0_LOW);//   0x68 / 0x69
+            gyros[selectedSensor].mpu = new MPU6050_MPU9250(MPU6050_MPU9250_ADDRESS_AD0_LOW); //   0x68 / 0x69
         }
 
-        int selectorOffsettedPin = SENSOR_PIN_OFFSET + i;
-        
-        #ifdef SENSOR_PIN_TU_COMPENSATION
-        if (i == SENSOR_PIN_TU) {
-            selectorOffsettedPin = SENSOR_PIN_TU_COMPENSATION;
-        }
-        #endif
-        #ifdef SENSOR_PIN_SU_COMPENSATION
-        if (i == SENSOR_PIN_SU) {
-            selectorOffsettedPin = SENSOR_PIN_SU_COMPENSATION;
-        }
-        #endif
-        #ifdef SENSOR_PIN_FU_COMPENSATION
-        if (i == SENSOR_PIN_FU) {
-            selectorOffsettedPin = SENSOR_PIN_FU_COMPENSATION;
-        }
-        #endif
-        #ifdef SENSOR_PIN_MU_COMPENSATION
-        if (i == SENSOR_PIN_MU) {
-            selectorOffsettedPin = SENSOR_PIN_MU_COMPENSATION;
-        }
-        #endif
-        #ifdef SENSOR_PIN_EU_COMPENSATION
-        if (i == SENSOR_PIN_EU) {
-            selectorOffsettedPin = SENSOR_PIN_EU_COMPENSATION;
-        }
-        #endif
-        // Because Non-firing contact field on right hand has broken contact on pin D8  
-        #ifdef SENSOR_PIN_HP_COMPENSATION
-        if (i == SENSOR_PIN_HP) {
-            selectorOffsettedPin = SENSOR_PIN_HP_COMPENSATION;
-        }
-        #endif
+        int selectorOffsettedPin = selectSingleMPU(i);
+
+        MASTER_SERIAL_NAME.print(F("selectedSensor: "));
+        MASTER_SERIAL_NAME.print((int)selectedSensor);
+        MASTER_SERIAL_NAME.println(F(""));
+
         MASTER_SERIAL_NAME.print(F("Enabled on pin: "));
         MASTER_SERIAL_NAME.print(selectorOffsettedPin);
         MASTER_SERIAL_NAME.println(F(""));
         
         initMPUAndDMP(1);
+        MASTER_SERIAL_NAME.println(F("\n\n"));
+
     }
     timeNow = millis(); //Start counting time in milliseconds
 
     //delay(3000);
-//ui.init();
-  //ui.update();
-
+    //ui.init();
+    //ui.update();
 }
 
 

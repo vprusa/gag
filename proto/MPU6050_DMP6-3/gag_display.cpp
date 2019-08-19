@@ -3,7 +3,7 @@
 
 #include "definitions.h"
 #include "gag_display.h"
-
+#ifdef USE_DISPLAY
 SSD1306Wire display(0x3c, 18, 19);
 OLEDDisplayUi ui ( &display );
 int remainingTimeBudget = 0;
@@ -145,3 +145,4 @@ void displaySetup(){
 
 }
 
+#endif

@@ -1,4 +1,3 @@
-
 /*
 */
 
@@ -10,7 +9,6 @@
 #include "MPU6050_MPU9250_9Axis_MotionApps41.h"
 //#include "gag_offsetting.h"
 
-
 #ifdef USE_DISPLAY
 #ifndef USE_DUSPLAY_h
 #define USE_DUSPLAY_h
@@ -18,9 +16,7 @@
 #endif
 #endif
 
-#ifdef  MASTER_HAND
-
-    #define MASTER_BT_SERIAL
+#ifdef MASTER_HAND
     #ifdef MASTER_BT_SERIAL
         #define MASTER_BT_SERIAL_NAME "GAGGM"
         #include "BluetoothSerial.h"
@@ -51,7 +47,6 @@
         //#define PC_SERIAL_BAUD 115200
     #endif
 #endif
-
 
 // TODO remove so many ifs ...
 
@@ -171,7 +166,7 @@ volatile float time2, timePrev2;
 //void getAccel_Data(MPU6050 * mpuI) {  
 void getAccel_Data(MPU6050_MPU9250 * mpu) {
     //MPU6050 mpu = *mpuI;
-   // MPU6050_MPU9250 mpu = *mpu;
+   // MPU6050_MPU9250 mpu = *mpu;hasDataReady
     mpu->getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
     Axyz[0] = (double) ax / 16384;
     Axyz[1] = (double) ay / 16384;
@@ -215,40 +210,39 @@ void measureOffsets(MPU6050_MPU9250 *mpuP);
 */
 #endif // end of code for measuring offsets 
 
-
 int selectSingleMPU(int i) {
     int selectorOffsettedPin = i + SENSOR_PIN_OFFSET;
-        #ifdef SENSOR_PIN_TU_COMPENSATION
-        if (i == SENSOR_PIN_TU) {
-            selectorOffsettedPin = SENSOR_PIN_TU_COMPENSATION;
-        }
-        #endif
-        #ifdef SENSOR_PIN_SU_COMPENSATION
-        if (i == SENSOR_PIN_SU) {
-            selectorOffsettedPin = SENSOR_PIN_SU_COMPENSATION;
-        }
-        #endif
-        #ifdef SENSOR_PIN_FU_COMPENSATION
-        if (i == SENSOR_PIN_FU) {
-            selectorOffsettedPin = SENSOR_PIN_FU_COMPENSATION;
-        }
-        #endif
-        #ifdef SENSOR_PIN_MU_COMPENSATION
-        if (i == SENSOR_PIN_MU) {
-            selectorOffsettedPin = SENSOR_PIN_MU_COMPENSATION;
-        }
-        #endif
-        #ifdef SENSOR_PIN_EU_COMPENSATION
-        if (i == SENSOR_PIN_EU) {
-            selectorOffsettedPin = SENSOR_PIN_EU_COMPENSATION;
-        }
-        #endif
-        // Because Non-firing contact field on right hand has broken contact on pin D8  
-        #ifdef SENSOR_PIN_HP_COMPENSATION
-        if (i == SENSOR_PIN_HP) {
-            selectorOffsettedPin = SENSOR_PIN_HP_COMPENSATION;
-        }
-        #endif
+    #ifdef SENSOR_PIN_TU_COMPENSATION
+    if (i == SENSOR_PIN_TU) {
+        selectorOffsettedPin = SENSOR_PIN_TU_COMPENSATION;
+    }
+    #endif
+    #ifdef SENSOR_PIN_SU_COMPENSATION
+    if (i == SENSOR_PIN_SU) {
+        selectorOffsettedPin = SENSOR_PIN_SU_COMPENSATION;
+    }
+    #endif
+    #ifdef SENSOR_PIN_FU_COMPENSATION
+    if (i == SENSOR_PIN_FU) {
+        selectorOffsettedPin = SENSOR_PIN_FU_COMPENSATION;
+    }
+    #endif
+    #ifdef SENSOR_PIN_MU_COMPENSATION
+    if (i == SENSOR_PIN_MU) {
+        selectorOffsettedPin = SENSOR_PIN_MU_COMPENSATION;
+    }
+    #endif
+    #ifdef SENSOR_PIN_EU_COMPENSATION
+    if (i == SENSOR_PIN_EU) {
+        selectorOffsettedPin = SENSOR_PIN_EU_COMPENSATION;
+    }
+    #endif
+    #ifdef SENSOR_PIN_HP_COMPENSATION
+    if (i == SENSOR_PIN_HP) {
+        selectorOffsettedPin = SENSOR_PIN_HP_COMPENSATION;
+    }
+    #endif
+    return selectorOffsettedPin;
 }
 
 void enableSingleMPU(int sensorToEnable) {
@@ -286,6 +280,8 @@ int initMPUAndDMP(int attempt) {
         MASTER_SERIAL_NAME.println(F("Initializing DMP..."));
         devStatus = mpu.dmpInitialize();
         MASTER_SERIAL_NAME.print(F("DMP initialized..."));
+    } else {
+        MASTER_SERIAL_NAME.print(F("Skipping initialing DMP for MPU9250..."));
     }
     // supply your own gyro offsets here for each mpu, scaled for min sensitivity
     // lets ignore this considering we want realtive values anyway
@@ -361,25 +357,24 @@ void resetMPUs(int around) {
 }
 #endif
 
-
 void automaticFifoReset() {
     long now = millis();
     int currentlySellectedSensor = selectedSensor;
 
     for(int i = 0; i < SENSORS_COUNT; i++){
         if(gyros[i].lastResetTime + MIN_TIME_TO_RESET < now 
-        #ifdef RIGHT_HAND
+       /* #ifdef MASTER_HAND
         && gyros[i].hasDataReady
-        #endif
+        #endif*/
         ) {
             int selectedNow = setOrRotateSelectedGyro(i);
-            if(selectedNow != 5){
+            if(selectedNow != HP){
                 //MPU6050 mpu = *gyros[selectedNow].mpu;
                 MPU6050_MPU9250 mpu = *gyros[selectedSensor].mpu;
                
                 int localFifoCount = mpu.getFIFOCount();
-                //Serial.println("localFifoCount");
-                //Serial.println(localFifoCount);
+                //GAG_DEBUG_PRINT("localFifoCount");
+                //GAG_DEBUG_PRINTLN(localFifoCount);
                 if(( localFifoCount >= MAX_FIFO_USAGE_FOR_RESET || 
                     ( gyros[i].lastResetTime + MAX_TIME_TO_RESET < now && 
                     localFifoCount >= MIN_FIFO_USAGE_FOR_RESET) ) ){
@@ -389,10 +384,11 @@ void automaticFifoReset() {
             } else{
                 //MPU9250 mpu = *gyros[selectedNow].mpuM;
                 MPU6050_MPU9250 mpu = *gyros[selectedSensor].mpu;
-
                 int localFifoCount = mpu.getFIFOCount();
                 //Serial.println("localFifoCount");
                 //Serial.println(localFifoCount);
+                //GAG_DEBUG_PRINT("localFifoCount");
+                //GAG_DEBUG_PRINTLN(localFifoCount);
                 if(( localFifoCount >= MAX_FIFO_USAGE_FOR_RESET || 
                     ( gyros[i].lastResetTime + MAX_TIME_TO_RESET < now && 
                     localFifoCount >= MIN_FIFO_USAGE_FOR_RESET) ) ){
@@ -406,7 +402,7 @@ void automaticFifoReset() {
 }
 
 void fifoToPacket(byte * fifoBuffer, byte * packet, int selectedSensor) {
-    DEBUG_PRINTLN("fifoToPacket");
+    //DEBUG_PRINTLN("fifoToPacket");
     packet[2] = selectedSensor;
     packet[3] = fifoBuffer[0];
     packet[4] = fifoBuffer[1];
@@ -525,7 +521,7 @@ void getMPU9250Data(MPU6050_MPU9250 * mpu) {
 }
 
 bool loadDataFromFIFO(bool forceLoad) {
-    if(selectedSensor != LAST_SENSOR){
+    if(selectedSensor != HP){
         //MPU6050 mpu = *gyros[selectedSensor].mpu;
         MPU6050_MPU9250 mpu = *gyros[selectedSensor].mpu;
 
@@ -574,21 +570,24 @@ void writePacket() {
 
 #ifdef MASTER_HAND
     MASTER_SERIAL_NAME.write(teapotPacket, PACKET_LENGTH);
+    //DEBUG_WRITE_LEN(teapotPacket, PACKET_LENGTH);
 
     if(!gyros[selectedSensor].alreadySentData && gyros[selectedSensor].hasDataReady) {
         fifoToPacket(fifoBuffer, teapotPacket, selectedSensor);
         MASTER_SERIAL_NAME.write(teapotPacket, PACKET_LENGTH);
         MASTER_SERIAL_NAME.write((byte)0x00);
+        //DEBUG_WRITE_LEN(teapotPacket, PACKET_LENGTH);
+        //DEBUG_WRITE((byte)0x00);
         gyros[selectedSensor].hasDataReady = false;
         gyros[selectedSensor].alreadySentData = true;
         teapotPacket[PACKET_COUNTER_POSITION]++; // packetCount, loops at 0xFF on purpose
     }
 #else
 #ifdef SLAVE_HAND
-    DEBUG_PRINT("alreadySentData ");
-    DEBUG_PRINT(gyros[selectedSensor].alreadySentData);
-    DEBUG_PRINT(" hasDataReady ");
-    DEBUG_PRINTLN(gyros[selectedSensor].hasDataReady);
+    //DEBUG_PRINT("alreadySentData ");
+    //DEBUG_PRINT(gyros[selectedSensor].alreadySentData);
+    //DEBUG_PRINT(" hasDataReady ");
+    //DEBUG_PRINTLN(gyros[selectedSensor].hasDataReady);
     if(!gyros[selectedSensor].alreadySentData && gyros[selectedSensor].hasDataReady){
         fifoToPacket(fifoBuffer, teapotPacket, selectedSensor);
         MASTER_SERIAL_NAME.write(teapotPacket, PACKET_LENGTH);
@@ -616,19 +615,9 @@ void writePacket() {
 
 void loadDataAndSendPacket() {
     loadDataFromFIFO(false);
+    //loadDataFromFIFO(true);
     if(gyros[selectedSensor].hasDataReady) {
-/*
-#ifdef USE_BT
-        if (hc05.availableForWrite()) {
-            for (int i = 0; i < PACKET_LENGTH; i++) {
-                hc05.print((char)teapotPacket[i]);
-            }
-        }
-#endif
-*/
-//#ifdef USE_USB
-    writePacket();       
-//#endif
+        writePacket();       
     }
 }
 
@@ -638,7 +627,7 @@ void slaveHandDataRequestHandler() {
     int limit = REPEAT_SLAVE_HAND_READ_LIMIT;
     readAlign = 0;
     readAligned = 0;
-    DEBUG_PRINTLN("slaveHandDataRequestHandler");
+    //DEBUG_PRINTLN("slaveHandDataRequestHandler");
 
     while(limit > 0) {
         int ch = MASTER_SERIAL_NAME.read();
@@ -647,7 +636,7 @@ void slaveHandDataRequestHandler() {
             if(readAlign<1) {
                 if(ch == '$') {
                     readAlign=1;
-                    DEBUG_PRINTLN("$ - readAlign=1");
+                    //DEBUG_PRINTLN("$ - readAlign=1");
                 }
             } else {
                 //if(ch >= 0 && ch < SENSORS_COUNT) {
@@ -655,7 +644,7 @@ void slaveHandDataRequestHandler() {
                     if(ch >= '0' && ch <= '6' ){
                         ch = ch - 48;
                     }
-                    DEBUG_PRINTLN("al");
+                    //DEBUG_PRINTLN("al");
                     readAligned = 1;
                     readAlign=0;//++;
                     setOrRotateSelectedGyro(ch);
@@ -672,7 +661,7 @@ void slaveHandDataRequestHandler() {
 
                     break;
                 }else {
-                    DEBUG_PRINTLN("readAlign=0");
+                    //DEBUG_PRINTLN("readAlign=0");
                     readAlign=0;
                 }
             }    

@@ -158,6 +158,8 @@ THE SOFTWARE.
     #define DEBUG_PRINTF(x, y) Serial.print(x, y)
     #define DEBUG_PRINTLN(x) Serial.println(x)
     #define DEBUG_PRINTLNF(x, y) Serial.println(x, y)
+    #define DEBUG_WRITE(x) Serial.write(x)
+    #define DEBUG_WRITE_LEN(x,y) Serial.write(x,y)
 #else
     #define DEBUG_PRINT(x)
     #define DEBUG_PRINTF(x, y)
@@ -407,8 +409,8 @@ const unsigned char dmpConfigMPU6050[MPU6050_DMP_CONFIG_SIZE] PROGMEM = {
     0x07,   0x46,   0x01,   0x9A,                     // CFG_GYRO_SOURCE inv_send_gyro
     0x07,   0x47,   0x04,   0xF1, 0x28, 0x30, 0x38,   // CFG_9 inv_send_gyro -> inv_construct3_fifo
     0x07,   0x6C,   0x04,   0xF1, 0x28, 0x30, 0x38,   // CFG_12 inv_send_accel -> inv_construct3_fifo
-    0x02,   0x16,   0x02,   0x00, 0x03//MPU6050_MPU9250_DMP_FIFO_RATE_DIVISOR // D_0_22 inv_set_fifo_rate
-
+    0x02,   0x16,   0x02,   0x00, 0x01//MPU6050_MPU9250_DMP_FIFO_RATE_DIVISOR // D_0_22 inv_set_fifo_rate
+    // 0x03
     // This very last 0x01 WAS a 0x09, which drops the FIFO rate down to 20 Hz. 0x07 is 25 Hz,
     // 0x01 is 100Hz. Going faster than 100Hz (0x00=200Hz) tends to result in very noisy data.
     // DMP output frequency is calculated easily using this equation: (200Hz / (1 + value))
@@ -612,7 +614,7 @@ const unsigned char dmpConfigMPU9250[MPU9250_DMP_CONFIG_SIZE] PROGMEM = {
     0x07,   0x67,   0x01,   0x9A,                     // ?
     0x07,   0x68,   0x04,   0xF1, 0x28, 0x30, 0x38,   // CFG_12 inv_send_accel -> inv_construct3_fifo
     0x07,   0x8D,   0x04,   0xF1, 0x28, 0x30, 0x38,   // ??? CFG_12 inv_send_mag -> inv_construct3_fifo
-    0x02,   0x16,   0x02,   0x00, 0x03                // D_0_22 inv_set_fifo_rate
+    0x02,   0x16,   0x02,   0x00, 0x01                // D_0_22 inv_set_fifo_rate
 
     // This very last 0x01 WAS a 0x09, which drops the FIFO rate down to 20 Hz. 0x07 is 25 Hz,
     // 0x01 is 100Hz. Going faster than 100Hz (0x00=200Hz) tends to result in very noisy data.

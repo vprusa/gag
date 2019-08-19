@@ -1,26 +1,28 @@
 /**
  * 
 */
-#define ESP32_RIGHT 1
+//#define ESP32_RIGHT 1
 
 #ifdef ESP32_RIGHT
 #define MASTER_HAND
-#define USE_DISPLAY 1
+//#define USE_DISPLAY 1
 #else
 #define SLAVE_HAND
 #endif
 
-//#define GAG_DEBUG
+//#define MASTER_BT_SERIAL
+
+#define GAG_DEBUG
 #ifdef GAG_DEBUG
-    #define DEBUG_PRINT(x) Serial.print(x)
-    #define DEBUG_PRINTF(x, y) Serial.print(x, y)
-    #define DEBUG_PRINTLN(x) Serial.println(x)
-    #define DEBUG_PRINTLNF(x, y) Serial.println(x, y)
+    #define GAG_DEBUG_PRINT(x) Serial.print(x)
+    #define GAG_DEBUG_PRINTF(x, y) Serial.print(x, y)
+    #define GAG_DEBUG_PRINTLN(x) Serial.println(x)
+    #define GAG_DEBUG_PRINTLNF(x, y) Serial.println(x, y)
 #else
-    #define DEBUG_PRINT(x)
-    #define DEBUG_PRINTF(x, y)
-    #define DEBUG_PRINTLN(x)
-    #define DEBUG_PRINTLNF(x, y)
+    #define GAG_DEBUG_PRINT(x)
+    #define GAG_DEBUG_PRINTF(x, y)
+    #define GAG_DEBUG_PRINTLN(x)
+    #define GAG_DEBUG_PRINTLNF(x, y)
 #endif
 /*
 #ifdef USE_DISPLAY

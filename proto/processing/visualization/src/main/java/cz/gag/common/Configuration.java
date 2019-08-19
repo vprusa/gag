@@ -29,19 +29,19 @@ public class Configuration {
     static public int packetSize = receiveAcc ? 21 : 15;
 
     static public String prefixPath = "/dev/";
-    static public String deviceRight = "rfcomm0"; // ttyUSB1 // /dev/rfcomm0
+    static public String deviceRight = "ttyUSB0"; // ttyUSB1 // /dev/rfcomm0
     static public String portNameRight = System.getProperty("portNameRight", prefixPath + deviceRight);
-    static public int baudRateRight = System.getProperty("baudRateRight") == null ? 230400
+    static public int baudRateRight = System.getProperty("baudRateRight") == null ? 57600
             // 230400 115200 57600 38400 19200 9600
             : Integer.valueOf(System.getProperty("baudRateRight"));
     // 38400 9600 115200 57600
 
-    static public String deviceLeft = "ttyUSB0";
+    static public String deviceLeft = "ttyUSB1";
     // static String portNameLeft = prefixPath + deviceLeft;
     // static int baudRateLeft = 115200; // 38400 9600 115200 57600
 
     static public String portNameLeft = System.getProperty("portNameLeft", prefixPath + deviceLeft);
-    static public int baudRateLeft = System.getProperty("baudRateLeft") == null ? 115200 // 115200 38400
+    static public int baudRateLeft = System.getProperty("baudRateLeft") == null ? 57600 // 115200 38400 57600
             : Integer.valueOf(System.getProperty("baudRateLeft"));
 
     // output-ttyUSB1-2018-12-01_23:26:10.882.log

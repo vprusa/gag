@@ -893,7 +893,7 @@ public class ProcessingApplet extends PApplet {
                         // continue;
                     } else {
                         print((char) ch);
-                        System.out.print((char)ch);
+                        //System.out.print((char)ch);
                     }
 
 
