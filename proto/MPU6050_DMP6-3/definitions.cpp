@@ -3,9 +3,9 @@
 */
 #include "definitions.h"
 
-/**
- * 
-*/
+/*
+#define MEASURE_OFFSETS 1
+
 //#define ESP32_RIGHT 1
 
 #ifdef ESP32_RIGHT
@@ -29,10 +29,10 @@
     #define DEBUG_PRINTLN(x)
     #define DEBUG_PRINTLNF(x, y)
 #endif
-/*
-#ifdef USE_DISPLAY
-#include "gag_display.h"
-#endif*/
+
+//#ifdef USE_DISPLAY
+//#include "gag_display.h"
+//#endif
 
 
 #define MPU6050_FIFO_PACKET_SIZE 42
@@ -60,7 +60,7 @@
 #define OUTPUT_TEAPOT_REALACCEL
 
 //#define SEND_ACC
-
+#define CMD_PACKET_LENGTH 5
 #ifdef SEND_ACC
 #define PACKET_LENGTH 21
 #define PACKET_COUNTER_POSITION 18
@@ -180,5 +180,5 @@
 //#endif
 
 //BluetoothSerial btSerial;
-
+*/
 

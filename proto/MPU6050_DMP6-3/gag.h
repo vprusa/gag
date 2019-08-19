@@ -84,12 +84,16 @@ uint16_t fifoCount;  // count of all bytes currently in FIFO
 
 // packet structure for InvenSense teapot demo
 #ifdef SLAVE_HAND
+uint8_t cmdPacket[CMD_PACKET_LENGTH] = {'c', 0, 0, '\r', '\n'};
+
 uint8_t teapotPacket[PACKET_LENGTH] = {'$', 0x99, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 #ifdef SEND_ACC
                                        0, 0, 0, 0, 0, 0,
 #endif
                                        0x00, 0x00, '\r', '\n'};
 #else
+uint8_t cmdPacket[CMD_PACKET_LENGTH] = {'C', 0, 0x00, '\r', '\n'};
+
 uint8_t teapotPacket[PACKET_LENGTH] = {'*', 0x99, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 #ifdef SEND_ACC
                                        0, 0, 0, 0, 0, 0,
@@ -195,7 +199,7 @@ void loadDataAndSendPacket();
 
 // start of code for measuring offsets 
 #ifdef MEASURE_OFFSETS
-/*
+
 //Change this 3 variables if you want to fine tune the skecth to your needs.
 int buffersize=1000;     //Amount of readings used to average, make it higher to get more precision but sketch will be slower  (default:1000)
 int acel_deadzone=8;     //Acelerometer error allowed, make it lower to get more precision, but sketch may not converge  (default:8)
@@ -207,7 +211,7 @@ int ax_offset,ay_offset,az_offset,gx_offset,gy_offset,gz_offset;
 void meansensors(MPU6050_MPU9250 *mpuP);
 void calibration(MPU6050_MPU9250 *mpuP);
 void measureOffsets(MPU6050_MPU9250 *mpuP);
-*/
+
 #endif // end of code for measuring offsets 
 
 int selectSingleMPU(int i) {
@@ -262,11 +266,15 @@ void enableSingleMPU(int sensorToEnable) {
     }
 }
 
+#ifdef MEASURE_OFFSETS
+bool calibrationDone = false;
+#endif
+
 int initMPUAndDMP(int attempt) {
     if (attempt <= 0) {
         return 0;
     }
-// initialize device
+    // initialize device
 #ifdef MASTER_SERIAL_NAME
     MASTER_SERIAL_NAME.println(F("USB: Initializing I2C devices..."));
 #endif
@@ -287,7 +295,9 @@ int initMPUAndDMP(int attempt) {
     // lets ignore this considering we want realtive values anyway
     //mpu.setXGyroOffset(220);
     #ifdef MEASURE_OFFSETS
-    measureOffsets(&mpu);
+    if(!calibrationDone) {
+        measureOffsets(&mpu);
+    }
     #endif
     // make sure it worked (returns 0 if so)
 
@@ -623,6 +633,23 @@ void loadDataAndSendPacket() {
 
 //#ifdef RIGHT_HAND_SLAVE     
 #ifdef SLAVE_HAND
+
+void execCommand(byte ch){
+    // {'c', 0, 0, '\r', '\n'};
+    cmdPacket[1] = ch;
+    switch(ch) {
+        case CMD_RESTART_WITH_CALIBRATION:
+            calibrationDone = false;
+        case CMD_RESTART:
+            setup();
+            break;
+        default:
+            break;
+    }
+    MASTER_SERIAL_NAME.write(cmdPacket, CMD_PACKET_LENGTH);
+    MASTER_SERIAL_NAME.write((byte)0x00);
+}
+
 void slaveHandDataRequestHandler() {
     int limit = REPEAT_SLAVE_HAND_READ_LIMIT;
     readAlign = 0;
@@ -646,10 +673,10 @@ void slaveHandDataRequestHandler() {
                     }
                     //DEBUG_PRINTLN("al");
                     readAligned = 1;
-                    readAlign=0;//++;
+                    readAlign=0;
                     setOrRotateSelectedGyro(ch);
 
-                    if(readAligned == 1){
+                    //if(readAligned == 1){
                         gyros[selectedSensor].alreadySentData = false;
                         writePacket();
                         loadDataAndSendPacket();
@@ -657,10 +684,21 @@ void slaveHandDataRequestHandler() {
                         setOrRotateSelectedGyro(-1);
                         loadDataFromFIFO(true);
                         // setOrRotateSelectedGyro(currentlySellectedSensor);
-                    }
-
+                    //}
                     break;
-                }else {
+                } else if (ch == 'c') {
+                    // deal with command packet ..
+                    readAligned = 1;
+                    readAlign=0;
+                    while(limit > 0) {
+                        int chc = MASTER_SERIAL_NAME.read();
+                        if (chc != -1) {
+                            execCommand((char)chc);
+                        }
+                        limit--;
+                     }
+                    break;
+                } else {
                     //DEBUG_PRINTLN("readAlign=0");
                     readAlign=0;
                 }
@@ -733,6 +771,8 @@ void loadSlaveHandData() {
     }
 }
 
+#endif
+
 // start of code measuring for offsets
 #ifdef MEASURE_OFFSETS
 
@@ -804,40 +844,40 @@ void calibration(MPU6050_MPU9250 *mpuP){
         else gz_offset=gz_offset-mean_gz/(giro_deadzone+1);
         #define PRINT_VALIBRATION_VALUES
         #ifdef PRINT_VALIBRATION_VALUES
-        MASTER_SERIAL_NAME.print(F("Ready: "));
+        MASTER_SERIAL_NAME.print(F("R: "));
         MASTER_SERIAL_NAME.print(ready);
-        MASTER_SERIAL_NAME.print(F(" acel_deadzone:"));
+        MASTER_SERIAL_NAME.print(F(" a_dz:"));
         MASTER_SERIAL_NAME.print(acel_deadzone);
-        MASTER_SERIAL_NAME.print(F(" mean_ax:"));
+        MASTER_SERIAL_NAME.print(F(" m_ax:"));
         MASTER_SERIAL_NAME.print(mean_ax);
-        MASTER_SERIAL_NAME.print(F(" ax_offset:"));
+        MASTER_SERIAL_NAME.print(F(" ax_o:"));
         MASTER_SERIAL_NAME.print(ax_offset);
 
-        MASTER_SERIAL_NAME.print(F(" mean_ay:"));
+        MASTER_SERIAL_NAME.print(F(" m_ay:"));
         MASTER_SERIAL_NAME.print(mean_ay);
-        MASTER_SERIAL_NAME.print(F(" ay_offset:"));
+        MASTER_SERIAL_NAME.print(F(" ay_o:"));
         MASTER_SERIAL_NAME.print(ay_offset);
 
-        MASTER_SERIAL_NAME.print(F(" mean_az:"));
+        MASTER_SERIAL_NAME.print(F(" m_az:"));
         MASTER_SERIAL_NAME.print(mean_az);
-        MASTER_SERIAL_NAME.print(F(" az_offset:"));
+        MASTER_SERIAL_NAME.print(F(" az_o:"));
         MASTER_SERIAL_NAME.print(az_offset);
 
-        MASTER_SERIAL_NAME.print(F(" giro_deadzone:"));
+        MASTER_SERIAL_NAME.print(F(" g_dz:"));
         MASTER_SERIAL_NAME.print(giro_deadzone);
-        MASTER_SERIAL_NAME.print(F(" mean_gx:"));
+        MASTER_SERIAL_NAME.print(F(" m_gx:"));
         MASTER_SERIAL_NAME.print(mean_gx);
-        MASTER_SERIAL_NAME.print(F(" gx_offset:"));
+        MASTER_SERIAL_NAME.print(F(" gx_o:"));
         MASTER_SERIAL_NAME.print(gx_offset);
 
-        MASTER_SERIAL_NAME.print(F(" mean_gy:"));
+        MASTER_SERIAL_NAME.print(F(" m_gy:"));
         MASTER_SERIAL_NAME.print(mean_gy);
-        MASTER_SERIAL_NAME.print(F(" gy_offset:"));
+        MASTER_SERIAL_NAME.print(F(" gy_of:"));
         MASTER_SERIAL_NAME.print(gy_offset);
 
-        MASTER_SERIAL_NAME.print(F(" mean_gz:"));
+        MASTER_SERIAL_NAME.print(F(" m_gz:"));
         MASTER_SERIAL_NAME.print(mean_gz);
-        MASTER_SERIAL_NAME.print(F(" gz_offset:"));
+        MASTER_SERIAL_NAME.print(F(" gz_of:"));
         MASTER_SERIAL_NAME.println(gz_offset);
         #endif
         if (ready==6) break;
@@ -845,6 +885,10 @@ void calibration(MPU6050_MPU9250 *mpuP){
 }
 
 void measureOffsets(MPU6050_MPU9250 *mpuP){
+    ax=0; ay=0; az=0;gx=0; gy=0; gz=0;
+    mean_ax=0;mean_ay=0;mean_az=0;mean_gx=0;mean_gy=0;mean_gz=0;state=0;
+    ax_offset=0;ay_offset=0;az_offset=0;gx_offset=0;gy_offset=0;gz_offset=0;
+    
     MPU6050_MPU9250 mpu = *mpuP;
     mpu.setXAccelOffset(0);
     mpu.setYAccelOffset(0);
@@ -911,8 +955,6 @@ void measureOffsets(MPU6050_MPU9250 *mpuP){
 }
 
 #endif // end of code measuring for offsets
-
-#endif
 
 
 

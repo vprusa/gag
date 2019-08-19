@@ -2,7 +2,7 @@
  * 
 */
 //#define ESP32_RIGHT 1
-
+#define MEASURE_OFFSETS 1
 #ifdef ESP32_RIGHT
 #define MASTER_HAND
 //#define USE_DISPLAY 1
@@ -49,13 +49,16 @@
 #define LEFT_HAND
 #endif
 
+#define CMD_RESTART_WITH_CALIBRATION 'a'
+#define CMD_RESTART 'r'
+
 // uncomment "OUTPUT_TEAPOT" if you want output that matches the
 // format used for the InvenSense teapot demo
 #define OUTPUT_TEAPOT
 #define OUTPUT_TEAPOT_REALACCEL
 
 //#define SEND_ACC
-
+#define CMD_PACKET_LENGTH 15
 #ifdef SEND_ACC
 #define PACKET_LENGTH 21
 #define PACKET_COUNTER_POSITION 18

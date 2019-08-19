@@ -7,8 +7,6 @@ Copyright (c) 2018 Vojtěch Průša
 // 
 // master to left, slave to pc
 
-//#define MEASURE_OFFSETS
-
 
 //#define ESP32_RIGHT 1
 //#define USE_DISPLAY 1
@@ -30,6 +28,7 @@ extern int remainingTimeBudget;
 
 #ifdef MEASURE_OFFSETS
 //#include "gag_offsetting.h"
+extern bool calibrationDone;
 #endif
 
 
@@ -131,6 +130,7 @@ void setup() {
         MASTER_SERIAL_NAME.println(F("\n\n"));
 
     }
+    calibrationDone = true;
     timeNow = millis(); //Start counting time in milliseconds
 
     //delay(3000);
