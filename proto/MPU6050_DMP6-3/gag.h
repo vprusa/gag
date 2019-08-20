@@ -201,14 +201,7 @@ void loadDataAndSendPacket();
 // start of code for measuring offsets 
 #ifdef MEASURE_OFFSETS
 //Change this 3 variables if you want to fine tune the skecth to your needs.
-/*extern int buffersize=1000;     //Amount of readings used to average, make it higher to get more precision but sketch will be slower  (default:1000)
-extern int acel_deadzone=8;     //Acelerometer error allowed, make it lower to get more precision, but sketch may not converge  (default:8)
-extern int giro_deadzone=1;     //Gyro error allowed, make it lower to get more precision, but sketch may not converge  (default:1)
-extern int16_t ax, ay, az,gx, gy, gz;
-extern int16_t mean_ax,mean_ay,mean_az,mean_gx,mean_gy,mean_gz,state=0;
-extern int16_t ax_offset,ay_offset,az_offset,gx_offset,gy_offset,gz_offset;
-extern uint8_t measurementsLimit = 0;
-*/
+
 //extern bool calibrationDone = false;
 #endif // end of code for measuring offsets 
 
@@ -329,41 +322,6 @@ int setOrRotateSelectedGyro(int i) {
     return i;
 }
 
-
-#ifdef OLD_RESET
-void resetMPUs(int around) {
-    // reset n after (TODO without current?)
-    if (around > 0) {
-        for (int i = 0; i < around; i++) {
-            //MPU6050 mpu = *gyros[selectedSensor].mpu;
-            MPU6050_MPU9250 mpu = *gyros[selectedSensor].mpu;
-
-            mpu.resetFIFO();
-            setOrRotateSelectedGyro(-1);
-        }
-        // rotate to start position
-        for (int i = around; i < SENSORS_COUNT; i++) {
-            setOrRotateSelectedGyro(-1);
-        }
-    }
-    else
-    {
-        // reset n before current (TODO without current?)
-        // rotate to position where reset should start
-        int i = 0;
-        for (; i < SENSORS_COUNT + around; i++) {
-            setOrRotateSelectedGyro(-1);
-        }
-        for (; i < SENSORS_COUNT; i++) {
-            //MPU6050 mpu = *gyros[selectedSensor].mpu;
-            MPU6050_MPU9250 mpu = *gyros[selectedSensor].mpu;
-            mpu.resetFIFO();
-            setOrRotateSelectedGyro(-1);
-        }
-    }
-}
-#endif
-
 void automaticFifoReset() {
     long now = millis();
     int currentlySellectedSensor = selectedSensor;
@@ -376,7 +334,6 @@ void automaticFifoReset() {
         ) {
             int selectedNow = setOrRotateSelectedGyro(i);
             if(selectedNow != HP){
-                //MPU6050 mpu = *gyros[selectedNow].mpu;
                 MPU6050_MPU9250 mpu = *gyros[selectedSensor].mpu;
                
                 int localFifoCount = mpu.getFIFOCount();
@@ -389,11 +346,8 @@ void automaticFifoReset() {
                     gyros[selectedNow].lastResetTime = now;
                 }
             } else{
-                //MPU9250 mpu = *gyros[selectedNow].mpuM;
                 MPU6050_MPU9250 mpu = *gyros[selectedSensor].mpu;
                 int localFifoCount = mpu.getFIFOCount();
-                //Serial.println("localFifoCount");
-                //Serial.println(localFifoCount);
                 //GAG_DEBUG_PRINT("localFifoCount");
                 //GAG_DEBUG_PRINTLN(localFifoCount);
                 if(( localFifoCount >= MAX_FIFO_USAGE_FOR_RESET || 
@@ -431,18 +385,13 @@ void sendDataRequest(int selectedSensor) {
 
 
 void getMPU9250Data(MPU6050_MPU9250 * mpu) {
-    // uint8_t buffer_m[6];
     int16_t ax, ay, az;
     int16_t gx, gy, gz;
     int16_t   mx, my, mz;
     
-    //float q[4];
     uint16_t qI[4];
 
-    //MPU6050_MPU9250 mpu = *gyros[selectedSensor].mpu;
-    //MPU9250 mpu = *mpuI;
     //MPU6050_MPU9250 mpu = *mpu;
-    //mpu->get
     mpu->getMotion9(&ax, &ay, &az, &gx, &gy, &gz,&mx, &my, &mz);
 
     // TODO fix
@@ -451,7 +400,6 @@ void getMPU9250Data(MPU6050_MPU9250 * mpu) {
     Gxyz[0] += (float) gx / (65536) ;
     Gxyz[1] += (float) gy / (65536) ;
     Gxyz[2] += (float) gz / (65536) ;
-
     */
     #define offsetDown 65536
     
@@ -497,7 +445,7 @@ void getMPU9250Data(MPU6050_MPU9250 * mpu) {
     qI[1] = (uint16_t)(q[1]*offsetUp);
     qI[2] = (uint16_t)(q[2]*offsetUp);
     qI[3] = (uint16_t)(q[3]*offsetUp);
-*/
+    */
     #define offsetUp 1024
     
     qI[0] = (uint16_t)((cy * cp * cr + sy * sp * sr)*offsetUp);
@@ -505,7 +453,7 @@ void getMPU9250Data(MPU6050_MPU9250 * mpu) {
     qI[2] = (uint16_t)((sy * cp * sr + cy * sp * cr)*offsetUp);
     qI[3] = (uint16_t)((sy * cp * cr - cy * sp * sr)*offsetUp);
 
-  /*
+    /*
     qI[0] += (uint16_t)(q[0]*offsetDown);
     qI[1] += (uint16_t)(q[1]*offsetDown);
     qI[2] += (uint16_t)(q[2]*offsetDown);
@@ -541,7 +489,7 @@ bool loadDataFromFIFO(bool forceLoad) {
                     mpu.getFIFOBytes(fifoBuffer, packetSize);
                     fifoCount -= packetSize;
                 }
-                //mpu.resetFIFO();*/
+                //mpu.resetFIFO();
                 gyros[selectedSensor].hasDataReady=true;
                 return true;
             }
@@ -560,11 +508,9 @@ bool loadDataFromFIFO(bool forceLoad) {
 
 void writePacket() {
     uint8_t *fifoBuffer = gyros[selectedSensor].fifoBuffer; // FIFO storage buffer
-
 #ifdef MASTER_HAND
     //???? MASTER_SERIAL_NAME.write(teapotPacket, PACKET_LENGTH);
     //DEBUG_WRITE_LEN(teapotPacket, PACKET_LENGTH);
-
     if(!gyros[selectedSensor].alreadySentData && gyros[selectedSensor].hasDataReady) {
         fifoToPacket(fifoBuffer, teapotPacket, selectedSensor);
         MASTER_SERIAL_NAME.write(teapotPacket, PACKET_LENGTH);
@@ -603,12 +549,10 @@ void writePacket() {
     }
 #endif        
 #endif
-
 }
 
 void loadDataAndSendPacket() {
     loadDataFromFIFO(false);
-    //loadDataFromFIFO(true);
     if(gyros[selectedSensor].hasDataReady) {
         writePacket();       
     }

@@ -14,11 +14,6 @@ Copyright (c) 2018 Vojtěch Průša
 #include "definitions.h"
 #include "gag.h"
 #include "Wire.h"
-/*
-extern SSD1306Wire display(0x3c, 18, 19);
-extern OLEDDisplayUi ui ( &display );
-extern int remainingTimeBudget = 0;
-*/
 
 #ifdef USE_DISPLAY
 extern SSD1306Wire display;
@@ -48,12 +43,8 @@ void setup() {
     #endif
     //#endif
     
-    
-    //MASTER_SERIAL_NAME.begin(MASTER_SERIAL_BAUD);
-    //MASTER_SERIAL_NAME.println(F("USB up"));
-    
-    //Serial.begin(115200);
-    //Serial.println(F("USB up"));
+    MASTER_SERIAL_NAME.begin(MASTER_SERIAL_BAUD);
+    MASTER_SERIAL_NAME.println(F("USB up"));
     
 #ifdef USE_DISPLAY
     displaySetup();
@@ -66,21 +57,17 @@ void setup() {
 #ifdef MASTER_HAND
     Wire.begin();
     //TWBR = 24; // 400kHz I2C clock (200kHz if CPU is 8MHz)
-    //Wire.setClock(400000); 
-    //Wire.setClock(400000); 
     //Wire.begin(21 , 22, 200000);
     //Wire.setTimeOut(2);
-    //setTimeOut
     //Fastwire::setup(400, true);
     //Wire.begin();
-    //TWBR = 24; // 400kHz I2C clock (200kHz if CPU is 8MHz)
     Wire.setClock(100000);
 #else
 // join I2C bus (I2Cdev library doesn't do this automatically)
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
     Wire.begin();
     TWBR = 24; // 400kHz I2C clock (200kHz if CPU is 8MHz)
-   // Wire.setClock(400000); // 400kHz I2C clock. Comment this line if having compilation difficulties#elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
+    // Wire.setClock(400000); // 400kHz I2C clock. Comment this line if having compilation difficulties#elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
    Wire.setClock(400000);
 #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
     //Fastwire::setup(400, true);
@@ -171,24 +158,17 @@ void loop() {
 #ifdef USE_DISPLAY
 
 //if(elapsedTime > 10){
-    /* Serial.println("elapsedTime time budget:");
-    Serial.println(elapsedTime);
-    Serial.println("remainingTimeBudget time budget:");
-    Serial.println(remainingTimeBudget);
-    */
     remainingTimeBudget = ui.update();
-
     if (elapsedTime - remainingTimeBudget > 0) {
-    //  remainingTimeBudget = ui.update();
+        //  remainingTimeBudget = ui.update();
+        // You can do some work here
+        // Don't do stuff if you are below your
+        // time budget.
+        // Serial.println("Remaining time budget:");
+        //Serial.println(remainingTimeBudget);
+        // delay(remainingTimeBudget);
 
-    // You can do some work here
-    // Don't do stuff if you are below your
-    // time budget.
-   // Serial.println("Remaining time budget:");
-    //Serial.println(remainingTimeBudget);
-   // delay(remainingTimeBudget);
-
-  }
+    }
   //return;
   //}
 #endif
