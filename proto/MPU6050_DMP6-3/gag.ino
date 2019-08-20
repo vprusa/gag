@@ -16,14 +16,14 @@ Copyright (c) 2018 Vojtěch Průša
 #include "Wire.h"
 
 #ifdef USE_DISPLAY
-extern SSD1306Wire display;
-extern OLEDDisplayUi ui;
-extern int remainingTimeBudget;
+    extern SSD1306Wire display;
+    extern OLEDDisplayUi ui;
+    extern int remainingTimeBudget;
 #endif
 
 #ifdef MEASURE_OFFSETS
-//#include "gag_offsetting.h"
-extern bool calibrationDone;
+    //#include "gag_offsetting.h"
+    extern bool calibrationDone;
 #endif
 
 
@@ -63,15 +63,15 @@ void setup() {
     //Wire.begin();
     Wire.setClock(100000);
 #else
-// join I2C bus (I2Cdev library doesn't do this automatically)
-#if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
-    Wire.begin();
-    TWBR = 24; // 400kHz I2C clock (200kHz if CPU is 8MHz)
-    // Wire.setClock(400000); // 400kHz I2C clock. Comment this line if having compilation difficulties#elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
-   Wire.setClock(400000);
-#elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
-    //Fastwire::setup(400, true);
-#endif
+    // join I2C bus (I2Cdev library doesn't do this automatically)
+    #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
+        Wire.begin();
+        TWBR = 24; // 400kHz I2C clock (200kHz if CPU is 8MHz)
+        // Wire.setClock(400000); // 400kHz I2C clock. Comment this line if having compilation difficulties#elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
+    Wire.setClock(400000);
+    #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
+        //Fastwire::setup(400, true);
+    #endif
 #endif
 // initialize serial communication
 // (9600 38400 57600 74880 115200 230400 250000 57600 38400 chosen because it is required for Teapot Demo output, but it's

@@ -36,21 +36,13 @@
     #define SLAVE_SERIAL_NAME Serial2
     #define SLAVE_SERIAL_BAUD 57600
 
-    //#define PC_SERIAL_NAME hc05Master
 #else
-//#define LIB_SW_SERIAL
-//#define LIB_ALT_SW_SERIAL 1
-
-// 115200 57600
+    // 115200 57600
     #ifdef MASTER_HAND
         #define MASTER_SERIAL_NAME Serial2
-        //#define PC_SERIAL_NAME Serial
         #define MASTER_SERIAL_BAUD 115200
-        //#define PC_SERIAL_BAUD 115200
     #endif
 #endif
-
-// TODO remove so many ifs ...
 
 #ifdef SLAVE_HAND
     #define MASTER_SERIAL_NAME Serial
