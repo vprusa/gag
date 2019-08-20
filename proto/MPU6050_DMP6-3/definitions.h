@@ -10,6 +10,8 @@
 #define SLAVE_HAND
 #endif
 
+#define MEASUREMENT_LIMIT 100
+
 //#define MASTER_BT_SERIAL
 
 #define GAG_DEBUG
@@ -50,6 +52,7 @@
 #endif
 
 #define CMD_RESTART_WITH_CALIBRATION 'a'
+#define CMD_RESTART_WITH_CALIBRATION_AND_SEND 's'
 #define CMD_RESTART 'r'
 
 // uncomment "OUTPUT_TEAPOT" if you want output that matches the
