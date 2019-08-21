@@ -1,12 +1,14 @@
-// I2C device class (I2Cdev) demonstration Arduino sketch for MPU6050 class using DMP (MotionApps v2.0)
-/*
-Copyright (c) 2018 Vojtěch Průša
+/**
+ * Copyright (c) 2018 Vojtěch Průša
+ * 
+ * -- I2C device class (I2Cdev) demonstration Arduino sketch for MPU6050 class using DMP (MotionApps v2.0)
+ * -- Based on example of MPU6050 from https://github.com/jrowberg/i2cdevlib
+ * -- from 6/21/2012 by Jeff Rowberg <jeff@rowberg.net>
+ * TODO's:
+ * - change terminology e.g.: 
+ * -- master => ruler
+ * -- slave => subject
 */
-// Based on example of MPU6050 from https://github.com/jrowberg/i2cdevlib
-// from 6/21/2012 by Jeff Rowberg <jeff@rowberg.net>
-// 
-// master to left, slave to pc
-
 
 //#define ESP32_RIGHT 1
 //#define USE_DISPLAY 1

@@ -1,4 +1,7 @@
-/*
+/**
+ * 
+ * TODO's for this file  
+ * - slip to gag_master.h and gag_slave.h
 */
 
 #ifndef _GAG_H_
@@ -55,8 +58,6 @@
         #include <AltSoftSerial.h>
     #endif
 
-    //#define RX_MASTER 8
-    //#define TX_MASTER 9
     // TODO check if using RX_MASTER=13 or any other SPI pin is faster? 
     #define RX_MASTER 8
     #define TX_MASTER 9
@@ -70,7 +71,6 @@
 
 
 // MPU control/status vars
-//uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
 uint8_t devStatus;   // return status after each device operation (0 = success, !0 = error)
 uint8_t packetSizeS = MPU6050_FIFO_PACKET_SIZE; // expected DMP packet size (default is 42 bytes)
 uint8_t packetSizeM = MPU9250_FIFO_PACKET_SIZE; // expected DMP packet size (default is 42 bytes)
@@ -131,7 +131,7 @@ struct Gyro
 Sensor selectedSensor = SENSOR_PIN_NF;
 
 //Variables
-float elapsedTime, timeNow, timePrev, elapsedTimeToSwitch, handSwitchPrev, handSwitchElapsed; //Variables for time control
+long elapsedTime, timeNow, timePrev, elapsedTimeToSwitch, handSwitchPrev, handSwitchElapsed; //Variables for time control
 Gyro gyros[SENSORS_COUNT];
 
 /*
@@ -150,9 +150,9 @@ void resetMPUs(int around);
 //void sendDataRequest(int selectedSensor);
 #endif
 
-volatile int readAlign = 0;
+volatile int8_t readAlign = 0;
 
-volatile float time2, timePrev2;
+volatile long time2, timePrev2;
 
 /*
 //void getAccel_Data(MPU6050 * mpuI) {  
