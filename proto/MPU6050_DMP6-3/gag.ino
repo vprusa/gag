@@ -156,7 +156,6 @@ void loop() {
     elapsedTime = (timeNow - timePrev);
  
 #ifdef USE_DISPLAY
-
 //if(elapsedTime > 10){
     remainingTimeBudget = ui.update();
     if (elapsedTime - remainingTimeBudget > 0) {
@@ -174,6 +173,7 @@ void loop() {
 #endif
 
 #ifdef MASTER_HAND
+    masterHandDataRequestHandler();
     loadSlaveHandData();
     gyros[selectedSensor].alreadySentData = false;
     //writePacket();

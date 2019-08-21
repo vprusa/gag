@@ -86,7 +86,7 @@ uint8_t teapotPacket[PACKET_LENGTH] = {'$', 0x99, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 #endif
                                        0x00, 0x00, '\r', '\n'};
 #else
-uint8_t cmdPacket[CMD_PACKET_LENGTH] = {'C', 0, 0x00, '\r', '\n'};
+uint8_t cmdPacket[CMD_PACKET_LENGTH] = {'C', 0, 0, '\r', '\n'};
 
 uint8_t teapotPacket[PACKET_LENGTH] = {'*', 0x99, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 #ifdef SEND_ACC
@@ -151,12 +151,7 @@ void resetMPUs(int around);
 #endif
 
 volatile int readAlign = 0;
-#ifdef SLAVE_HAND 
-volatile int readAligned = 0;
-#endif
-#ifdef MASTER_HAND 
-volatile int readAligned = 1;
-#endif
+
 volatile float time2, timePrev2;
 
 /*
@@ -528,7 +523,6 @@ void writePacket() {
         gyros[selectedSensor].alreadySentData = true;
     }
     readAlign = 0;
-    readAligned = 0;
 #endif
 #ifdef MASTER_HAND
     if(!gyros[selectedSensor].alreadySentData && gyros[selectedSensor].hasDataReady) {
@@ -613,7 +607,6 @@ uint8_t teapotPacket[PACKET_LENGTH] = {'$', 0x99, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 void slaveHandDataRequestHandler() {
     int limit = REPEAT_SLAVE_HAND_READ_LIMIT;
     readAlign = 0;
-    readAligned = 0;
     //DEBUG_PRINTLN("slaveHandDataRequestHandler");
 
     while(limit > 0) {
@@ -628,11 +621,10 @@ void slaveHandDataRequestHandler() {
             } else {
                 //if(ch >= 0 && ch < SENSORS_COUNT) {
                 if((ch >= 0 && ch < SENSORS_COUNT) || (ch >= '0' && ch <= '6' )) {    
-                    if(ch >= '0' && ch <= '6' ){
+                    if(ch >= '0' && ch <= '6'){
                         ch = ch - 48;
                     }
                     //DEBUG_PRINTLN("al");
-                    readAligned = 1;
                     readAlign=0;
                     setOrRotateSelectedGyro(ch);
 
@@ -645,12 +637,13 @@ void slaveHandDataRequestHandler() {
                     break;
                 } else if (ch == 'c') {
                     // deal with command packet ..
-                    readAligned = 1;
                     readAlign=0;
                     while(limit > 0) {
                         int chc = MASTER_SERIAL_NAME.read();
                         if (chc != -1) {
                             execCommand((char)chc);
+                            limit = -1;
+                            break;
                         }
                         limit--;
                      }
@@ -667,19 +660,112 @@ void slaveHandDataRequestHandler() {
 #endif
 
 #ifdef MASTER_HAND
+
+// uint8_t cmdPacket[CMD_PACKET_LENGTH] = {'C', 0, 0, '\r', '\n'};
+
+void masterHandDataRequestHandler() {
+    uint8_t limit = REPEAT_MASTER_HAND_READ_LIMIT;
+    uint8_t endOfPacketAlign = 0;
+    readAlign = 0;
+    bool sendToSlave = false;
+    
+    //DEBUG_PRINTLN("slaveHandDataRequestHandler");
+
+    while(limit > 0) {
+        int ch = MASTER_SERIAL_NAME.read();
+        if (ch != -1) {
+            if(readAlign<1) {
+                if(ch == 'C' || ch == 'c') {
+                    if(ch == 'c') {
+                        sendToSlave = true;
+                    }
+                    //DEBUG_PRINTLN("$ - readAlign=1");
+                    readAlign++;
+                    limit += CMD_PACKET_LENGTH;
+                }else {
+                    readAlign = 0;
+                }
+            } else {
+                if(ch == '\r') {
+                    readAlign=254;
+                }
+                if(ch == '\n' && readAlign == 254) {
+                    readAlign=255;
+                }
+            }
+            if(readAlign > 0) {                
+                if(sendToSlave) {
+                    SLAVE_SERIAL_NAME.write(ch);
+                } else {
+                    readAlign=0;
+                    while(limit > 0) {
+                        int chc = MASTER_SERIAL_NAME.read();
+                        if (chc != -1) {
+                            execCommand((char)chc);
+                            limit = -1;
+                            break;
+                        }
+                        limit--;
+                    }
+                    break;
+                }
+            }
+            if(readAlign == 255) {
+                break;
+            }
+            limit--;
+        }
+
+        if (/*sentCharCounter > MAX_HAND_SWITCH_CHARS || */ 
+            handSwitchElapsed > MAX_HAND_SWITCH_TIME ||
+            sentPacketCharCounter > PACKET_LENGTH || endOfPacketAlign == 2) {
+            handSwitchElapsed = 0;
+            sentCharCounter = 0;
+            // TODO fix failing aligning differently then with sending flag character '+' for distinguishing packet end
+            MASTER_SERIAL_NAME.write((byte)0x00);
+            // TODO find out how many packets are lost
+            limit =-1;
+            break;
+        }
+
+     
+        if (ch != -1) {
+            if(ch == '$') {
+                align++;
+                sentPacketCharCounter++;
+            }
+            if(ch == 0x99) {
+                align++;
+                sentPacketCharCounter++;
+            }
+          
+            if(sentPacketCharCounter>0) {
+                MASTER_SERIAL_NAME.write(ch);
+                sentPacketCharCounter++;
+            }
+            if(ch == '\r') {
+                endOfPacketAlign=1;
+            }
+            if(ch == '\n' && endOfPacketAlign==1) {
+                endOfPacketAlign=2;
+            }
+        }
+    }
+
+}
+
 void loadSlaveHandData() {
-    int limit = REPEAT_MASTER_HAND_READ_LIMIT;
+    uint8_t limit = REPEAT_MASTER_HAND_READ_LIMIT;
     
     while(--limit>0){ 
         sendDataRequest(selectedSensor);
         handSwitchElapsed = 0;
         time2 = millis();
         timePrev2 = 0;
-        int sentCharCounter = 0;
-        int sentPacketCharCounter = 0;
-        int align = 0;
-        int aligned = 0;
-        int endOfPacketAlign=0;
+        uint8_t sentCharCounter = 0;
+        uint8_t sentPacketCharCounter = 0;
+        uint8_t align = 0;
+        uint8_t endOfPacketAlign=0;
         
         while (true) {
             timePrev2 = time2;
@@ -707,9 +793,6 @@ void loadSlaveHandData() {
                 if(ch == 0x99) {
                     align++;
                     sentPacketCharCounter++;
-                }
-                if(align > 1) {
-                    aligned = 1;
                 }
                 if(sentPacketCharCounter>0) {
                     MASTER_SERIAL_NAME.write(ch);

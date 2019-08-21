@@ -49,7 +49,7 @@
 #define CMD_RESTART_WITH_CALIBRATION_AND_SEND 's'
 #define CMD_RESTART 'r'
 
-#define CMD_PACKET_LENGTH 15
+#define CMD_PACKET_LENGTH 5
 #ifdef SEND_ACC
     #define PACKET_LENGTH 21
     #define PACKET_COUNTER_POSITION 18
@@ -121,7 +121,7 @@
 #define MAX_HAND_SWITCH_CHARS 35
 // TODO make left/right switch
 
-// TODO test if 2 should is enough
+// TODO test if value 2 is enough
 #define REPEAT_MASTER_HAND_READ_LIMIT 10
 #define REPEAT_SLAVE_HAND_READ_LIMIT 10
 
