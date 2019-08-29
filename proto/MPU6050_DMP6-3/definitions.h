@@ -8,6 +8,7 @@
     #define MASTER_HAND
     #define USE_DISPLAY 1
     #define MASTER_BT_SERIAL
+    #define USE_BT_GATT_SERIAL
 #else
     #define SLAVE_HAND
 #endif

@@ -37,15 +37,20 @@ void setup() {
     
     //#ifdef MASTER_HAND
     #ifdef MASTER_BT_SERIAL
-    MASTER_SERIAL_NAME.begin(MASTER_BT_SERIAL_NAME);
+        #ifdef USE_BT_GATT_SERIAL
+            MASTER_SERIAL_NAME.begin(MASTER_BT_SERIAL_NAME, new ServerCallbacks(), new CharCallbacks());
+        #else
+            MASTER_SERIAL_NAME.begin(MASTER_BT_SERIAL_NAME);
+        #endif
     #else
     MASTER_SERIAL_NAME.begin(MASTER_SERIAL_BAUD);
     while (!MASTER_SERIAL_NAME)
         ; // wait for Leonardo enumeration, others continue immediately
     #endif
     //#endif
-    
-    MASTER_SERIAL_NAME.begin(MASTER_SERIAL_BAUD);
+    #ifndef USE_BT_GATT_SERIAL
+        MASTER_SERIAL_NAME.begin(MASTER_SERIAL_BAUD);
+    #endif
     MASTER_SERIAL_NAME.println(F("USB up"));
     
 #ifdef USE_DISPLAY
@@ -137,7 +142,7 @@ void loop() {
     //if (!dmpReady)
     //   return;
 
-    loopBTGATT();
+    SerialBT.loop();
 
     // wait for MPU interrupt or extra packet(s) available
     // while (/*!mpuInterrupt &&*/ fifoCount < packetSize)
@@ -169,7 +174,7 @@ void loop() {
         // time budget.
         // Serial.println("Remaining time budget:");
         //Serial.println(remainingTimeBudget);
-        // delay(remainingTimeBudget);
+         //delay(remainingTimeBudget);
 
     }
   //return;

@@ -1,4 +1,4 @@
-// Copyright 2018 Evandro Luis Copercini
+// Copyright 2018 Vojtech Prusa
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,6 +14,16 @@
 
 #ifndef _GAG_BT_GATT_SERIAL_H_
 #define _GAG_BT_GATT_SERIAL_H_
+
+
+#include "sdkconfig.h"
+
+//#if defined(CONFIG_BT_ENABLED) && defined(CONFIG_BLUEDROID_ENABLED)
+
+#include "Arduino.h"
+#include "Stream.h"
+#include <esp_spp_api.h>
+
 
 #include <BLEDevice.h>
 #include <BLEServer.h>
@@ -35,20 +45,31 @@ class BluetoothSerial: public Stream
         BluetoothSerial(void);
         ~BluetoothSerial(void);
 
-        bool begin(String localName=String());
+        // bool begin(String localName=String());
+        bool begin(std::string deviceName,
+            BLEServerCallbacks* pServerCallbacks,
+            BLECharacteristicCallbacks* pCharacteristcsCallbacks);
         int available(void);
         int peek(void);
-        bool hasClient(void);
+        //bool hasClient(void);
         int read(void);
         size_t write(uint8_t c);
-        size_t write(const uint8_t *buffer, size_t size);
+        size_t write(uint8_t *buffer, size_t size);
+        //size_t write(const uint8_t *buffer, size_t size);
         void flush();
         void end(void);
-        esp_err_t register_callback(esp_spp_cb_t * callback);
+        //esp_err_t register_callback(esp_spp_cb_t * callback);
+        void loop();
+
+        BLEServer *pServer;
+        BLECharacteristic * pTxCharacteristic;
+        bool deviceConnected;
+        bool oldDeviceConnected;
 
     private:
-        String local_name;
+        //String local_name;
 
 };
+
 
 #endif

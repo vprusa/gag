@@ -19,12 +19,12 @@
 #endif
 
 #ifdef MASTER_HAND
-    #define USE_BT_GATT_SERIAL
     #ifdef MASTER_BT_SERIAL
         #define MASTER_BT_SERIAL_NAME "GAGGM"
         #ifdef USE_BT_GATT_SERIAL
             #include "gag_bt_gatt_serial.h"
             #define MASTER_SERIAL_NAME SerialBT
+            BluetoothSerial SerialBT;
         #else
             #include "BluetoothSerial.h"
             #if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
@@ -74,99 +74,33 @@
 
 #ifdef USE_BT_GATT_SERIAL
 
-BLEServer *pServer = NULL;
-BLECharacteristic * pTxCharacteristic;
-bool deviceConnected = false;
-bool oldDeviceConnected = false;
+// MASTER_BT_SERIAL_NAME
 
+class ServerCallbacks: public BLEServerCallbacks {            
+    void onConnect(BLEServer* pServer) {
+        SerialBT.deviceConnected = true;
+    };
 
-class MyServerCallbacks: public BLEServerCallbacks {
-  
-  void onConnect(BLEServer* pServer) {
-    deviceConnected = true;
-  };
-
-  void onDisconnect(BLEServer* pServer) {
-    deviceConnected = false;
-  }
-};
-
-class MyCallbacks: public BLECharacteristicCallbacks {
-    void onWrite(BLECharacteristic *pCharacteristic) {
-      std::string rxValue = pCharacteristic->getValue();
-      //timeNow = micros();
-      
-      if (rxValue.length() > 0) {
-        //Serial.print(timeNow);
-        //Serial.print(" ");
-        //unsigned long timeDiff = timeNow-timeLastRead;
-        //Serial.print(timeDiff);
-        
-        //Serial.println("*********");
-        //MASTER_SERIAL_NAME.print(" Received: ");
-        for (int i = 0; i < rxValue.length(); i++)
-          SLAVE_SERIAL_NAME.print(rxValue[i]);
-        //MASTER_SERIAL_NAME.println();
-        //Serial.println("*********");
-        //timeLastRead=timeNow;
-      }
+    void onDisconnect(BLEServer* pServer) {
+        SerialBT.deviceConnected = false;
     }
 };
 
-void prepareBTGATTSerial(){
-    // Create the BLE Device
-    BLEDevice::init(MASTER_BT_SERIAL_NAME);
-
-    // Create the BLE Server
-    pServer = BLEDevice::createServer();
-    pServer->setCallbacks(new MyServerCallbacks());
-
-    // Create the BLE Service
-    BLEService *pService = pServer->createService(SERVICE_UUID);
-
-    // Create a BLE Characteristic
-    pTxCharacteristic = pService->createCharacteristic(
-                                    CHARACTERISTIC_UUID_TX,
-                                    BLECharacteristic::PROPERTY_NOTIFY
-                                );
-                    
-    pTxCharacteristic->addDescriptor(new BLE2902());
-
-    BLECharacteristic * pRxCharacteristic = pService->createCharacteristic(
-                                            CHARACTERISTIC_UUID_RX,
-                                        BLECharacteristic::PROPERTY_WRITE
-                                    );
-
-    pRxCharacteristic->setCallbacks(new MyCallbacks());
-
-    // Start the service
-    pService->start();
-
-    // Start advertising
-    pServer->getAdvertising()->start();
-    //MASTER_SERIAL_NAME.println("Waiting a client connection to notify...");
-
-}
+class CharCallbacks: public BLECharacteristicCallbacks {
+    void onWrite(BLECharacteristic *pCharacteristic) {
+    std::string rxValue = pCharacteristic->getValue();
+    //timeNow = micros();
+    
+    if (rxValue.length() > 0) {
+        for (int i = 0; i < rxValue.length(); i++)
+            SLAVE_SERIAL_NAME.print(rxValue[i]);
+        }
+    }
+};
 
 /*uint8_t* string2char(String str){
     return reinterpret_cast<uint8_t*>(&str[0]);
 }*/
-
-void loopBTGATT(){
-    // disconnecting
-    if (!deviceConnected && oldDeviceConnected) {
-        delay(500); // give the bluetooth stack the chance to get things ready
-        pServer->startAdvertising(); // restart advertising
-        //MASTER_SERIAL_NAME.println("start advertising");
-        oldDeviceConnected = deviceConnected;
-    }
-    // connecting
-    if (deviceConnected && !oldDeviceConnected) {
-        // do stuff here on connecting
-        //MASTER_SERIAL_NAME.println("connected");
-        oldDeviceConnected = deviceConnected;
-    }
-}
 
 #endif
 
@@ -602,13 +536,15 @@ void writePacket() {
     if(!gyros[selectedSensor].alreadySentData && gyros[selectedSensor].hasDataReady) {
         fifoToPacket(fifoBuffer, teapotPacket, selectedSensor);
         #ifdef USE_BT_GATT_SERIAL
-            if (deviceConnected) {
+            MASTER_SERIAL_NAME.write(teapotPacket, PACKET_LENGTH);
+
+            //if (deviceConnected) {
                 //MASTER_SERIAL_NAME.println(str);
                 //pTxCharacteristic->setValue(string2char(str), str.length());
-                pTxCharacteristic->setValue(teapotPacket, PACKET_LENGTH);
-                pTxCharacteristic->notify();
+                //pTxCharacteristic->setValue(teapotPacket, PACKET_LENGTH);
+                //pTxCharacteristic->notify();
                 //timeLastWrite=timeNow;
-            }
+            //}
         #else
             MASTER_SERIAL_NAME.write(teapotPacket, PACKET_LENGTH);
             MASTER_SERIAL_NAME.write((byte)0x00);
@@ -655,8 +591,6 @@ void loadDataAndSendPacket() {
         writePacket();       
     }
 }
-
-#ifdef SLAVE_HAND
 
 void execCommand(byte ch){
     // {'c', 0, 0, '\r', '\n'};
@@ -715,6 +649,8 @@ uint8_t teapotPacket[PACKET_LENGTH] = {'$', 0x99, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     MASTER_SERIAL_NAME.write(cmdPacket, CMD_PACKET_LENGTH);
     MASTER_SERIAL_NAME.write((byte)0x00);
 }
+
+#ifdef SLAVE_HAND
 
 void slaveHandDataRequestHandler() {
     int limit = REPEAT_SLAVE_HAND_READ_LIMIT;
@@ -780,7 +716,8 @@ void masterHandDataRequestHandler() {
     uint8_t endOfPacketAlign = 0;
     readAlign = 0;
     bool sendToSlave = false;
-    
+    uint8_t sentPacketCharCounter = 0;
+    uint8_t align = 0;
     //DEBUG_PRINTLN("slaveHandDataRequestHandler");
 
     while(limit > 0) {
@@ -832,7 +769,7 @@ void masterHandDataRequestHandler() {
             handSwitchElapsed > MAX_HAND_SWITCH_TIME ||
             sentPacketCharCounter > PACKET_LENGTH || endOfPacketAlign == 2) {
             handSwitchElapsed = 0;
-            sentCharCounter = 0;
+            //sentCharCounter = 0;
             // TODO fix failing aligning differently then with sending flag character '+' for distinguishing packet end
             MASTER_SERIAL_NAME.write((byte)0x00);
             // TODO find out how many packets are lost
