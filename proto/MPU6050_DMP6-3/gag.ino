@@ -137,6 +137,8 @@ void loop() {
     //if (!dmpReady)
     //   return;
 
+    loopBTGATT();
+
     // wait for MPU interrupt or extra packet(s) available
     // while (/*!mpuInterrupt &&*/ fifoCount < packetSize)
     //{

@@ -15,21 +15,24 @@
 #include "gag_offsetting.h"
 
 #ifdef USE_DISPLAY
-#ifndef USE_DUSPLAY_h
-#define USE_DUSPLAY_h
 #include "gag_display.h"
-#endif
 #endif
 
 #ifdef MASTER_HAND
+    #define USE_BT_GATT_SERIAL
     #ifdef MASTER_BT_SERIAL
         #define MASTER_BT_SERIAL_NAME "GAGGM"
-        #include "BluetoothSerial.h"
-        #if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
-            #error Bluetooth is not enabled! Please run `make menuconfig` to and enable it
+        #ifdef USE_BT_GATT_SERIAL
+            #include "gag_bt_gatt_serial.h"
+            #define MASTER_SERIAL_NAME SerialBT
+        #else
+            #include "BluetoothSerial.h"
+            #if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
+                #error Bluetooth is not enabled! Please run `make menuconfig` to and enable it
+            #endif
+            BluetoothSerial SerialBT;
+            #define MASTER_SERIAL_NAME SerialBT
         #endif
-        BluetoothSerial SerialBT;
-        #define MASTER_SERIAL_NAME SerialBT
     #else
         #define MASTER_SERIAL_NAME Serial
     #endif
@@ -67,6 +70,104 @@
     #ifdef LIB_ALT_SW_SERIAL
         AltSoftSerial hc05Master; //(RX_MASTER, TX_MASTER);
     #endif
+#endif
+
+#ifdef USE_BT_GATT_SERIAL
+
+BLEServer *pServer = NULL;
+BLECharacteristic * pTxCharacteristic;
+bool deviceConnected = false;
+bool oldDeviceConnected = false;
+
+
+class MyServerCallbacks: public BLEServerCallbacks {
+  
+  void onConnect(BLEServer* pServer) {
+    deviceConnected = true;
+  };
+
+  void onDisconnect(BLEServer* pServer) {
+    deviceConnected = false;
+  }
+};
+
+class MyCallbacks: public BLECharacteristicCallbacks {
+    void onWrite(BLECharacteristic *pCharacteristic) {
+      std::string rxValue = pCharacteristic->getValue();
+      //timeNow = micros();
+      
+      if (rxValue.length() > 0) {
+        //Serial.print(timeNow);
+        //Serial.print(" ");
+        //unsigned long timeDiff = timeNow-timeLastRead;
+        //Serial.print(timeDiff);
+        
+        //Serial.println("*********");
+        //MASTER_SERIAL_NAME.print(" Received: ");
+        for (int i = 0; i < rxValue.length(); i++)
+          SLAVE_SERIAL_NAME.print(rxValue[i]);
+        //MASTER_SERIAL_NAME.println();
+        //Serial.println("*********");
+        //timeLastRead=timeNow;
+      }
+    }
+};
+
+void prepareBTGATTSerial(){
+    // Create the BLE Device
+    BLEDevice::init(MASTER_BT_SERIAL_NAME);
+
+    // Create the BLE Server
+    pServer = BLEDevice::createServer();
+    pServer->setCallbacks(new MyServerCallbacks());
+
+    // Create the BLE Service
+    BLEService *pService = pServer->createService(SERVICE_UUID);
+
+    // Create a BLE Characteristic
+    pTxCharacteristic = pService->createCharacteristic(
+                                    CHARACTERISTIC_UUID_TX,
+                                    BLECharacteristic::PROPERTY_NOTIFY
+                                );
+                    
+    pTxCharacteristic->addDescriptor(new BLE2902());
+
+    BLECharacteristic * pRxCharacteristic = pService->createCharacteristic(
+                                            CHARACTERISTIC_UUID_RX,
+                                        BLECharacteristic::PROPERTY_WRITE
+                                    );
+
+    pRxCharacteristic->setCallbacks(new MyCallbacks());
+
+    // Start the service
+    pService->start();
+
+    // Start advertising
+    pServer->getAdvertising()->start();
+    //MASTER_SERIAL_NAME.println("Waiting a client connection to notify...");
+
+}
+
+/*uint8_t* string2char(String str){
+    return reinterpret_cast<uint8_t*>(&str[0]);
+}*/
+
+void loopBTGATT(){
+    // disconnecting
+    if (!deviceConnected && oldDeviceConnected) {
+        delay(500); // give the bluetooth stack the chance to get things ready
+        pServer->startAdvertising(); // restart advertising
+        //MASTER_SERIAL_NAME.println("start advertising");
+        oldDeviceConnected = deviceConnected;
+    }
+    // connecting
+    if (deviceConnected && !oldDeviceConnected) {
+        // do stuff here on connecting
+        //MASTER_SERIAL_NAME.println("connected");
+        oldDeviceConnected = deviceConnected;
+    }
+}
+
 #endif
 
 
@@ -500,8 +601,19 @@ void writePacket() {
     //DEBUG_WRITE_LEN(teapotPacket, PACKET_LENGTH);
     if(!gyros[selectedSensor].alreadySentData && gyros[selectedSensor].hasDataReady) {
         fifoToPacket(fifoBuffer, teapotPacket, selectedSensor);
-        MASTER_SERIAL_NAME.write(teapotPacket, PACKET_LENGTH);
-        MASTER_SERIAL_NAME.write((byte)0x00);
+        #ifdef USE_BT_GATT_SERIAL
+            if (deviceConnected) {
+                //MASTER_SERIAL_NAME.println(str);
+                //pTxCharacteristic->setValue(string2char(str), str.length());
+                pTxCharacteristic->setValue(teapotPacket, PACKET_LENGTH);
+                pTxCharacteristic->notify();
+                //timeLastWrite=timeNow;
+            }
+        #else
+            MASTER_SERIAL_NAME.write(teapotPacket, PACKET_LENGTH);
+            MASTER_SERIAL_NAME.write((byte)0x00);
+        #endif
+
         //DEBUG_WRITE_LEN(teapotPacket, PACKET_LENGTH);
         //DEBUG_WRITE((byte)0x00);
         gyros[selectedSensor].hasDataReady = false;
