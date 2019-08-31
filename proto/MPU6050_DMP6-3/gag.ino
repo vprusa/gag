@@ -27,20 +27,33 @@
     //#include "gag_offsetting.h"
     extern bool calibrationDone;
 #endif
-
+    
+#ifdef USE_BT_GATT_SERIAL
+    ServerCallbacks * sclbk;
+    CharCallbacks * cclbk;
+#endif
 
 void setup() {
+    
     // WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
     //#ifdef MASTER_HAND    
     //Serial.begin(115200);
     //DEBUG_PRINT("setup");
-    
+   
     //#ifdef MASTER_HAND
+    #ifdef GAG_DEBUG 
+        Serial.begin(115200);
+    #endif
+
+    #ifdef USE_BT_GATT_SERIAL
+        sclbk = new ServerCallbacks();
+        cclbk = new CharCallbacks();
+        //SerialBT = new BluetoothSerial();
+        MASTER_SERIAL_NAME.begin(MASTER_BT_SERIAL_NAME, sclbk, cclbk);
+    #endif
     #ifdef MASTER_BT_SERIAL
-        #ifdef USE_BT_GATT_SERIAL
-            MASTER_SERIAL_NAME.begin(MASTER_BT_SERIAL_NAME, new ServerCallbacks(), new CharCallbacks());
-        #else
-            MASTER_SERIAL_NAME.begin(MASTER_BT_SERIAL_NAME);
+        #ifndef USE_BT_GATT_SERIAL
+           // MASTER_SERIAL_NAME.begin(MASTER_BT_SERIAL_NAME);
         #endif
     #else
     MASTER_SERIAL_NAME.begin(MASTER_SERIAL_BAUD);
@@ -49,8 +62,9 @@ void setup() {
     #endif
     //#endif
     #ifndef USE_BT_GATT_SERIAL
-        MASTER_SERIAL_NAME.begin(MASTER_SERIAL_BAUD);
+        //MASTER_SERIAL_NAME.begin(MASTER_SERIAL_BAUD);
     #endif
+    
     MASTER_SERIAL_NAME.println(F("USB up"));
     
 #ifdef USE_DISPLAY
@@ -80,6 +94,7 @@ void setup() {
         //Fastwire::setup(400, true);
     #endif
 #endif
+
 // initialize serial communication
 // (9600 38400 57600 74880 115200 230400 250000 57600 38400 chosen because it is required for Teapot Demo output, but it's
 // really up to you depending on your project)
@@ -130,6 +145,7 @@ void setup() {
     //delay(3000);
     //ui.init();
     //ui.update();
+    
 }
 
 
@@ -142,8 +158,31 @@ void loop() {
     //if (!dmpReady)
     //   return;
 
-    SerialBT.loop();
-
+    //SerialBT.loop();
+    //SerialBT.println("test");
+    //SerialBT.write('c');
+    //char * ch = new char[]{"qweqwe"};
+    //char *ch = new char [strlen("hello") + 1];
+    //char *ch = s.c_str();
+/*
+    char hello[] = "hello!";
+    char * ch = hello;
+    //SerialBT.pTxCharacteristic->setValue(reinterpret_cast<const int8_t*>(ch), 6);
+    //SerialBT.pTxCharacteristic->setValue(reinterpret_cast< uint8_t*>(hello), 6);
+    //SerialBT.pTxCharacteristic->notify();
+    //GAG_DEBUG_PRINTLN("write(const uint8_t*,size_t)");
+    GAG_DEBUG_PRINTLN(hello);
+    if (deviceConnected) {
+        //GAG_DEBUG_PRINTLN("deviceConnected");
+        //SerialBT.pTxCharacteristic->setValue(reinterpret_cast<uint8_t*>(ch), 6);
+        SerialBT.pTxCharacteristic->setValue(reinterpret_cast<uint8_t*>(ch), 6);
+        //SerialBT.pTxCharacteristic->setValue("q");
+        SerialBT.pTxCharacteristic->notify();
+    }else{
+        //delay(1000);
+    }
+    
+   */
     // wait for MPU interrupt or extra packet(s) available
     // while (/*!mpuInterrupt &&*/ fifoCount < packetSize)
     //{
@@ -158,7 +197,8 @@ void loop() {
     // .
     // .
     // }
-    //uint8_t teapotPacket[21] = {'*', 0x99, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0,0,0,0,0,0x00, 0x00 , '\r', '\n'};
+    
+    
     handSwitchPrev = timeNow;
     timePrev = timeNow; // the previous time is stored before the actual time read
     timeNow = millis(); // actual time read
@@ -182,8 +222,8 @@ void loop() {
 #endif
 
 #ifdef MASTER_HAND
-    masterHandDataRequestHandler();
-    loadSlaveHandData();
+    //masterHandDataRequestHandler();
+    //loadSlaveHandData();
     gyros[selectedSensor].alreadySentData = false;
     //writePacket();
     loadDataAndSendPacket();
@@ -198,7 +238,7 @@ void loop() {
 #endif
     automaticFifoReset();
 #ifdef MASTER_HAND
-    loadSlaveHandData();
+    //loadSlaveHandData();
 #endif
 
 }

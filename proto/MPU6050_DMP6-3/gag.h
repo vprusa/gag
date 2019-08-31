@@ -74,29 +74,81 @@
 
 #ifdef USE_BT_GATT_SERIAL
 
-// MASTER_BT_SERIAL_NAME
-
+/*
 class ServerCallbacks: public BLEServerCallbacks {            
     void onConnect(BLEServer* pServer) {
-        SerialBT.deviceConnected = true;
+        GAG_DEBUG_PRINTLN("onConnect");
+        MASTER_SERIAL_NAME.deviceConnected = true;
     };
 
     void onDisconnect(BLEServer* pServer) {
-        SerialBT.deviceConnected = false;
+        GAG_DEBUG_PRINTLN("onDisconnect");
+        MASTER_SERIAL_NAME.deviceConnected = false;
     }
 };
 
 class CharCallbacks: public BLECharacteristicCallbacks {
     void onWrite(BLECharacteristic *pCharacteristic) {
+    GAG_DEBUG_PRINTLN("onWrite");
     std::string rxValue = pCharacteristic->getValue();
     //timeNow = micros();
     
     if (rxValue.length() > 0) {
+        GAG_DEBUG_PRINTLN(rxValue.c_str());
         for (int i = 0; i < rxValue.length(); i++)
             SLAVE_SERIAL_NAME.print(rxValue[i]);
+            //GAG_DEBUG_PRINT(reinterpret_cast<uint8_t>([i]));
+        }
+    }
+};*/
+
+
+
+ServerCallbacks::ServerCallbacks(void){
+    GAG_DEBUG_PRINTLN("ServerCallbacks");
+    //MASTER_SERIAL_NAME.deviceConnected = true;
+
+}
+
+ServerCallbacks::~ServerCallbacks(void){
+    GAG_DEBUG_PRINTLN("~ServerCallbacks");
+}
+extern bool deviceConnected;
+void ServerCallbacks::onConnect(BLEServer* pServer) {
+    GAG_DEBUG_PRINTLN("onConnect");
+    //MASTER_SERIAL_NAME.deviceConnected = true;
+    deviceConnected = true;
+};
+
+void ServerCallbacks::onDisconnect(BLEServer* pServer) {
+    GAG_DEBUG_PRINTLN("onDisconnect");
+    //MASTER_SERIAL_NAME.deviceConnected = false;
+    deviceConnected = false;
+}
+
+
+CharCallbacks::CharCallbacks(void){
+    GAG_DEBUG_PRINTLN("CharCallbacks");
+}
+
+CharCallbacks::~CharCallbacks(void){
+    GAG_DEBUG_PRINTLN("~CharCallbacks");
+}
+
+void CharCallbacks::onWrite(BLECharacteristic *pCharacteristic) {
+    GAG_DEBUG_PRINTLN("onWrite");
+    std::string rxValue = pCharacteristic->getValue();
+    //timeNow = micros();
+    
+    if (rxValue.length() > 0) {
+        GAG_DEBUG_PRINTLN(rxValue.c_str());
+        for (int i = 0; i < rxValue.length(); i++) {
+            SLAVE_SERIAL_NAME.print(rxValue[i]);
+            //GAG_DEBUG_PRINT(reinterpret_cast<uint8_t>([i]));
         }
     }
 };
+
 
 /*uint8_t* string2char(String str){
     return reinterpret_cast<uint8_t*>(&str[0]);
@@ -140,24 +192,13 @@ enum Sensor {
     SENSOR_PIN_NF = -1,
 };
 
-/*
-char emptyArr[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-#ifdef SEND_ACC
-0, 0, 0, 0, 0, 0,
-#endif
-0x00, 0x00, 0, 0};
-*/
 struct Gyro
 {
     uint8_t fifoBuffer[FIFO_SIZE];                                      // FIFO storage buffer
-    //int AD0_pin;
-    //MPU6050 *mpu;
-    //MPU6050 *mpuM;
-    //MPU9250 *mpuM;
     MPU6050_MPU9250 *mpu;
     // orientation/motion vars
     Quaternion q;        // [w, x, y, z]         quaternion container
-   // bool dmpReady = false; // set true if DMP init was successful
+    // bool dmpReady = false; // set true if DMP init was successful
     bool hasDataReady = false;
     bool alreadySentData = false;
     long lastResetTime=0;
@@ -718,7 +759,7 @@ void masterHandDataRequestHandler() {
     bool sendToSlave = false;
     uint8_t sentPacketCharCounter = 0;
     uint8_t align = 0;
-    //DEBUG_PRINTLN("slaveHandDataRequestHandler");
+    DEBUG_PRINTLN("slaveHandDataRequestHandler");
 
     while(limit > 0) {
         int ch = MASTER_SERIAL_NAME.read();
@@ -762,7 +803,6 @@ void masterHandDataRequestHandler() {
             if(readAlign == 255) {
                 break;
             }
-            limit--;
         }
 
         if (/*sentCharCounter > MAX_HAND_SWITCH_CHARS || */ 
@@ -799,6 +839,7 @@ void masterHandDataRequestHandler() {
                 endOfPacketAlign=2;
             }
         }
+        limit--;
     }
 
 }

@@ -3,7 +3,7 @@
 */
 #define ESP32_RIGHT 1
 //#define SEND_ACC
-#define MEASURE_OFFSETS 1
+//#define MEASURE_OFFSETS 1
 #ifdef ESP32_RIGHT
     #define MASTER_HAND
     #define USE_DISPLAY 1

@@ -1,4 +1,4 @@
-// Copyright 2018 Vojtech Prusa
+// Copyright 2019 Vojtech Prusa
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,18 @@
 #ifndef _GAG_BT_GATT_SERIAL_H_
 #define _GAG_BT_GATT_SERIAL_H_
 
+#define GAG_BT_GATT_SERIAL
+#ifdef GAG_BT_GATT_SERIAL
+    #define GAG_DEBUG_PRINT(x) Serial.print(x)
+    #define GAG_DEBUG_PRINTF(x, y) Serial.print(x, y)
+    #define GAG_DEBUG_PRINTLN(x) Serial.println(x)
+    #define GAG_DEBUG_PRINTLNF(x, y) Serial.println(x, y)
+#else
+    #define GAG_DEBUG_PRINT(x)
+    #define GAG_DEBUG_PRINTF(x, y)
+    #define GAG_DEBUG_PRINTLN(x, y)
+    #define GAG_DEBUG_PRINTLNF(x, y)
+#endif
 
 #include "sdkconfig.h"
 
@@ -38,7 +50,27 @@
 #define CHARACTERISTIC_UUID_TX "6e400003-b5a3-f393-e0a9-e50e24dcca9e"
 //#define TEST_PERF 
 
-class BluetoothSerial: public Stream
+// MASTER_BT_SERIAL_NAME
+
+class ServerCallbacks: public BLEServerCallbacks {
+    public:            
+
+        ServerCallbacks(void);
+        ~ServerCallbacks(void);
+        void onConnect(BLEServer* pServer);
+        void onDisconnect(BLEServer* pServer);
+};
+
+class CharCallbacks: public BLECharacteristicCallbacks {
+    public:
+
+        CharCallbacks(void);
+        ~CharCallbacks(void);
+        void onWrite(BLECharacteristic *pCharacteristic);
+};
+
+// TODO implement properly.. or override sending just 1 char ...?
+class BluetoothSerial //: public Stream
 {
     public:
 
@@ -47,24 +79,40 @@ class BluetoothSerial: public Stream
 
         // bool begin(String localName=String());
         bool begin(std::string deviceName,
-            BLEServerCallbacks* pServerCallbacks,
-            BLECharacteristicCallbacks* pCharacteristcsCallbacks);
+            ServerCallbacks*,
+            CharCallbacks*);
         int available(void);
         int peek(void);
         //bool hasClient(void);
         int read(void);
         size_t write(uint8_t c);
-        size_t write(uint8_t *buffer, size_t size);
+        size_t write(const uint8_t *buffer, size_t size);
+        
+        size_t print(const char* c);
+        size_t print(uint8_t c);
+        size_t println(const uint8_t *buffer, size_t size);
+        size_t println(unsigned char b, int base);
+        //size_t print(const char* buffer);
+        size_t println(const char* buffer); 
+        size_t println(uint8_t);
+        
+        size_t print(const __FlashStringHelper *ifsh);
+        size_t println(const __FlashStringHelper *ifsh);
+        
         //size_t write(const uint8_t *buffer, size_t size);
         void flush();
         void end(void);
         //esp_err_t register_callback(esp_spp_cb_t * callback);
         void loop();
 
+        // TODO privateize and then mine
         BLEServer *pServer;
         BLECharacteristic * pTxCharacteristic;
-        bool deviceConnected;
+        //bool deviceConnected;
         bool oldDeviceConnected;
+
+        ServerCallbacks * pServerCallbacks;      
+        CharCallbacks * pCharacteristcsCallbacks;
 
     private:
         //String local_name;
