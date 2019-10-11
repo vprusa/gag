@@ -133,7 +133,7 @@ void calibration(MPU6050_MPU9250 *mpuP){
         MASTER_SERIAL_NAME.print(F(" gzof:"));
         MASTER_SERIAL_NAME.println(gz_offset);
         #endif
-        if (ready==6 || measurementsLimit-- < 0) break;
+        if (ready==2 || --measurementsLimit < 0) break;
     }
 }
 
@@ -208,6 +208,5 @@ void measureOffsets(MPU6050_MPU9250 *mpuP){
 }
 
 //#endif // end of code measuring for offsets
-
 
 #endif

@@ -4,6 +4,9 @@
 #define ESP32_RIGHT 1
 //#define SEND_ACC
 //#define MEASURE_OFFSETS 1
+#define SET_OFFSETS 1
+#define SEND_DATA_ALSO_OVER_SERIAL 1 
+
 #ifdef ESP32_RIGHT
     #define MASTER_HAND
     #define USE_DISPLAY 1
@@ -13,9 +16,9 @@
     #define SLAVE_HAND
 #endif
 
-#define MEASUREMENT_LIMIT 100
+#define MEASUREMENT_LIMIT 20
 
-#define GAG_DEBUG
+//#define GAG_DEBUG
 #ifdef GAG_DEBUG
     #define GAG_DEBUG_PRINT(x) Serial.print(x)
     #define GAG_DEBUG_PRINTF(x, y) Serial.print(x, y)
@@ -32,7 +35,6 @@
 #include "gag_display.h"
 #endif*/
 
-
 #define MPU6050_FIFO_PACKET_SIZE 42
 #define MPU9250_FIFO_PACKET_SIZE 48
 // TODO fix..
@@ -48,6 +50,10 @@
 #define CMD_RESTART_WITH_CALIBRATION 'a'
 #define CMD_RESTART_WITH_CALIBRATION_AND_SEND 's'
 #define CMD_RESTART 'r'
+#define CMD_READ_SLAVE 'i'
+#define CMD_DONT_READ_SLAVE 'I'
+
+
 
 #define CMD_PACKET_LENGTH 5
 #ifdef SEND_ACC
@@ -70,13 +76,13 @@
     // https://randomnerdtutorials.com/esp32-pinout-reference-gpios/
 
     #define SENSOR_PIN_TU TU
-    #define SENSOR_PIN_TU_COMPENSATION 14 //4
+    #define SENSOR_PIN_TU_COMPENSATION 14
     #define SENSOR_PIN_SU SU
-    #define SENSOR_PIN_SU_COMPENSATION 13 //14
+    #define SENSOR_PIN_SU_COMPENSATION 13
     #define SENSOR_PIN_FU FU
     #define SENSOR_PIN_FU_COMPENSATION 12
     #define SENSOR_PIN_MU MU
-    #define SENSOR_PIN_MU_COMPENSATION 4 //13
+    #define SENSOR_PIN_MU_COMPENSATION 4
     #define SENSOR_PIN_EU EU
     #define SENSOR_PIN_EU_COMPENSATION 2
     #define SENSOR_PIN_HP HP // HAND PALM

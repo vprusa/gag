@@ -31,7 +31,7 @@ public class Configuration {
     static public String prefixPath = "/dev/";
     static public String deviceRight = "ttyUSB0"; // ttyUSB1 // /dev/rfcomm0
     static public String portNameRight = System.getProperty("portNameRight", prefixPath + deviceRight);
-    static public int baudRateRight = System.getProperty("baudRateRight") == null ? 57600
+    static public int baudRateRight = System.getProperty("baudRateRight") == null ? 115200
             // 230400 115200 57600 38400 19200 9600
             : Integer.valueOf(System.getProperty("baudRateRight"));
     // 38400 9600 115200 57600
