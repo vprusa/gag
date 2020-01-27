@@ -1,5 +1,6 @@
 package cz.gag.visualization;
 
+import com.jogamp.opengl.math.Quaternion;
 import cz.gag.common.Configuration;
 import cz.gag.common.Hand;
 import cz.gag.common.ProcessingApplet;
@@ -23,6 +24,11 @@ public class HandVisualizationBase {
         this.rotationX = rotationX;
         this.rotationY = rotationY;
         this.rotationZ = rotationZ;
+        //q.normalize();
+        /*this.angle = q.getW();
+        this.rotationX = q.getX();
+        this.rotationY = q.getY();
+        this.rotationZ = q.getZ();*/
     }
 
     public void rotateX(float rotationX) {

@@ -309,6 +309,7 @@ public class ProcessingApplet extends PApplet {
             // to wrist sensor ...
             float[] axis;
             if (curSensor == Sensor.WRIST) {
+                //System.out.println(axis2[0] + " " +  axis2[1] + " " +  axis2[3] + " " +  axis2[2]);
                 axis = new float[] { axis2[0], axis2[1], axis2[3], axis2[2] };
                 axisW = new float[] { axis2[0], axis2[1], axis2[3], axis2[2] };
             } else {

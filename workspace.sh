@@ -8,7 +8,7 @@ THIS_DIR_PATH=$(dirname `realpath "$0"`)
 IDEA_IDE_PATH=~/IDE/idea/idea-IC-192.5728.98/bin/idea.sh
 
 echo "Opening temrinator"
-cd ${PROJECT_PATH} && terminator -e "echo 'mvn clean wildfly:start wildfly:undeploy install wildfly:deploy -DskipTests=true -Dcheckstyle.skip | tee app.log' && zsh " & disown
+cd ${PROJECT_PATH} && terminator -e "echo 'mvn wildfly:start wildfly:undeploy install wildfly:deploy -DskipTests=true -Dcheckstyle.skip | tee app.log' && zsh " & disown
 
 echo "BASH_SOURCE[0]: ${BASH_SOURCE[0]}"
 PROCESSING_PROJECT_PATH=${THIS_DIR_PATH}/proto/processing/MPUTeapot/MPUTeapot.pde
@@ -16,7 +16,7 @@ echo "PROCESSING_PROJECT_PATH: ${PROCESSING_PROJECT_PATH}"
 echo "PROCESSING_IDE_PATH: ${PROCESSING_IDE_PATH}"
 #${PROCESSING_IDE_PATH} ${PROCESSING_PROJECT_PATH}
 
-CODE_PROJECT_PATH=${THIS_DIR_PATH}/proto/MPU6050_DMP6-3
+CODE_PROJECT_PATH=${THIS_DIR_PATH}/proto/gag
 echo "CODE_PROJECT_PATH: ${CODE_PROJECT_PATH}"
 code ${CODE_PROJECT_PATH}
 
