@@ -1,7 +1,9 @@
 /**
- * 
  * TODO's for this file  
- * - slip to gag_master.h and gag_slave.h
+ * - slip to gag_master.h and gag_agent.h
+ * - split custom command execution
+ * - refactor MASTER_SERIAL, GAG_DEBUG_PRINT[F|LN], GAG_DEBUG_PRINT[F|LN]
+ * - 
 */
 
 #ifndef _GAG_H_
@@ -24,6 +26,7 @@
             #include "gag_bt_gatt_serial.h"
             #define MASTER_SERIAL_NAME SerialBT
             BluetoothSerial SerialBT;
+
         #else
             #include "BluetoothSerial.h"
             #if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
@@ -71,8 +74,8 @@
     #endif
 #endif
 
+// TODO pass const* cmdPacket as argument because cmdPacket is a singleton per device?
 void execCommand();
-
 
 // MPU control/status vars
 uint8_t devStatus;   // return status after each device operation (0 = success, !0 = error)
@@ -81,7 +84,7 @@ uint8_t packetSizeM = MPU9250_FIFO_PACKET_SIZE; // expected DMP packet size (def
 uint16_t fifoCount;  // count of all bytes currently in FIFO
 
 #ifdef SLAVE_HAND
-uint8_t cmdPacket[CMD_PACKET_LENGTH] = {'c', 0, 0, 0, 0, 0, '\r', '\n'};
+uint8_t cmdPacket[CMD_PACKET_LENGTH] = {'c', 0, 0, 0, 0, 0, 0, '\r', '\n'};
 
 uint8_t dataPacket[PACKET_LENGTH] = {'$', 0x99, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 #ifdef SEND_ACC
@@ -89,7 +92,7 @@ uint8_t dataPacket[PACKET_LENGTH] = {'$', 0x99, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 #endif
                                        0x00, 0x00, '\r', '\n'};
 #else
-uint8_t cmdPacket[CMD_PACKET_LENGTH] = {'C', 0, 0, 0, 0, 0, '\r', '\n'};
+uint8_t cmdPacket[CMD_PACKET_LENGTH] = {'C', 0, 0, 0, 0, 0, 0, '\r', '\n'};
 
 uint8_t dataPacket[PACKET_LENGTH] = {'*', 0x99, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 #ifdef SEND_ACC
@@ -131,22 +134,53 @@ CharCallbacks::~CharCallbacks(void){
     GAG_DEBUG_PRINTLN("~CharCallbacks");
 }
 
+// because this is called assynchrnously i created buffer for storing cmdPackets
 void CharCallbacks::onWrite(BLECharacteristic *pCharacteristic) {
     GAG_DEBUG_PRINTLN("onWrite");
     std::string rxValue = pCharacteristic->getValue();
-    //timeNow = micros();
+    // timeNow = micros();
     
-    if (rxValue.length() > 0) {
+    if(rxValue.length() > 0) {
         const char * rxStr = rxValue.c_str(); 
         GAG_DEBUG_PRINTLN(rxStr);
         // TODO check if already in use?
-        cmdPacket[1] = rxStr[1]; // cmd
-        cmdPacket[2] = rxStr[2]; // type 
-        cmdPacket[3] = rxStr[3]; // specification
-        cmdPacket[4] = rxStr[4]; // value1
-        cmdPacket[5] = rxStr[5]; // value2
+        // cmdPacket[1] = rxStr[1]; // cmd
+        // cmdPacket[2] = rxStr[2]; // type 
+        // cmdPacket[3] = rxStr[3]; // specification
+        // cmdPacket[4] = rxStr[4]; // value1
+        // cmdPacket[5] = rxStr[5]; // value2
 
-        execCommand();
+        GAG_DEBUG_PRINT("SerialBT.serialBufferWriteIndex ");
+        GAG_DEBUG_PRINTLN(SerialBT.serialBufferWriteIndex);
+
+        GAG_DEBUG_PRINT("SerialBT.serialBufferReadIndex ");
+        GAG_DEBUG_PRINTLN(SerialBT.serialBufferReadIndex);
+
+        for(char i = 0; i < CMD_PACKET_LENGTH; i++) {
+            SerialBT.serialBuffer[SerialBT.serialBufferWriteIndex][i]=rxStr[i];
+        }
+        // GAG_DEBUG_PRINTLN(SerialBT.serialBuffer[SerialBT.serialBufferWriteIndex]);
+        GAG_DEBUG_PRINTLN(SerialBT.serialBuffer[SerialBT.serialBufferWriteIndex][0]);
+        // GAG_DEBUG_PRINTLN(SerialBT.serialBuffer[SerialBT.serialBufferWriteIndex][0]);
+
+        if(++SerialBT.serialBufferWriteIndex >= BT_SERIAL_BUFFER_SIZE){
+            SerialBT.serialBufferWriteIndex=0;}
+
+
+        //if(SerialBT.serialBufferWriteIndex == SerialBT.serialBufferReadIndex) {
+            // if(++SerialBT.serialBufferWriteIndex >= BT_SERIAL_BUFFER_SIZE){
+                // SerialBT.serialBufferWriteIndex=0;}
+        //}
+
+        GAG_DEBUG_PRINTLN("Buffer: ");
+        for(char i =0; i<BT_SERIAL_BUFFER_SIZE; i++ ) {
+            for(char ii =0; ii<CMD_PACKET_LENGTH; ii++ ) {
+                GAG_DEBUG_PRINT(SerialBT.serialBuffer[i][ii]);
+                GAG_DEBUG_PRINT(" ");
+            }
+            GAG_DEBUG_PRINTLN("");
+        }
+        //execCommand();
         // for (int i = 0; i < rxValue.length(); i++) {
             // SLAVE_SERIAL_NAME.print(rxValue[i]);
             // GAG_DEBUG_PRINT(reinterpret_cast<uint8_t>([i]));
@@ -181,7 +215,7 @@ Sensor selectedSensor = SENSOR_PIN_NF;
 long elapsedTime, timeNow, timePrev, elapsedTimeToSwitch, handSwitchPrev, handSwitchElapsed; //Variables for time control
 Gyro gyros[SENSORS_COUNT];
 
-volatile int8_t readAlign = 0;
+int8_t readAlign = 0;
 volatile long time2, timePrev2;
 
 float Axyz[3];
@@ -194,7 +228,7 @@ float Mxyz[3];
 
 #ifdef SET_OFFSETS
     // ax ay az gx gy gz
-    int sensorsOffsets[6][6] = {
+    int16_t sensorsOffsets[6][6] = {
         // T
         {-2772,479,2063,119,-49,120},
         // I
@@ -531,16 +565,146 @@ void loadDataAndSendPacket() {
 /**
  * Exec cmd based on: 
  * - hand command set (enabled by compilation)
+ * 
+ * example cmds:
+ * set 
+ * - O1gx9
+ * get
+ * - C1gx0
 */
 void execCommand(/*const byte * ch */) {
-    // {'c', 0, 0, 0, '\r', '\n'};
+    // {'c', 0, 0, 0, 0, 0, 0, '\r', '\n'};
+    // {'C', 0, 0, 0, 0, 0, 0, '\r', '\n'};
+
     //cmdPacket[1] = *ch;
-    GAG_DEBUG_PRINTLN("execCommand: ");
-    GAG_DEBUG_PRINTLN(cmdPacket[1]);
+    GAG_DEBUG_PRINT("execCommand: ");
+    for(char i =0; i < CMD_PACKET_LENGTH; i++) {
+        GAG_DEBUG_PRINT((char)cmdPacket[i]);
+    }
 
     switch(cmdPacket[1]) {
         case CMD_TEST_REPLY:
             GAG_DEBUG_PRINTLN("CMD_TEST_REPLY");
+            break;
+        case CMD_GET_CURRENT_OFFSET:
+        case CMD_SET_OFFSET: {
+            // TODO const access..?
+            uint8_t sensorIndex = cmdPacket[2];
+            // agent hand sensorIndex > 5 else slave hand
+            if(sensorIndex >= 48) {sensorIndex-=48;}
+            if(sensorIndex > 5) {sensorIndex -=5;}
+            int8_t selectedSensorBkp = selectedSensor;
+            GAG_DEBUG_PRINT("Selecting ");
+            GAG_DEBUG_PRINTLN(sensorIndex);
+
+            enableSingleMPU(sensorIndex);
+            MPU6050_MPU9250 * currentMpu = gyros[sensorIndex].mpu;
+
+            switch(cmdPacket[1]) {
+                case CMD_GET_CURRENT_OFFSET: {
+                    // int16_t offset = 0;
+                    int16_t offset = 0;
+                    switch(cmdPacket[3]) {
+                        case 'g': 
+                            switch(cmdPacket[4]) {
+                                case 'x':
+                                    offset =(currentMpu->getXGyroOffset());
+                                    //offset = sensorsOffsets[sensorIndex][3];
+                                break;
+                                case 'y':
+                                    offset =(currentMpu->getYGyroOffset());
+                                    // offset = sensorsOffsets[sensorIndex][4];
+                                break;
+                                case 'z':
+                                    offset =(currentMpu->getZGyroOffset());
+                                    // offset = sensorsOffsets[sensorIndex][5];
+                                break;
+                            }
+                            break;
+                        case 'a': 
+                            switch(cmdPacket[4]) {
+                                case 'x':
+                                    offset = currentMpu->getXAccelOffset();
+                                    // offset = sensorsOffsets[sensorIndex][0];
+                                break;
+                                case 'y':
+                                    offset = currentMpu->getYAccelOffset();
+                                    // offset = sensorsOffsets[sensorIndex][1];
+                                break;
+                                case 'z':
+                                    offset = currentMpu->getZAccelOffset();
+                                    // offset = sensorsOffsets[sensorIndex][2];
+                                break;
+                            }
+                            break;
+                            // case 'm': break; // so far magnetometer does not support setting offsets 
+                        // default:
+                    }
+                    GAG_DEBUG_PRINTLN("CMD_GET_CURRENT_OFFSET");
+                    GAG_DEBUG_PRINTLN(offset);
+                }
+                break;
+                case CMD_SET_OFFSET:
+                    GAG_DEBUG_PRINT("CMD_SET_OFFSET");
+                    GAG_DEBUG_PRINT((char)cmdPacket[2]);
+                    GAG_DEBUG_PRINT(" ");
+                    GAG_DEBUG_PRINT((char)cmdPacket[3]);
+                    GAG_DEBUG_PRINT(" ");
+                    GAG_DEBUG_PRINT((char)cmdPacket[4]);
+                    GAG_DEBUG_PRINT(" ");
+                    GAG_DEBUG_PRINT((char)cmdPacket[5]);
+                    GAG_DEBUG_PRINT(" ");
+                    GAG_DEBUG_PRINTLN(cmdPacket[5]);
+                    //delay(100);
+                    //currentMpu->initialize();
+                    int16_t offset =  ((static_cast<uint16_t>(cmdPacket[6])) << 8) | cmdPacket[5];
+                    GAG_DEBUG_PRINT("offset ");
+                    GAG_DEBUG_PRINTLN(offset);
+
+                    switch(cmdPacket[3]) {
+                        case 'g':
+                            switch(cmdPacket[4]){
+                                case 'x':
+                                    currentMpu->setXGyroOffset(offset);
+                                    // sensorsOffsets[sensorIndex][3] = cmdPacket[5];
+                                    //currentMpu->reset();
+                                    //initMPUAndDMP(1,sensorIndex);
+                                break;
+                                case 'y':
+                                    currentMpu->setYGyroOffset(offset);
+                                    // sensorsOffsets[sensorIndex][4] = cmdPacket[5];
+                                break;
+                                case 'z':
+                                    currentMpu->setZGyroOffset(offset);
+                                    // sensorsOffsets[sensorIndex][5] = cmdPacket[5];
+                                break;
+                            }
+                            break;
+                        case 'a':
+                            // TODO use 2 bytes convert them to 2 uint8_t and merge them to uint16_t
+                            switch(cmdPacket[4]){
+                                case 'x':
+                                    currentMpu->setXAccelOffset(offset);
+                                    //sensorsOffsets[sensorIndex][0] = cmdPacket[5];
+                                break;
+                                case 'y':
+                                    currentMpu->setYAccelOffset(offset);
+                                    //sensorsOffsets[sensorIndex][1] = cmdPacket[5];
+                                break;
+                                case 'z':
+                                    currentMpu->setZAccelOffset(offset);
+                                    // sensorsOffsets[sensorIndex][2] = cmdPacket[5];
+                                break;
+                            }
+                            break;
+                            // case 'm': break;
+                        // default:
+                    }
+                    // delay(100);
+                break;
+            }
+            enableSingleMPU(selectedSensorBkp);
+            }
             break;
         case CMD_RESTART_WITH_CALIBRATION_AND_SEND:
         case CMD_RESTART_WITH_CALIBRATION:
@@ -562,7 +726,6 @@ void execCommand(/*const byte * ch */) {
             break;
     }
     #ifdef MEASURE_OFFSETS
-
     if(ch == CMD_RESTART_WITH_CALIBRATION_AND_SEND) {
 /*
 this is just a note for better code readability ... 
@@ -644,15 +807,15 @@ void slaveHandDataRequestHandler() {
                     loadDataFromFIFO(true);
                     break;
                 } else if (ch == 'c') {
-                    //DEBUG_PRINTLN("execCommand");
+                    //DEBUG_PRINTLN("exec Command");
                     // deal with command packet ..
                     readAlign=0;
                     while(limit > 0) {
                         int chc = MASTER_SERIAL_NAME.read();
                         //DEBUG_PRINTLN(chc);
                         if (chc != -1) {
-                            //execCommand((char)chc);
-                            // TODO fix execCommand's cmdPacket 
+                            //exec Command((char)chc);
+                            // TODO fix exec Command's cmdPacket 
                             execCommand();
                             limit = -1;
                             break;
@@ -673,9 +836,115 @@ void slaveHandDataRequestHandler() {
 
 #ifdef MASTER_HAND
 
-// TODO fix Serial with MASK ?
+boolean masterHandCommandRequestHandler(
+        uint8_t* limit,
+        uint8_t* endOfPacketAlignIn,
+        int8_t* readAlign,
+        bool* sendToSlaveIn,
+        uint8_t* sentPacketCharCounterIn,
+        uint8_t* alignIn, 
+        int8_t * ch
+    ){
+    //GAG_DEBUG_PRINTLN("slaveHandDataRequestHandler");
+    // TODO save memory?
+    uint8_t endOfPacketAlign = *endOfPacketAlignIn;
+    bool sendToSlave = *sendToSlaveIn;
+    uint8_t sentPacketCharCounter = *sentPacketCharCounterIn;
+    uint8_t align = *alignIn;
+
+    //int ch = MASTER_SERIAL_NAME.read();
+    *ch = (int8_t) MASTER_SERIAL_NAME.read();
+    
+    // int ch2 = Serial.read();
+    // if (ch2 != -1) {
+        // ch = ch2;
+    // }
+
+    if (*ch != -1) {
+        // GAG_DEBUG_PRINT(*ch);
+        if(*readAlign<=0) {
+            if(*ch == 'C' || *ch == 'c') {
+                GAG_DEBUG_PRINT("received - C|c: ");
+                GAG_DEBUG_PRINTLN((char)(*ch));
+                if(*ch == 'c') {
+                    sendToSlave = true;
+                }
+                // GAG_DEBUG_PRINT("parsing cmdPacket1 ");
+                // GAG_DEBUG_PRINT((int) *readAlign);
+                // GAG_DEBUG_PRINT(" ");
+                // GAG_DEBUG_PRINT((int) *limit);
+                // GAG_DEBUG_PRINT(" ");
+                // GAG_DEBUG_PRINTLN((char)cmdPacket[*readAlign]);
+                (*readAlign)++;
+                (*limit) += CMD_PACKET_LENGTH+1;
+                // GAG_DEBUG_PRINT("parsing cmdPacket2 ");
+                // GAG_DEBUG_PRINT((int) *readAlign);
+                // GAG_DEBUG_PRINT(" ");
+                // GAG_DEBUG_PRINT((int) *limit);
+                // GAG_DEBUG_PRINT(" ");
+                // GAG_DEBUG_PRINTLN((char)cmdPacket[*readAlign]);
+            } else {
+                *readAlign = 0;
+            }
+        } /*else {
+            if(*ch == '\r') {
+                *readAlign=254;
+            }
+            if(*ch == '\n' && *readAlign == 254) {
+                *readAlign=255;
+            }
+        }*/
+        if(*readAlign > 0) {
+            // GAG_DEBUG_PRINTLN("*readAlign > 0");
+            if(sendToSlave) {
+                SLAVE_SERIAL_NAME.write(*ch);
+            } else {
+                // GAG_DEBUG_PRINTLN("parsing cmdPacket");
+                *readAlign=0;
+                cmdPacket[0]=*ch;
+                // GAG_DEBUG_PRINT("Limit ");
+                // GAG_DEBUG_PRINTLN((int) *limit);
+                while((*limit) > 0) {
+                    int chc = MASTER_SERIAL_NAME.read();
+                    if (chc != -1) {
+                        (*readAlign)++;
+                        cmdPacket[*readAlign]=chc;
+                        // GAG_DEBUG_PRINT("parsing cmdPacket ");
+                        // GAG_DEBUG_PRINT((char)chc);
+                        // GAG_DEBUG_PRINT(" ");
+                        // GAG_DEBUG_PRINT((int) *readAlign);
+                        // GAG_DEBUG_PRINT(" ");
+                        // GAG_DEBUG_PRINT((int) *limit);
+                        // GAG_DEBUG_PRINT(" ");
+                        // GAG_DEBUG_PRINTLN((char)cmdPacket[*readAlign]);
+                        //if(chc == '\n' && *readAlign==(CMD_PACKET_LENGTH-1) && cmdPacket[CMD_PACKET_LENGTH-2] == '\r') {
+                        //if(chc == '\n' && *readAlign==(CMD_PACKET_LENGTH-1)) {
+                        if(chc == '\n') {
+                            execCommand();
+                            (*readAlign) = 0;
+                            (*limit) = 0;
+                            return true;
+                        }
+                        if(*readAlign>CMD_PACKET_LENGTH){
+                            // GAG_DEBUG_PRINT("*readAlign>CMD_PACKET_LENGTH ");
+                            // *limit = -1;
+                        }
+                    }
+                    (*limit)--;
+                }
+                return true;
+            }
+        }
+        // if(*readAlign == 255){
+            // return true;
+        // }
+    }
+    (*limit)--;
+    return true;
+}
+
 void masterHandDataRequestHandler() {
-    DEBUG_PRINTLN("slaveHandDataRequestHandler");
+    //GAG_DEBUG_PRINTLN("slaveHandDataRequestHandler");
     // TODO save memory?
     uint8_t limit = REPEAT_MASTER_HAND_READ_LIMIT;
     uint8_t endOfPacketAlign = 0;
@@ -683,59 +952,17 @@ void masterHandDataRequestHandler() {
     bool sendToSlave = false;
     uint8_t sentPacketCharCounter = 0;
     uint8_t align = 0;
+    int8_t ch = 0;
 
     while(limit > 0) {
-        //int ch = MASTER_SERIAL_NAME.read();
-        int ch = MASTER_SERIAL_NAME.read();
-        int ch2 = Serial.read();
-        if (ch2 != -1) {
-            ch = ch2;
-        }
-
-        if (ch != -1) {
-            Serial.print(ch);
-            if(readAlign<1) {
-                if(ch == 'C' || ch == 'c') {
-                DEBUG_PRINTLN("received: C|c");
-                    if(ch == 'c') {
-                        sendToSlave = true;
-                    }
-                    readAlign++;
-                    limit += CMD_PACKET_LENGTH;
-                }else {
-                    readAlign = 0;
-                }
-            } else {
-                if(ch == '\r') {
-                    readAlign=254;
-                }
-                if(ch == '\n' && readAlign == 254) {
-                    readAlign=255;
-                }
-            }
-            if(readAlign > 0) {                
-                if(sendToSlave) {
-                    SLAVE_SERIAL_NAME.write(ch);
-                } else {
-                    readAlign=0;
-                    while(limit > 0) {
-                        int chc = MASTER_SERIAL_NAME.read();
-                        if (chc != -1) {
-                            DEBUG_PRINTLN("execCommand");
-                            // TODO ... 
-                            //execCommand((char)chc);
-                            limit = -1;
-                            break;
-                        }
-                        limit--;
-                    }
-                    break;
-                }
-            }
-            if(readAlign == 255) {
-                break;
-            }
-        }
+        if(masterHandCommandRequestHandler(
+            &limit,
+            &endOfPacketAlign,
+            &readAlign,
+            &sendToSlave,
+            &sentPacketCharCounter,
+            &align,
+            &ch)) { break; }
 
         if (handSwitchElapsed > MAX_HAND_SWITCH_TIME ||
             sentPacketCharCounter > PACKET_LENGTH || endOfPacketAlign == 2) {

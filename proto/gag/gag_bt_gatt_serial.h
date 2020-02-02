@@ -15,7 +15,7 @@
 #ifndef _GAG_BT_GATT_SERIAL_H_
 #define _GAG_BT_GATT_SERIAL_H_
 
-//#define GAG_BT_GATT_SERIAL
+#define GAG_BT_GATT_SERIAL
 #ifdef GAG_BT_GATT_SERIAL
     #define GAG_BT_DEBUG_PRINT(x) Serial.print(x)
     #define GAG_BT_DEBUG_PRINTF(x, y) Serial.print(x, y)
@@ -42,6 +42,9 @@
 #include <BLEUtils.h>
 #include <BLE2902.h>
 
+#include "definitions.h"
+
+
 // See the following for generating UUIDs:
 // https://www.uuidgenerator.net/
 
@@ -49,8 +52,10 @@
 #define CHARACTERISTIC_UUID_RX "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
 #define CHARACTERISTIC_UUID_TX "6e400003-b5a3-f393-e0a9-e50e24dcca9e"
 //#define TEST_PERF 
+#define BT_SERIAL_BUFFER_SIZE 2
 
 // MASTER_BT_SERIAL_NAME
+
 
 class ServerCallbacks: public BLEServerCallbacks {
     public:            
@@ -112,6 +117,12 @@ class BluetoothSerial //: public Stream
 
         ServerCallbacks * pServerCallbacks;      
         CharCallbacks * pCharacteristcsCallbacks;
+
+
+        int8_t serialBuffer[BT_SERIAL_BUFFER_SIZE][CMD_PACKET_LENGTH];
+        uint8_t serialBufferWriteIndex;
+        uint8_t serialBufferReadIndex;
+        uint8_t serialBufferReadCharIndex;
 
     private:
         //String local_name;

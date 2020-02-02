@@ -34,13 +34,21 @@
 
 bool deviceConnected;
 
-/*
+/**
  * Serial Bluetooth GATT Arduino
  *
- * */
+ */
 BluetoothSerial::BluetoothSerial() {
     GAG_BT_DEBUG_PRINTLN("BluetoothSerial");
     //local_name = "ESP32"; //default bluetooth name
+    // serialBuffer = new char[BTSerialBufferSize][];
+    for(char i = 0; i++; i < BT_SERIAL_BUFFER_SIZE){
+        for(char ii = 0; ii++; ii < CMD_PACKET_LENGTH){
+            serialBuffer[i][ii] = -1;
+        }
+    }
+    serialBufferWriteIndex = 0;
+    serialBufferReadIndex = 0;
 }
 
 BluetoothSerial::~BluetoothSerial(void) {
@@ -109,9 +117,39 @@ int BluetoothSerial::peek(void) {
 }
 
 int BluetoothSerial::read(void) {
-    GAG_BT_DEBUG_PRINTLN("read");
-    return -1;
+    //GAG_BT_DEBUG_PRINTLN("read");
+    int8_t c = serialBuffer[serialBufferReadIndex][serialBufferReadCharIndex];
+    if(c!=-1){
+        // GAG_BT_DEBUG_PRINT((char)c);
+        // GAG_BT_DEBUG_PRINT(" ");
+        // GAG_BT_DEBUG_PRINT(c);
+        // GAG_BT_DEBUG_PRINT(" ");
+        // GAG_BT_DEBUG_PRINT(serialBufferReadIndex);
+        // GAG_BT_DEBUG_PRINT(" ");
+        // GAG_BT_DEBUG_PRINTLN(serialBufferReadCharIndex);
+        
+        if(++serialBufferReadCharIndex>=CMD_PACKET_LENGTH){
+            for(char i =0; i<CMD_PACKET_LENGTH; i++) {
+                serialBuffer[serialBufferReadIndex][i]=-1;
+            }
+            serialBufferReadCharIndex = 0;
+            if(++serialBufferReadIndex>=BT_SERIAL_BUFFER_SIZE){serialBufferReadIndex=0;}
+        }
+    }
+    return c;
 }
+
+/*
+char* BluetoothSerial::read(uint8_t len) {
+    //GAG_BT_DEBUG_PRINTLN("read");
+    if(len == CMD_PACKET_LENGTH){
+        char * ch = serialBuffer[serialBufferReadIndex];
+        if(serialBufferReadIndex++>BT_SERIAL_BUFFER_SIZE){serialBufferReadIndex = 0;}
+        return ch;
+    }
+    return c;
+}
+*/
 
 size_t BluetoothSerial::write(uint8_t c) {
     return write(&c, 1);
@@ -119,10 +157,10 @@ size_t BluetoothSerial::write(uint8_t c) {
 
 size_t BluetoothSerial::write(const uint8_t *buffer, size_t size) {
     char * ch =   const_cast<char*>(reinterpret_cast<const char*>(buffer));
-    GAG_BT_DEBUG_PRINTLN("BluetoothSerial:write(const uint8_t *buffer, size_t size)");
-    GAG_BT_DEBUG_PRINTLN(deviceConnected);
+    // GAG_BT_DEBUG_PRINTLN("BluetoothSerial:write(const uint8_t *buffer, size_t size)");
+    // GAG_BT_DEBUG_PRINTLN(deviceConnected);
     if (deviceConnected) {
-        GAG_BT_DEBUG_PRINTLN(ch);
+        // GAG_BT_DEBUG_PRINTLN(ch);
         //pTxCharacteristic->setValue(const_cast<uint8_t*>(buffer), size);
         pTxCharacteristic->setValue(const_cast<uint8_t*>(buffer), size);
         pTxCharacteristic->notify();
@@ -157,7 +195,7 @@ size_t BluetoothSerial::println(unsigned char b, int base) {
 }
 
 size_t BluetoothSerial::println(const char* buffer) {
-    GAG_BT_DEBUG_PRINTLN("println(const char*");
+    //GAG_BT_DEBUG_PRINTLN("println(const char*");
     GAG_BT_DEBUG_PRINTLN(buffer);
 }
 

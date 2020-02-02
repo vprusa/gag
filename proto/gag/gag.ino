@@ -187,8 +187,28 @@ void loop() {
     if(useSlaveHand) {
         masterHandDataRequestHandler();
         loadSlaveHandData();
+    }else{
+        uint8_t limit = REPEAT_MASTER_HAND_READ_LIMIT;
+        uint8_t endOfPacketAlign = 0;
+        int8_t readAlign = 0;
+        bool sendToSlave = false;
+        uint8_t sentPacketCharCounter = 0;
+        uint8_t align = 0;
+        int8_t ch = 0; 
+
+        while(limit > 0) {
+            if(masterHandCommandRequestHandler(
+                &limit,
+                &endOfPacketAlign,
+                &readAlign,
+                &sendToSlave,
+                &sentPacketCharCounter,
+                &align, 
+                &ch)){ break; }
+            limit--;
+        }
     }
-    
+
     gyros[selectedSensor].alreadySentData = false;
     loadDataAndSendPacket();
     int currentlySellectedSensor = selectedSensor;

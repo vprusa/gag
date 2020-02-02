@@ -31,8 +31,9 @@
 #define MENU_CUBE 3
 #define MENU_CLOCK_SKETCH 4
 #define MENU_CLOCK 5
+#define MENU_LIFE 6
 
-#define MENU_ITEM_MAX 5
+#define MENU_ITEM_MAX 6
 
 
 #define BLACK 0x0000
@@ -63,6 +64,31 @@
 
 #define TFT_GREY 0xBDF7
 TFT_eSPI tft = TFT_eSPI(135, 240); // Invoke custom library
+
+// Maximum number of generations until the screen is refreshed
+#define MAX_GEN_COUNT 1000
+
+// The ESP8266 has plenty of memory so we can create a large array
+// 2 x 2 pixel cells, array size = 5120 bytes per array, runs fast
+#define GRIDX 64
+#define GRIDY 120
+#define CELLXY 2
+
+// 1 x 1 pixel cells, array size = 20480 bytes per array
+//#define GRIDX 160
+//#define GRIDY 128
+//#define CELLXY 1
+
+#define GEN_DELAY 20 // Set a delay between each generation to slow things down
+
+//Current grid and newgrid arrays are needed
+uint8_t grid[GRIDX][GRIDY];
+
+//The new grid for the next generation
+uint8_t newgrid[GRIDX][GRIDY];
+
+//Number of generations
+uint16_t genCount = 0;
 
 
 float sx = 0, sy = 1, mx = 1, my = 0, hx = -1, hy = 0;    // Saved H, M, S x & y multipliers
@@ -148,8 +174,7 @@ int menuItem = 1;
 bool menuItemChanged = false;
 bool cubePlaying = false;
 bool clockPlaying = false;
-
-
+bool lifePlaying = false;
 
 //! Long time delay, it is recommended to use shallow sleep, which can effectively reduce the current consumption
 void espDelay(int ms) {   
@@ -191,7 +216,8 @@ void showMenu() {
         tft.drawString(" Voltage", 15, 26);
         tft.drawString(" Cube", 15, 37);
         tft.drawString(" Clock (sketch)", 15, 48);
-        tft.drawString(" Clock", 15, 48);
+        tft.drawString(" Clock", 15, 59);
+        tft.drawString(" Life", 15, 70);
 
         tft.setCursor(0, 0);
         tft.drawString(">", 0, (menuItem*11)+5);
@@ -226,7 +252,8 @@ void button_init() {
         btnLClick = false;
         cubePlaying = false;
         clockPlaying = false;
-
+        lifePlaying = false;
+        
         if(inMenu){
             inMenu = false;
             switch(menuItem) {
@@ -259,6 +286,13 @@ void button_init() {
                     clockPlaying = true;
                     play_clock(); // reset cube geometry
                     break;
+                case MENU_LIFE:
+                    Serial.println("Life..");
+                    btnRClick = false;
+                    btnLClick = false;
+                    lifePlaying = true;
+                    setup_life();
+                    break;
                 default:
                     inMenu = true;
                     break;
@@ -288,7 +322,7 @@ void button_loop() {
 }
 
 void loop() {
-        espDelay(1);
+    espDelay(1);
 }
 
 void wifi_scan() {
@@ -783,6 +817,119 @@ void loop_clock() {
   }
 }
 
+void setup_life()   {
+  //Set up the display
+  // tft.init();
+  //tft.setRotation(3);
+  tft.fillScreen(TFT_BLACK);
+  tft.setTextSize(1);
+  tft.setTextColor(TFT_WHITE);
+  tft.setCursor(0, 0);
+}
+
+void loop_life() {
+
+  //Display a simple splash screen
+  tft.fillScreen(TFT_BLACK);
+  tft.setTextSize(2);
+  tft.setTextColor(TFT_WHITE);
+  tft.setCursor(40, 5);
+  tft.println(F("Arduino"));
+  tft.setCursor(35, 25);
+  tft.println(F("Cellular"));
+  tft.setCursor(35, 45);
+  tft.println(F("Automata"));
+
+  espDelay(1000);
+
+  tft.fillScreen(TFT_BLACK);
+
+  initGrid();
+
+  genCount = MAX_GEN_COUNT;
+
+  drawGrid();
+
+  //Compute generations
+  for (int gen = 0; gen < genCount; gen++) {
+    if(btnLClick) { 
+      lifePlaying = false;
+      inMenu = true;
+      return;
+    }
+    computeCA();
+    drawGrid();
+    espDelay(GEN_DELAY);
+    for (int16_t x = 1; x < GRIDX-1; x++) {
+      for (int16_t y = 1; y < GRIDY-1; y++) {
+        grid[x][y] = newgrid[x][y];
+      }
+    }
+
+  }
+  lifePlaying = false;
+  inMenu = true;
+}
+
+//Draws the grid on the display
+void drawGrid(void) {
+
+  uint16_t color = TFT_WHITE;
+  for (int16_t x = 1; x < GRIDX - 1; x++) {
+    for (int16_t y = 1; y < GRIDY - 1; y++) {
+      if ((grid[x][y]) != (newgrid[x][y])) {
+        if (newgrid[x][y] == 1) color = 0xFFFF; //random(0xFFFF);
+        else color = 0;
+        tft.fillRect(CELLXY * x, CELLXY * y, CELLXY, CELLXY, color);
+      }
+    }
+  }
+}
+
+//Initialise Grid
+void initGrid(void) {
+  for (int16_t x = 0; x < GRIDX; x++) {
+    for (int16_t y = 0; y < GRIDY; y++) {
+      newgrid[x][y] = 0;
+
+      if (x == 0 || x == GRIDX - 1 || y == 0 || y == GRIDY - 1) {
+        grid[x][y] = 0;
+      }
+      else {
+        if (random(3) == 1)
+          grid[x][y] = 1;
+        else
+          grid[x][y] = 0;
+      }
+
+    }
+  }
+}
+
+//Compute the CA. Basically everything related to CA starts here
+void computeCA() {
+  for (int16_t x = 1; x < GRIDX; x++) {
+    for (int16_t y = 1; y < GRIDY; y++) {
+      int neighbors = getNumberOfNeighbors(x, y);
+      if (grid[x][y] == 1 && (neighbors == 2 || neighbors == 3 ))
+      {
+        newgrid[x][y] = 1;
+      }
+      else if (grid[x][y] == 1)  newgrid[x][y] = 0;
+      if (grid[x][y] == 0 && (neighbors == 3))
+      {
+        newgrid[x][y] = 1;
+      }
+      else if (grid[x][y] == 0) newgrid[x][y] = 0;
+    }
+  }
+}
+
+// Check the Moore neighborhood
+int getNumberOfNeighbors(int x, int y) {
+  return grid[x - 1][y] + grid[x - 1][y - 1] + grid[x][y - 1] + grid[x + 1][y - 1] + grid[x + 1][y] + grid[x + 1][y + 1] + grid[x][y + 1] + grid[x - 1][y + 1];
+}
+
 void Task1code( void * pvParameters ){
     static uint64_t timeStamp = 0;
     for(;;){
@@ -822,13 +969,16 @@ void Task2code( void * pvParameters ) {
         if(inMenu){
             showMenu();
         } else {
-            if(btnLClick && cubePlaying){
+            if(btnLClick && (cubePlaying|| lifePlaying)){
                 cubePlaying = false;
+                lifePlaying = false;
                 inMenu = true;
             }else if(cubePlaying) {
                 loop_cube();
             }else if(clockPlaying) {
                 loop_clock();
+            }else if(lifePlaying) {
+                loop_life();
             }
         }
         button_loop();
@@ -838,4 +988,3 @@ void Task2code( void * pvParameters ) {
     }
     vTaskDelete( NULL );
 }
-
