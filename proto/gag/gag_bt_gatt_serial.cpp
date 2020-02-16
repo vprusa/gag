@@ -84,13 +84,19 @@ bool BluetoothSerial::begin(std::string localName,
                                     CHARACTERISTIC_UUID_TX,
                                     BLECharacteristic::PROPERTY_NOTIFY);
                     
-    pTxCharacteristic->addDescriptor(new BLE2902());
+    ble2902 = new BLE2902();
+    //ble2902->setIndications(true);
+    //ble2902->setNotifications(true);
+    //pTxCharacteristic->setWriteNoResponseProperty(true);
+    //pTxCharacteristic->setNotifyProperty(true);
+    //pTxCharacteristic->setIndicateProperty(true);
+    //pTxCharacteristic->setAccessPermissions();
+    pTxCharacteristic->addDescriptor(ble2902);
 
     GAG_BT_DEBUG_PRINTLN("pRxCharacteristic");
     BLECharacteristic * pRxCharacteristic = pService->createCharacteristic(
                                             CHARACTERISTIC_UUID_RX,
                                         BLECharacteristic::PROPERTY_WRITE);
-    
     GAG_BT_DEBUG_PRINTLN("pRxCharacteristic - setCallbacks");
     pRxCharacteristic->setCallbacks(pCharacteristcsCallbacks);
 
@@ -157,13 +163,39 @@ size_t BluetoothSerial::write(uint8_t c) {
 
 size_t BluetoothSerial::write(const uint8_t *buffer, size_t size) {
     char * ch =   const_cast<char*>(reinterpret_cast<const char*>(buffer));
-    // GAG_BT_DEBUG_PRINTLN("BluetoothSerial:write(const uint8_t *buffer, size_t size)");
-    // GAG_BT_DEBUG_PRINTLN(deviceConnected);
+    // GAG_BT_DEBUG_PRINT("BluetoothSerial:write(const uint8_t *buffer, size_t size) ");
+    // GAG_BT_DEBUG_PRINTLN(size);
     if (deviceConnected) {
         // GAG_BT_DEBUG_PRINTLN(ch);
+
         //pTxCharacteristic->setValue(const_cast<uint8_t*>(buffer), size);
+        //pTxCharacteristic->setValue(const_cast<uint8_t*>(buffer), size);
+        //pTxCharacteristic->setValue(const_cast<char*>(reinterpret_cast<const char*>(buffer)), size);
+        //pTxCharacteristic->indicate();
+        //pTxCharacteristic->setValue(dynamic_cast<uint8_t*>(buffer), size);
+        //pTxCharacteristic->setValue(const_cast<uint8_t*>(buffer), size);
+        //pTxCharacteristic->notify(true);
+        //pTxCharacteristic->getDescriptorByUUID(CHARACTERISTIC_UUID_TX)->setValue(value);
+        // pTxCharacteristic->getDescriptorByUUID(CHARACTERISTIC_UUID_TX)->setValue(const_cast<uint8_t*>(buffer), size);
+
+        // BLEService* s = (BLEService*) 
+        // pTxCharacteristic->setWriteNoResponseProperty(true);
+
+        //pTxCharacteristic->setNotifyProperty(true);
+        //pTxCharacteristic->setValue(const_cast<uint8_t*>(buffer), size);
+        // pTxCharacteristic->getDescriptorByUUID(BLEUUID((uint16_t) 0x2902))->setValue(const_cast<uint8_t*>(buffer), size);
         pTxCharacteristic->setValue(const_cast<uint8_t*>(buffer), size);
+        // std::string value((char*) buffer, size);
+        // pTxCharacteristic->setValue(value);
+        //ble2902->setValue(value);
+        
+        //->getCharacteristic(CHARACTERISTIC_UUID_TX)->setValue(const_cast<uint8_t*>(buffer), size);
+        //pTxCharacteristic->setValue((char*) buffer, size);
+        // pTxCharacteristic->notify(true);
+        //pTxCharacteristic->notify(false);
         pTxCharacteristic->notify();
+        // pTxCharacteristic->notify(true);
+        //delay(1);
     }
     return 0;
 }

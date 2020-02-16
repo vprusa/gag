@@ -26,7 +26,6 @@
             #include "gag_bt_gatt_serial.h"
             #define MASTER_SERIAL_NAME SerialBT
             BluetoothSerial SerialBT;
-
         #else
             #include "BluetoothSerial.h"
             #if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
@@ -76,6 +75,10 @@
 
 // TODO pass const* cmdPacket as argument because cmdPacket is a singleton per device?
 void execCommand();
+void setupSensors();
+void enableSingleMPU(uint8_t sensorToEnable);
+uint8_t selectSingleMPU(uint8_t sensorToEnable);
+uint8_t initMPUAndDMP(uint8_t attempt, uint8_t i);
 
 // MPU control/status vars
 uint8_t devStatus;   // return status after each device operation (0 = success, !0 = error)
@@ -94,7 +97,7 @@ uint8_t dataPacket[PACKET_LENGTH] = {'$', 0x99, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 #else
 uint8_t cmdPacket[CMD_PACKET_LENGTH] = {'C', 0, 0, 0, 0, 0, 0, '\r', '\n'};
 
-uint8_t dataPacket[PACKET_LENGTH] = {'*', 0x99, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+uint8_t dataPacket[PACKET_LENGTH] = {'*', 0x99, 0,  0, 0,  0, 0,  0, 0,  0, 0,
 #ifdef SEND_ACC
                                        0, 0, 0, 0, 0, 0,
 #endif
@@ -158,6 +161,9 @@ void CharCallbacks::onWrite(BLECharacteristic *pCharacteristic) {
 
         for(char i = 0; i < CMD_PACKET_LENGTH; i++) {
             SerialBT.serialBuffer[SerialBT.serialBufferWriteIndex][i]=rxStr[i];
+            if(SerialBT.serialBuffer[SerialBT.serialBufferWriteIndex][i] == -1){
+                SerialBT.serialBuffer[SerialBT.serialBufferWriteIndex][i] = 0;
+            }
         }
         // GAG_DEBUG_PRINTLN(SerialBT.serialBuffer[SerialBT.serialBufferWriteIndex]);
         GAG_DEBUG_PRINTLN(SerialBT.serialBuffer[SerialBT.serialBufferWriteIndex][0]);
@@ -203,7 +209,14 @@ struct Gyro {
     uint8_t fifoBuffer[FIFO_SIZE]; // FIFO storage buffer
     MPU6050_MPU9250 *mpu;
     // orientation/motion vars
-    Quaternion q;        // [w, x, y, z]         quaternion container
+    Quaternion *q;        // [w, x, y, z]         quaternion container
+    //#define TEST_CALIB
+    #ifdef TEST_CALIB
+    #define TEST_CALIB_QUAT_BUFFER 10
+    Quaternion queue[TEST_CALIB_QUAT_BUFFER];
+    uint8_t queueIndex = 0;
+    #endif
+    bool debugDiff = false;
     bool hasDataReady = false;
     bool alreadySentData = false;
     long lastResetTime=0;
@@ -227,25 +240,44 @@ float Mxyz[3];
 #endif
 
 #ifdef SET_OFFSETS
+    // cmd for setting sensors 3 gyro's x-axis offset O3gx-1750
+    // exec calibration for sensor a3..50
     // ax ay az gx gy gz
     int16_t sensorsOffsets[6][6] = {
         // T
+        // {-2772,479,2063,119,-49,120},
         {-2772,479,2063,119,-49,120},
         // I
+        // {-3678,1461,1496,46,-43,-3},
         {-3678,1461,1496,46,-43,-3},
         // M
+        // {507,1346,1743,20,26,-19},
         {507,1346,1743,20,26,-19},
         // R
         //{-1397,525,919,-1295,2057,-509},
         //{-1397,525,919,-3000,2057,-509},
         //{-1448, 453, 1111, -1379,1980,-514},
-        {-4140,444,1180,-1208,1774,-1000}, // 469
-       //{0,0,0,0,0,0},
+        //{-4140,444,1180,-1208,1774,-1000}, // 469
+        // {1578,356,1180,-1630,1975, -200}, // 469
+        //{-1584, 495, 1004, -1326, 2093, -495},
+        // !!! One sensors's axis is broken... TODO replace sensor ...
+        {-1611, 466, 1081, -1468, 2020, -497},
+        //  {-1650,1000,-500,0,0,0}, // 469
+        //{19440,-13312,2176,280,-144,5144}, // 469
+        //{0,0,0,0,0,0},
         // L
         {-1802,1287,1493,35,-19,6},
         // W
         //{0,0,0,0,0,0}};
-        {500,500,500,-500,0,0}};
+        // {500,500,500,0,0,0}};
+        //{0,0,0,0,0,0}
+        //{ -158, -471, 1159, -181, -719, -926}
+        //{-27, -423, 1154, -227, -504, -1113}
+        // {-366, -1411, 4095, -1225, -2542, -3466}
+        // {-127, -263, 1133, -511, -429, -1933}
+        {-107, -183, 539, -13, -72, -588}
+        // Your offsets:	-123	-224	707	-70	-85	-1441
+        };
 #endif
 
 // start of code for measuring offsets 
@@ -255,8 +287,8 @@ float Mxyz[3];
 //extern bool calibrationDone = false;
 #endif // end of code for measuring offsets 
 
-int selectSingleMPU(int i) {
-    int selectorOffsettedPin;
+uint8_t selectSingleMPU(uint8_t i) {
+    uint8_t selectorOffsettedPin;
     switch(i){
         #ifdef SENSOR_PIN_TU_COMPENSATION
         case SENSOR_PIN_TU:
@@ -294,10 +326,49 @@ int selectSingleMPU(int i) {
     return selectorOffsettedPin;
 }
 
+
+void setupSensors(){
+     // NOTE: 8MHz or slower host processors, like the Teensy @ 3.3v or Ardunio
+    // Pro Mini running at 3.3v, cannot handle this baud rate reliably due to
+    // the baud timing being too misaligned with processor ticks. You must use
+    // 38400 or slower in these cases, or use some kind of external separate
+    // crystal solution for the UART timer.
+    
+    // TODO skip initial calibration
+    // calibrationDone = true;
+
+    for (int i = FIRST_SENSOR; i <= LAST_SENSOR; i++) {
+        selectedSensor = (Sensor) i;
+        enableSingleMPU(selectedSensor);
+        if(i == HP) {
+            gyros[selectedSensor].mpu = new MPU6050_MPU9250(MPU6050_MPU9250_ADDRESS_AD0_LOW);//   0x68 / 0x69
+            gyros[selectedSensor].mpu->isMPU9250 = true;
+        } else {
+            gyros[selectedSensor].mpu = new MPU6050_MPU9250(MPU6050_MPU9250_ADDRESS_AD0_LOW); //   0x68 / 0x69
+        }
+
+        int selectorOffsettedPin = selectSingleMPU(i);
+
+        MASTER_SERIAL_NAME.print(F("selectedSensor: "));
+        MASTER_SERIAL_NAME.print((int)selectedSensor);
+        MASTER_SERIAL_NAME.println(F(""));
+
+        MASTER_SERIAL_NAME.print(F("Enabled on pin: "));
+        MASTER_SERIAL_NAME.print(selectorOffsettedPin);
+        MASTER_SERIAL_NAME.println(F(""));
+        
+        initMPUAndDMP(1, i);
+        
+        MASTER_SERIAL_NAME.println(F("\n\n"));
+
+    }
+}
+
+
 /**
  * It has to happen in 2 loops because of the need to avoid having multiple uncertain choices
 */
-void enableSingleMPU(int sensorToEnable) {
+void enableSingleMPU(uint8_t sensorToEnable) {
     int i = 0;
     for (i = 0; i < SENSORS_COUNT; i++) {
         if ( i != sensorToEnable ) {
@@ -311,7 +382,7 @@ void enableSingleMPU(int sensorToEnable) {
     }
 }
 
-int initMPUAndDMP(int attempt, int i) {
+uint8_t initMPUAndDMP(uint8_t attempt, uint8_t i) {
     if (attempt <= 0) {
         return 0;
     }
@@ -319,6 +390,8 @@ int initMPUAndDMP(int attempt, int i) {
 #ifdef MASTER_SERIAL_NAME
     MASTER_SERIAL_NAME.println(F("USB: Initializing I2C devices..."));
 #endif
+    MASTER_SERIAL_NAME.print(F("Enabling DMP... "));
+    MASTER_SERIAL_NAME.println(selectedSensor);
     MPU6050_MPU9250 mpu = *gyros[selectedSensor].mpu;
     mpu.initialize();
     MASTER_SERIAL_NAME.println(F("Testing device connections..."));
@@ -326,10 +399,14 @@ int initMPUAndDMP(int attempt, int i) {
     MASTER_SERIAL_NAME.println("testConnection");
     MASTER_SERIAL_NAME.println(mpu.getDeviceID());
     if(selectedSensor != HP) {
+        MASTER_SERIAL_NAME.println(F("dmpInitialize MPU6050..."));
         MASTER_SERIAL_NAME.println(F("Initializing DMP..."));
         devStatus = mpu.dmpInitialize();
         MASTER_SERIAL_NAME.print(F("DMP initialized..."));
     } else {
+        MASTER_SERIAL_NAME.println(F("dmpInitialize MPU9250..."));
+        mpu.isMPU9250 = true;
+        devStatus = mpu.dmpInitialize();
         MASTER_SERIAL_NAME.print(F("Skipping initialing DMP for MPU9250..."));
     }
     // supply your own gyro offsets here for each mpu, scaled for min sensitivity
@@ -337,22 +414,29 @@ int initMPUAndDMP(int attempt, int i) {
     
     #ifdef MEASURE_OFFSETS
     // TODO fix measuring offsets for HP
-    if(!calibrationDone && i != HP) {
-        measureOffsets(&mpu);
+    // if(!calibrationDone && i != HP) {
+    if(!calibrationDone && i == 3) {
+        // measureOffsets(&mpu, i, 40);
     }
     #endif
     #ifdef SET_OFFSETS
+    if(selectedSensor == 5){
+        mpu.setXAccelOffset(sensorsOffsets[i][0], MPU9250_RA_XA_OFFS_H);
+        mpu.setYAccelOffset(sensorsOffsets[i][1], MPU9250_RA_YA_OFFS_H);
+        mpu.setZAccelOffset(sensorsOffsets[i][2], MPU9250_RA_ZA_OFFS_H);
+    }else{
         mpu.setXAccelOffset(sensorsOffsets[i][0]);
         mpu.setYAccelOffset(sensorsOffsets[i][1]);
         mpu.setZAccelOffset(sensorsOffsets[i][2]);
-        mpu.setXGyroOffset(sensorsOffsets[i][3]);
-        mpu.setYGyroOffset(sensorsOffsets[i][4]);
-        mpu.setZGyroOffset(sensorsOffsets[i][5]);
+    }
+    mpu.setXGyroOffset(sensorsOffsets[i][3]);
+    mpu.setYGyroOffset(sensorsOffsets[i][4]);
+    mpu.setZGyroOffset(sensorsOffsets[i][5]);
+        
     #endif
 
     // make sure it worked (returns 0 if so)
-    MASTER_SERIAL_NAME.print(F("Enabling DMP... "));
-    MASTER_SERIAL_NAME.println(selectedSensor);
+
     mpu.setDMPEnabled(true);
 
     // set our DMP Ready flag so the main loop( ) function knows it's okay to use it
@@ -383,6 +467,7 @@ int setOrRotateSelectedGyro(int i) {
 
 void automaticFifoReset() {
     long now = millis();
+    static long lastTime = 0;
     int currentlySellectedSensor = selectedSensor;
 
     for(int i = 0; i < SENSORS_COUNT; i++){
@@ -396,6 +481,14 @@ void automaticFifoReset() {
                 mpu.resetFIFO();
                 gyros[selectedNow].lastResetTime = now;
             }
+        }
+        // idk, offsets registeres do not work ...
+        if(i == HP && now - lastTime > 1000){
+            MPU6050_MPU9250 mpu = *gyros[selectedSensor].mpu;
+            mpu.setXGyroOffset(35);
+            mpu.setYGyroOffset(-35);
+            mpu.setZGyroOffset(40); // 12?
+            lastTime=now;
         }
     }
     setOrRotateSelectedGyro(currentlySellectedSensor);
@@ -422,6 +515,42 @@ void sendDataRequest(int selectedSensor) {
 }
 #endif
 
+//  Read more: https://blog.fpmurphy.com/2008/12/half-precision-floating-point-format_14.html#ixzz6E3v2yah7
+uint16_t floatToHalfI(uint32_t i) {
+    register int s =  (i >> 16) & 0x00008000;                   // sign
+    register int e = ((i >> 23) & 0x000000ff) - (127 - 15);     // exponent
+    register int f =   i        & 0x007fffff;                   // fraction
+
+    // need to handle NaNs and Inf?
+    if (e <= 0) {
+        if (e < -10) {
+            if (s)                                              // handle -0.0
+               return 0x8000;
+            else
+               return 0;
+        }
+        f = (f | 0x00800000) >> (1 - e);
+        return s | (f >> 13);
+    } else if (e == 0xff - (127 - 15)) {
+        if (f == 0)                                             // Inf
+            return s | 0x7c00;
+        else {                                                  // NAN
+            f >>= 13;
+            return s | 0x7c00 | f | (f == 0);
+        }
+    } else {
+        if (e > 30)                                             // Overflow
+            return s | 0x7c00;
+        return s | (e << 10) | (f >> 13);
+    }
+}
+
+uint16_t floatToHALF(float i) {
+    union { float f; uint32_t i; } v;
+    v.f = i;
+    return floatToHalfI(v.i);
+}
+
 /**
  * TODO: fix calculation, refactor
 */
@@ -435,20 +564,20 @@ void getMPU9250Data(MPU6050_MPU9250 * mpu) {
     mpu->getMotion9(&ax, &ay, &az, &gx, &gy, &gz,&mx, &my, &mz);
 
     // TODO fix
-    // 8192 16384 32768 65536
-    #define offsetDown 16384
+    // 4096 8192 16384 32768 65536 
+    #define offsetDown 8192
     
     Gxyz[0] += (float) gx / (offsetDown) ;
     Gxyz[1] += (float) gy / (offsetDown) ;
     Gxyz[2] += (float) gz / (offsetDown) ;
 
-    #define  offsetDownQ 16
+    #define  offsetDownQ 8
 
     float yaw = Gxyz[2] / offsetDownQ;
     float pitch = Gxyz[1]/ offsetDownQ;
     float roll = Gxyz[0]/ offsetDownQ;
 
-    #define partition 0.5
+    #define partition 1.0f
     float cy = cos(yaw * partition );
     float sy = sin(yaw * partition );
     float cp = cos(pitch * partition );
@@ -480,8 +609,10 @@ void getMPU9250Data(MPU6050_MPU9250 * mpu) {
     fifoBuffer[12] = qI[3] >> 8;
 }
 
+
 bool loadDataFromFIFO(bool forceLoad) {
     if(selectedSensor != HP) {
+    // if (true) {
         MPU6050_MPU9250 mpu = *gyros[selectedSensor].mpu;
         if(!gyros[selectedSensor].hasDataReady || forceLoad) {
             fifoCount = mpu.getFIFOCount();
@@ -493,6 +624,60 @@ bool loadDataFromFIFO(bool forceLoad) {
                     mpu.getFIFOBytes(fifoBuffer, packetSize);
                     fifoCount -= packetSize;
                 }
+                Quaternion *newQ = new Quaternion();
+                uint8_t res = mpu.dmpGetQuaternion(newQ,fifoBuffer);
+                // GAG_DEBUG_PRINT("res: ");
+                // GAG_DEBUG_PRINTLN(res);
+
+                //  fmod(2.*acos(A.dot(B)),2.*PI);
+                newQ->normalize();
+                if(gyros[selectedSensor].debugDiff && gyros[selectedSensor].q != nullptr) {
+                // if(gyros[selectedSensor].q != nullptr) {
+                    double dbl = fmod(2.*acos(newQ->dot(gyros[selectedSensor].q)),2.*PI);
+                    #ifdef TEST_CALIB
+                    #endif
+
+                    GAG_DEBUG_PRINT("DBL: ");
+                    GAG_DEBUG_PRINT(selectedSensor);
+                    GAG_DEBUG_PRINT(" ");
+                    GAG_DEBUG_PRINTF(dbl, 6);
+                    /*
+                    GAG_DEBUG_PRINT(" w:");
+                    GAG_DEBUG_PRINTF(newQ->w, 6);
+                    GAG_DEBUG_PRINT(" x:");
+                    GAG_DEBUG_PRINTF(newQ->x, 6);
+                    GAG_DEBUG_PRINT(" y:");
+                    GAG_DEBUG_PRINTF(newQ->y, 6);
+                    GAG_DEBUG_PRINT(" z:");
+                    GAG_DEBUG_PRINTF(newQ->z, 6);
+                    GAG_DEBUG_PRINT(" prev w:");
+                    GAG_DEBUG_PRINTF(gyros[selectedSensor].q->w, 6);
+                    GAG_DEBUG_PRINT(" x:");
+                    GAG_DEBUG_PRINTF(gyros[selectedSensor].q->x, 6);
+                    GAG_DEBUG_PRINT(" y:");
+                    GAG_DEBUG_PRINTF(gyros[selectedSensor].q->y, 6);
+                    GAG_DEBUG_PRINT(" z:");
+                    GAG_DEBUG_PRINTLNF(gyros[selectedSensor].q->z, 6);
+                    */
+                    GAG_DEBUG_PRINT(" diff w:");
+                    if(newQ->w - gyros[selectedSensor].q->w >= 0){GAG_DEBUG_PRINT(" ");};
+                    GAG_DEBUG_PRINTF(newQ->w - gyros[selectedSensor].q->w, 6);
+                    GAG_DEBUG_PRINT(" x:");
+                    if(newQ->x - gyros[selectedSensor].q->x >= 0){GAG_DEBUG_PRINT(" ");};
+                    GAG_DEBUG_PRINTF(newQ->x - gyros[selectedSensor].q->x, 6);
+                    GAG_DEBUG_PRINT(" y:");
+                    if(newQ->y - gyros[selectedSensor].q->y >= 0){GAG_DEBUG_PRINT(" ");};
+                    GAG_DEBUG_PRINTF(newQ->y - gyros[selectedSensor].q->y, 6);
+                    GAG_DEBUG_PRINT(" z:");
+                    if(newQ->z - gyros[selectedSensor].q->z >= 0){GAG_DEBUG_PRINT(" ");};
+                    GAG_DEBUG_PRINTLNF(newQ->z - gyros[selectedSensor].q->z, 6);
+                    
+                    //gyros[selectedSensor].
+                    // gyros[selectedSensor].mpu->
+                    // mpu.
+                    
+                }
+                gyros[selectedSensor].q = newQ;
                 //mpu.resetFIFO();
                 gyros[selectedSensor].hasDataReady=true;
                 return true;
@@ -515,6 +700,11 @@ void writePacket() {
 #ifdef MASTER_HAND
     if(!gyros[selectedSensor].alreadySentData && gyros[selectedSensor].hasDataReady) {
         fifoToPacket(fifoBuffer, dataPacket, selectedSensor);
+        // hotfix of broken sensor's z-axis
+        if(selectedSensor == 3) { // TODO fix names
+            dataPacket[9] = gyros[4].fifoBuffer[12];
+            dataPacket[10] = gyros[4].fifoBuffer[13];
+        }
         #ifdef USE_BT_GATT_SERIAL
             MASTER_SERIAL_NAME.write(dataPacket, PACKET_LENGTH);
             //#define SEND_DATA_ALSO_OVER_SERIAL
@@ -608,32 +798,38 @@ void execCommand(/*const byte * ch */) {
                         case 'g': 
                             switch(cmdPacket[4]) {
                                 case 'x':
-                                    offset =(currentMpu->getXGyroOffset());
-                                    //offset = sensorsOffsets[sensorIndex][3];
+                                    offset = (currentMpu->getXGyroOffset());
                                 break;
                                 case 'y':
-                                    offset =(currentMpu->getYGyroOffset());
-                                    // offset = sensorsOffsets[sensorIndex][4];
+                                    offset = (currentMpu->getYGyroOffset());
                                 break;
                                 case 'z':
-                                    offset =(currentMpu->getZGyroOffset());
-                                    // offset = sensorsOffsets[sensorIndex][5];
+                                    offset = (currentMpu->getZGyroOffset());
                                 break;
                             }
                             break;
                         case 'a': 
                             switch(cmdPacket[4]) {
                                 case 'x':
-                                    offset = currentMpu->getXAccelOffset();
-                                    // offset = sensorsOffsets[sensorIndex][0];
+                                    if(selectedSensor==HP){ // TODO
+                                        offset = currentMpu->getXAccelOffset(MPU9250_RA_XA_OFFS_H);
+                                    }else{
+                                        offset = currentMpu->getXAccelOffset();
+                                    }
                                 break;
                                 case 'y':
-                                    offset = currentMpu->getYAccelOffset();
-                                    // offset = sensorsOffsets[sensorIndex][1];
+                                    if(selectedSensor==HP){ // TODO
+                                        offset = currentMpu->getYAccelOffset(MPU9250_RA_YA_OFFS_H);
+                                    }else{
+                                        offset = currentMpu->getYAccelOffset();
+                                    }
                                 break;
                                 case 'z':
-                                    offset = currentMpu->getZAccelOffset();
-                                    // offset = sensorsOffsets[sensorIndex][2];
+                                    if(selectedSensor==HP){ // TODO
+                                        offset = currentMpu->getZAccelOffset(MPU9250_RA_ZA_OFFS_H);
+                                    }else{
+                                        offset = currentMpu->getZAccelOffset();
+                                    }
                                 break;
                             }
                             break;
@@ -657,43 +853,53 @@ void execCommand(/*const byte * ch */) {
                     GAG_DEBUG_PRINTLN(cmdPacket[5]);
                     //delay(100);
                     //currentMpu->initialize();
-                    int16_t offset =  ((static_cast<uint16_t>(cmdPacket[6])) << 8) | cmdPacket[5];
+                    int16_t offset = 0;
+                    if(cmdPacket[5]!=0){
+                        offset = ((static_cast<uint16_t>(cmdPacket[5])) << 8) | cmdPacket[6];
+                    }
                     GAG_DEBUG_PRINT("offset ");
                     GAG_DEBUG_PRINTLN(offset);
 
                     switch(cmdPacket[3]) {
                         case 'g':
                             switch(cmdPacket[4]){
+                                case '?':
+                                case '1':
+                                case 'X':
                                 case 'x':
                                     currentMpu->setXGyroOffset(offset);
-                                    // sensorsOffsets[sensorIndex][3] = cmdPacket[5];
+                                    sensorsOffsets[sensorIndex][3] = offset;
                                     //currentMpu->reset();
                                     //initMPUAndDMP(1,sensorIndex);
                                 break;
                                 case 'y':
                                     currentMpu->setYGyroOffset(offset);
-                                    // sensorsOffsets[sensorIndex][4] = cmdPacket[5];
+                                    sensorsOffsets[sensorIndex][4] = offset;
                                 break;
                                 case 'z':
                                     currentMpu->setZGyroOffset(offset);
-                                    // sensorsOffsets[sensorIndex][5] = cmdPacket[5];
+                                    sensorsOffsets[sensorIndex][5] = offset;
                                 break;
                             }
                             break;
                         case 'a':
                             // TODO use 2 bytes convert them to 2 uint8_t and merge them to uint16_t
                             switch(cmdPacket[4]){
+                                case '1':
+                                case 'X':
+                                case '?':
                                 case 'x':
                                     currentMpu->setXAccelOffset(offset);
-                                    //sensorsOffsets[sensorIndex][0] = cmdPacket[5];
+                                    sensorsOffsets[sensorIndex][0] = offset;
+
                                 break;
                                 case 'y':
                                     currentMpu->setYAccelOffset(offset);
-                                    //sensorsOffsets[sensorIndex][1] = cmdPacket[5];
+                                    sensorsOffsets[sensorIndex][1] = offset;
                                 break;
                                 case 'z':
                                     currentMpu->setZAccelOffset(offset);
-                                    // sensorsOffsets[sensorIndex][2] = cmdPacket[5];
+                                    sensorsOffsets[sensorIndex][2] = offset;
                                 break;
                             }
                             break;
@@ -702,17 +908,50 @@ void execCommand(/*const byte * ch */) {
                     }
                     // delay(100);
                 break;
-            }
+                }
             enableSingleMPU(selectedSensorBkp);
             }
             break;
-        case CMD_RESTART_WITH_CALIBRATION_AND_SEND:
-        case CMD_RESTART_WITH_CALIBRATION:
-            #ifdef MEASURE_OFFSETS
-                calibrationDone = false;
-            #endif
+        case CMD_SET_SENSOR_DEBUG_FLAG:{
+                uint8_t sensorIndex = cmdPacket[2];
+                if(sensorIndex >= 48) {sensorIndex-=48;}
+                if(sensorIndex > 5) {sensorIndex -=5;}
+                
+                if(cmdPacket[3] == 'T'){
+                    GAG_DEBUG_PRINT("Enable");
+                    gyros[sensorIndex].debugDiff = true;
+                }else {
+                    GAG_DEBUG_PRINT("Disable");
+                    gyros[sensorIndex].debugDiff = false;
+                }
+                GAG_DEBUG_PRINT("debug for sensor: ");
+                GAG_DEBUG_PRINTLN(sensorIndex);
+            }
+            break;
+        // case CMD_RESTART_WITH_CALIBRATION_AND_SEND:
+        case CMD_CALIBRATION:{
+                #ifdef MEASURE_OFFSETS
+                    calibrationDone = false;
+                #endif
+                uint8_t sensorIndex = cmdPacket[2];
+                uint8_t selectedSensorBkp = selectedSensor;
+                if(sensorIndex >= 48) {sensorIndex-=48;}
+                if(sensorIndex > 5) {sensorIndex -=5;}
+                enableSingleMPU(sensorIndex);
+                GAG_DEBUG_PRINT("Selected: ");
+                GAG_DEBUG_PRINTLN(sensorIndex);
+                int16_t limit =  ((static_cast<uint16_t>(cmdPacket[6])) << 8) | cmdPacket[5];
+                GAG_DEBUG_PRINT("limit: ");
+                GAG_DEBUG_PRINTLN(limit);
+                measureOffsets(gyros[selectedSensor].mpu, sensorIndex, limit);
+                enableSingleMPU(selectedSensorBkp);
+                setupSensors();
+            }
+            break;
         case CMD_RESTART:
-            setup();
+            if(cmdPacket[2] == CMD_RESTART || cmdPacket[3] == CMD_RESTART) {
+                setup();
+            }
             break;
         #ifdef MASTER_HAND
             case CMD_READ_SLAVE:
@@ -726,7 +965,7 @@ void execCommand(/*const byte * ch */) {
             break;
     }
     #ifdef MEASURE_OFFSETS
-    if(ch == CMD_RESTART_WITH_CALIBRATION_AND_SEND) {
+    if(cmdPacket[1] == CMD_RESTART_WITH_CALIBRATION_AND_SEND) {
 /*
 this is just a note for better code readability ... 
 on the other hand substituting comments for readable code seems like a bad practice.. 
@@ -747,8 +986,8 @@ uint8_t dataPacket[PACKET_LENGTH] = {'$', 0x99, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         dataPacket[9] = gz_offset & 0xFF;
         dataPacket[10] = gz_offset >> 8;
         
-        MASTER_SERIAL_NAME.write(dataPacket, PACKET_LENGTH);
-        MASTER_SERIAL_NAME.write((byte)0x00);    
+        // MASTER_SERIAL_NAME.write(dataPacket, PACKET_LENGTH);
+        // MASTER_SERIAL_NAME.write((byte)0x00);    
         dataPacket[PACKET_COUNTER_POSITION]++;
         #ifdef SEND_ACC
             dataPacket[3] = 'g';
@@ -769,8 +1008,8 @@ uint8_t dataPacket[PACKET_LENGTH] = {'$', 0x99, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     }
     #endif
     
-    MASTER_SERIAL_NAME.write(cmdPacket, CMD_PACKET_LENGTH);
-    MASTER_SERIAL_NAME.write((byte)0x00);
+    //MASTER_SERIAL_NAME.write(cmdPacket, CMD_PACKET_LENGTH);
+    //MASTER_SERIAL_NAME.write((byte)0x00);
 }
 
 #ifdef SLAVE_HAND
@@ -854,7 +1093,6 @@ boolean masterHandCommandRequestHandler(
 
     //int ch = MASTER_SERIAL_NAME.read();
     *ch = (int8_t) MASTER_SERIAL_NAME.read();
-    
     // int ch2 = Serial.read();
     // if (ch2 != -1) {
         // ch = ch2;

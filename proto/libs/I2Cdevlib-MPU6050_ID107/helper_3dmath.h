@@ -96,6 +96,10 @@ class Quaternion {
             r.normalize();
             return r;
         }
+
+        double dot(Quaternion *q){
+            return q->w*w + q->x*x + q->y*y + q->z*z;
+        }
 };
 
 class VectorInt16 {

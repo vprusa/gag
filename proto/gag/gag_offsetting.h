@@ -11,8 +11,8 @@
 
 //Change this 3 variables if you want to fine tune the skecth to your needs.
 int buffersize=1000;     //Amount of readings used to average, make it higher to get more precision but sketch will be slower  (default:1000)
-int acel_deadzone=8;     //Acelerometer error allowed, make it lower to get more precision, but sketch may not converge  (default:8)
-int giro_deadzone=1;     //Gyro error allowed, make it lower to get more precision, but sketch may not converge  (default:1)
+int acel_deadzone=200;     //Acelerometer error allowed, make it lower to get more precision, but sketch may not converge  (default:8)
+int giro_deadzone=5;     //Gyro error allowed, make it lower to get more precision, but sketch may not converge  (default:1)
 int16_t ax, ay, az,gx, gy, gz;
 int16_t mean_ax,mean_ay,mean_az,mean_gx,mean_gy,mean_gz,state=0;
 int16_t ax_offset,ay_offset,az_offset,gx_offset,gy_offset,gz_offset;
@@ -20,8 +20,8 @@ uint8_t measurementsLimit = 0;
 bool calibrationDone = false;
 
 void meansensors(MPU6050_MPU9250 *mpuP);
-void calibration(MPU6050_MPU9250 *mpuP);
-void measureOffsets(MPU6050_MPU9250 *mpuP);
+void calibration(MPU6050_MPU9250 *mpuP, int16_t limit);
+void measureOffsets(MPU6050_MPU9250 *mpuP, uint8_t i, int16_t limit);
 
 #ifndef MASTER_SERIAL_NAME
 #define MASTER_SERIAL_NAME Serial
@@ -57,7 +57,7 @@ void meansensors(MPU6050_MPU9250 *mpuP){
     }
 }
 
-void calibration(MPU6050_MPU9250 *mpuP){
+void calibration(MPU6050_MPU9250 *mpuP,  int16_t limit, uint8_t i){
     MPU6050_MPU9250 accelgyro = *mpuP;
     ax_offset=-mean_ax/8;
     ay_offset=-mean_ay/8;
@@ -66,7 +66,8 @@ void calibration(MPU6050_MPU9250 *mpuP){
     gx_offset=-mean_gx/4;
     gy_offset=-mean_gy/4;
     gz_offset=-mean_gz/4;
-    measurementsLimit = MEASUREMENT_LIMIT;
+    // measurementsLimit = MEASUREMENT_LIMIT;
+    measurementsLimit = limit;
     while (1){
         int ready=0;
         accelgyro.setXAccelOffset(ax_offset);
@@ -93,45 +94,48 @@ void calibration(MPU6050_MPU9250 *mpuP){
         #ifdef PRINT_VALIBRATION_VALUES
         MASTER_SERIAL_NAME.print(F("R: "));
         MASTER_SERIAL_NAME.print(ready);
+        MASTER_SERIAL_NAME.print(F(" ml: "));
+        MASTER_SERIAL_NAME.print(measurementsLimit);
         MASTER_SERIAL_NAME.print(F(" adz:"));
         MASTER_SERIAL_NAME.print(acel_deadzone);
-        MASTER_SERIAL_NAME.print(F(" max:"));
+        MASTER_SERIAL_NAME.print(F("  max:"));
         MASTER_SERIAL_NAME.print(mean_ax);
         MASTER_SERIAL_NAME.print(F(" axo:"));
         MASTER_SERIAL_NAME.print(ax_offset);
 
-        MASTER_SERIAL_NAME.print(F(" may:"));
+        MASTER_SERIAL_NAME.print(F("  may:"));
         MASTER_SERIAL_NAME.print(mean_ay);
         MASTER_SERIAL_NAME.print(F(" ayo:"));
         MASTER_SERIAL_NAME.print(ay_offset);
 
-        MASTER_SERIAL_NAME.print(F(" maz:"));
+        MASTER_SERIAL_NAME.print(F("  maz:"));
         MASTER_SERIAL_NAME.print(mean_az);
         MASTER_SERIAL_NAME.print(F(" azo:"));
         MASTER_SERIAL_NAME.print(az_offset);
 
-        MASTER_SERIAL_NAME.print(F(" gdz:"));
+        MASTER_SERIAL_NAME.print(F("   gdz:"));
         MASTER_SERIAL_NAME.print(giro_deadzone);
         MASTER_SERIAL_NAME.print(F(" mgx:"));
         MASTER_SERIAL_NAME.print(mean_gx);
         MASTER_SERIAL_NAME.print(F(" gxo:"));
         MASTER_SERIAL_NAME.print(gx_offset);
 
-        MASTER_SERIAL_NAME.print(F(" mgy:"));
+        MASTER_SERIAL_NAME.print(F("  mgy:"));
         MASTER_SERIAL_NAME.print(mean_gy);
         MASTER_SERIAL_NAME.print(F(" gyof:"));
         MASTER_SERIAL_NAME.print(gy_offset);
 
-        MASTER_SERIAL_NAME.print(F(" mgz:"));
+        MASTER_SERIAL_NAME.print(F("  mgz:"));
         MASTER_SERIAL_NAME.print(mean_gz);
         MASTER_SERIAL_NAME.print(F(" gzof:"));
         MASTER_SERIAL_NAME.println(gz_offset);
         #endif
-        if (ready==2 || --measurementsLimit < 0) break;
+        if (--measurementsLimit <= 0 || ready>=6 ) break;
     }
 }
+extern int16_t sensorsOffsets[6][6];
 
-void measureOffsets(MPU6050_MPU9250 *mpuP){
+void measureOffsets(MPU6050_MPU9250 *mpuP, uint8_t i, int16_t limit){
     ax=0; ay=0; az=0;gx=0; gy=0; gz=0;
     mean_ax=0;mean_ay=0;mean_az=0;mean_gx=0;mean_gy=0;mean_gz=0;state=0;
     ax_offset=0;ay_offset=0;az_offset=0;gx_offset=0;gy_offset=0;gz_offset=0;
@@ -155,7 +159,7 @@ void measureOffsets(MPU6050_MPU9250 *mpuP){
 
     if (state==1) {
         MASTER_SERIAL_NAME.println(F("\nCalculating offsets..."));
-        calibration(mpuP);
+        calibration(mpuP, limit, i);
         state++;
         delay(1000);
     }
@@ -192,12 +196,30 @@ void measureOffsets(MPU6050_MPU9250 *mpuP){
         //MASTER_SERIAL_NAME.println(F("If calibration was succesful write down your offsets so you can set them in your projects using something similar to mpu.setXAccelOffset(youroffset)"));
         //while (1);
         MASTER_SERIAL_NAME.println(F("Setting measured offsets..."));
+
+        sensorsOffsets[i][0] = ax_offset;
+        sensorsOffsets[i][1] = ay_offset;
+        sensorsOffsets[i][2] = az_offset;
+        sensorsOffsets[i][3] = gx_offset;
+        sensorsOffsets[i][4] = gy_offset;
+        sensorsOffsets[i][5] = gz_offset;
+
+
+        mpu.setXAccelOffset(sensorsOffsets[i][0]);
+        mpu.setYAccelOffset(sensorsOffsets[i][1]);
+        mpu.setZAccelOffset(sensorsOffsets[i][2]);   
+        mpu.setXGyroOffset(sensorsOffsets[i][3]);
+        mpu.setYGyroOffset(sensorsOffsets[i][4]);
+        mpu.setZGyroOffset(sensorsOffsets[i][5]);
+
+/*
         mpu.setXGyroOffset(gx_offset);
         mpu.setYGyroOffset(gy_offset);
         mpu.setZGyroOffset(gz_offset);
         mpu.setXAccelOffset(ax_offset);
         mpu.setYAccelOffset(ay_offset);
         mpu.setZAccelOffset(az_offset);
+        */
     }
 }
 #endif

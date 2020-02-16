@@ -123,6 +123,7 @@ class BluetoothSerial //: public Stream
         uint8_t serialBufferWriteIndex;
         uint8_t serialBufferReadIndex;
         uint8_t serialBufferReadCharIndex;
+        BLE2902 * ble2902;
 
     private:
         //String local_name;

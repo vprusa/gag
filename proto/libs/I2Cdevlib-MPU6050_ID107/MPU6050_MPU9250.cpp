@@ -36,6 +36,129 @@ THE SOFTWARE.
 
 #include "MPU6050_MPU9250.h"
 
+
+
+#ifndef ESP32_RIGHT 
+    #define __PGMSPACE_H_ 1
+    #include <inttypes.h>
+
+   // #define PROGMEM 
+    // wtf
+    //#define PGM_P  const char *
+    //#define PSTR(str) (str)
+    //#define F(x) x
+
+    typedef void prog_void;
+    typedef char prog_char;
+    typedef unsigned char prog_uchar;
+    #ifdef SLAVE_HAND
+    //vprusa
+    typedef int8_t prog_int8_t;
+    typedef uint8_t prog_uint8_t;
+    typedef int16_t prog_int16_t;
+    typedef uint16_t prog_uint16_t;
+    
+    //vprusa
+    typedef int32_t prog_int32_t;
+    typedef uint32_t prog_uint32_t;
+    #endif
+    /*
+    #define strcpy_P(dest, src) strcpy((dest), (src))
+    #define strcat_P(dest, src) strcat((dest), (src))
+    #define strcmp_P(a, b) strcmp((a), (b))
+    
+    #define pgm_read_byte(addr) (*(const unsigned char *)(addr))
+    #define pgm_read_word(addr) (*(const unsigned short *)(addr))
+    #define pgm_read_dword(addr) (*(const unsigned long *)(addr))
+    #define pgm_read_float(addr) (*(const float *)(addr))
+    
+    #define pgm_read_byte_near(addr) pgm_read_byte(addr)
+    #define pgm_read_word_near(addr) pgm_read_word(addr)
+    #define pgm_read_dword_near(addr) pgm_read_dword(addr)
+    #define pgm_read_float_near(addr) pgm_read_float(addr)
+    #define pgm_read_byte_far(addr) pgm_read_byte(addr)
+    #define pgm_read_word_far(addr) pgm_read_word(addr)
+    #define pgm_read_dword_far(addr) pgm_read_dword(addr)
+    #define pgm_read_float_far(addr) pgm_read_float(addr)
+    */
+#endif
+
+//#define __AVR__
+#ifdef __AVR__
+    #include <avr/pgmspace.h>
+#else
+    // Teensy 3.0 library conditional PROGMEM code from Paul Stoffregen
+    #ifndef __PGMSPACE_H_
+        #define __PGMSPACE_H_ 1
+        #include <inttypes.h>
+
+        #define PROGMEM
+        #define PGM_P  const char *
+        #define PSTR(str) (str)
+        #define F(x) x
+
+        typedef void prog_void;
+        typedef char prog_char;
+        typedef unsigned char prog_uchar;
+        //vprusa
+        //typedef int8_t prog_int8_t;
+        typedef uint8_t prog_uint8_t;
+        typedef int16_t prog_int16_t;
+        typedef uint16_t prog_uint16_t;
+        
+        //vprusa
+        //typedef int32_t prog_int32_t;
+        //typedef uint32_t prog_uint32_t;
+        
+        #define strcpy_P(dest, src) strcpy((dest), (src))
+        #define strcat_P(dest, src) strcat((dest), (src))
+        #define strcmp_P(a, b) strcmp((a), (b))
+        
+        #define pgm_read_byte(addr) (*(const unsigned char *)(addr))
+        #define pgm_read_word(addr) (*(const unsigned short *)(addr))
+        #define pgm_read_dword(addr) (*(const unsigned long *)(addr))
+        #define pgm_read_float(addr) (*(const float *)(addr))
+        
+        #define pgm_read_byte_near(addr) pgm_read_byte(addr)
+        #define pgm_read_word_near(addr) pgm_read_word(addr)
+        #define pgm_read_dword_near(addr) pgm_read_dword(addr)
+        #define pgm_read_float_near(addr) pgm_read_float(addr)
+        #define pgm_read_byte_far(addr) pgm_read_byte(addr)
+        #define pgm_read_word_far(addr) pgm_read_word(addr)
+        #define pgm_read_dword_far(addr) pgm_read_dword(addr)
+        #define pgm_read_float_far(addr) pgm_read_float(addr)
+    #endif
+#endif
+
+/* Source is from the InvenSense MotionApps v2 demo code. Original source is
+ * unavailable, unless you happen to be amazing as decompiling binary by
+ * hand (in which case, please contact me, and I'm totally serious).
+ *
+ * Also, I'd like to offer many, many thanks to Noah Zerkin for all of the
+ * DMP reverse-engineering he did to help make this bit of wizardry
+ * possible.
+ */
+
+// NOTE! Enabling DEBUG adds about 3.3kB to the flash program size.
+// Debug output is now working even on ATMega328P MCUs (e.g. Arduino Uno)
+// after moving string constants to flash memory storage using the F()
+// compiler macro (Arduino IDE 1.0+ required).
+
+#define DEBUG
+#ifdef DEBUG
+    #define DEBUG_PRINT(x) Serial.print(x)
+    #define DEBUG_PRINTF(x, y) Serial.print(x, y)
+    #define DEBUG_PRINTLN(x) Serial.println(x)
+    #define DEBUG_PRINTLNF(x, y) Serial.println(x, y)
+    #define DEBUG_WRITE(x) Serial.write(x)
+    #define DEBUG_WRITE_LEN(x,y) Serial.write(x,y)
+#else
+    #define DEBUG_PRINT(x)
+    #define DEBUG_PRINTF(x, y)
+    #define DEBUG_PRINTLN(x)
+    #define DEBUG_PRINTLNF(x, y)
+#endif
+
 /** Specific address constructor.
  * @param address I2C address, uses default I2C address if none is specified
  * @see MPU6050_MPU9250_DEFAULT_ADDRESS
@@ -1783,13 +1906,23 @@ void MPU6050_MPU9250::getMotion9(int16_t* ax, int16_t* ay, int16_t* az, int16_t*
  * @see MPU6050_MPU9250_RA_ACCEL_XOUT_H
  */
 void MPU6050_MPU9250::getMotion6(int16_t* ax, int16_t* ay, int16_t* az, int16_t* gx, int16_t* gy, int16_t* gz) {
-    I2Cdev::readBytes(devAddr, MPU6050_MPU9250_RA_ACCEL_XOUT_H, 14, buffer);
-    *ax = (((int16_t)buffer[0]) << 8) | buffer[1];
-    *ay = (((int16_t)buffer[2]) << 8) | buffer[3];
-    *az = (((int16_t)buffer[4]) << 8) | buffer[5];
-    *gx = (((int16_t)buffer[8]) << 8) | buffer[9];
-    *gy = (((int16_t)buffer[10]) << 8) | buffer[11];
-    *gz = (((int16_t)buffer[12]) << 8) | buffer[13];
+    if(isMPU9250){
+        I2Cdev::readBytes(devAddr, MPU6050_MPU9250_RA_ACCEL_XOUT_H, 14, buffer);
+        *ax = (((int16_t)buffer[0]) << 8) | buffer[1];
+        *ay = (((int16_t)buffer[2]) << 8) | buffer[3];
+        *az = (((int16_t)buffer[4]) << 8) | buffer[5];
+        *gx = (((int16_t)buffer[8]) << 8) | buffer[9];
+        *gy = (((int16_t)buffer[10]) << 8) | buffer[11];
+        *gz = (((int16_t)buffer[12]) << 8) | buffer[13];
+    }else{
+        I2Cdev::readBytes(devAddr, MPU6050_MPU9250_RA_ACCEL_XOUT_H, 14, buffer);
+        *ax = (((int16_t)buffer[0]) << 8) | buffer[1];
+        *ay = (((int16_t)buffer[2]) << 8) | buffer[3];
+        *az = (((int16_t)buffer[4]) << 8) | buffer[5];
+        *gx = (((int16_t)buffer[8]) << 8) | buffer[9];
+        *gy = (((int16_t)buffer[10]) << 8) | buffer[11];
+        *gz = (((int16_t)buffer[12]) << 8) | buffer[13];
+    }
 }
 /** Get 3-axis accelerometer readings.
  * These registers store the most recent accelerometer measurements.
@@ -2852,62 +2985,115 @@ void MPU6050_MPU9250::setZFineGain(int8_t gain) {
 
 // XA_OFFS_* registers
 
-int16_t MPU6050_MPU9250::getXAccelOffset() {
-    I2Cdev::readBytes(devAddr, MPU6050_MPU9250_RA_XA_OFFS_H, 2, buffer);
-    return (((int16_t)buffer[0]) << 8) | buffer[1];
+int16_t MPU6050_MPU9250::getXAccelOffset(int16_t config) {
+    if(isMPU9250) {
+        I2Cdev::readBytes(devAddr, MPU9250_RA_XA_OFFS_H, 2, buffer);
+    } else {
+        I2Cdev::readBytes(devAddr, config, 2, buffer);
+    }    return (((int16_t)buffer[0]) << 8) | buffer[1];
 }
-void MPU6050_MPU9250::setXAccelOffset(int16_t offset) {
-    I2Cdev::writeWord(devAddr, MPU6050_MPU9250_RA_XA_OFFS_H, offset);
+void MPU6050_MPU9250::setXAccelOffset(int16_t offset, int16_t config) {
+    if(isMPU9250) {
+        I2Cdev::writeWord(devAddr, MPU9250_RA_XA_OFFS_H, offset);
+    } else {
+        I2Cdev::writeWord(devAddr, config, offset);
+    }
 }
 
 // YA_OFFS_* register
 
-int16_t MPU6050_MPU9250::getYAccelOffset() {
-    I2Cdev::readBytes(devAddr, MPU6050_MPU9250_RA_YA_OFFS_H, 2, buffer);
+int16_t MPU6050_MPU9250::getYAccelOffset(int16_t config) {
+    if(isMPU9250) {
+        I2Cdev::readBytes(devAddr, MPU9250_RA_YA_OFFS_H, 2, buffer);
+    } else {
+        I2Cdev::readBytes(devAddr, config, 2, buffer);
+    }
     return (((int16_t)buffer[0]) << 8) | buffer[1];
 }
-void MPU6050_MPU9250::setYAccelOffset(int16_t offset) {
-    I2Cdev::writeWord(devAddr, MPU6050_MPU9250_RA_YA_OFFS_H, offset);
+void MPU6050_MPU9250::setYAccelOffset(int16_t offset, int16_t config) {
+    if(isMPU9250) {
+        I2Cdev::writeWord(devAddr, MPU9250_RA_YA_OFFS_H, offset);
+    } else {
+        I2Cdev::writeWord(devAddr, config, offset);
+    }
 }
 
 // ZA_OFFS_* register
 
-int16_t MPU6050_MPU9250::getZAccelOffset() {
-    I2Cdev::readBytes(devAddr, MPU6050_MPU9250_RA_ZA_OFFS_H, 2, buffer);
+int16_t MPU6050_MPU9250::getZAccelOffset(int16_t config) {
+    if(isMPU9250) {
+        I2Cdev::readBytes(devAddr, MPU9250_RA_ZA_OFFS_H, 2, buffer);
+    } else {
+        I2Cdev::readBytes(devAddr, config, 2, buffer);
+    }
     return (((int16_t)buffer[0]) << 8) | buffer[1];
 }
-void MPU6050_MPU9250::setZAccelOffset(int16_t offset) {
-    I2Cdev::writeWord(devAddr, MPU6050_MPU9250_RA_ZA_OFFS_H, offset);
+void MPU6050_MPU9250::setZAccelOffset(int16_t offset, int16_t config) {
+    if(isMPU9250) {
+        I2Cdev::writeWord(devAddr, MPU9250_RA_ZA_OFFS_H, offset);
+    } else {
+        I2Cdev::writeWord(devAddr, config, offset);
+    }
 }
 
 // XG_OFFS_USR* registers
 
 int16_t MPU6050_MPU9250::getXGyroOffset() {
-    I2Cdev::readBytes(devAddr, MPU6050_MPU9250_RA_XG_OFFS_USRH, 2, buffer);
+    if(isMPU9250){
+        DEBUG_PRINT(F("getXGyroOffset: "));
+        I2Cdev::readBytes(devAddr, MPU9250_RA_XG_OFFS_H, 2, buffer);
+        DEBUG_PRINT(F("getXGyroOffset: "));
+        DEBUG_PRINTLN((((int16_t)buffer[0]) << 8) | buffer[1]);
+
+    }else{
+        I2Cdev::readBytes(devAddr, MPU6050_MPU9250_RA_XG_OFFS_USRH, 2, buffer);
+    }
     return (((int16_t)buffer[0]) << 8) | buffer[1];
 }
-void MPU6050_MPU9250::setXGyroOffset(int16_t offset) {
-    I2Cdev::writeWord(devAddr, MPU6050_MPU9250_RA_XG_OFFS_USRH, offset);
+void MPU6050_MPU9250::setXGyroOffset(int16_t offset, int16_t config) {
+    if(isMPU9250){
+        // DEBUG_PRINT(F("setXGyroOffset: "));
+        // DEBUG_PRINTLN(offset);
+        I2Cdev::writeWord(devAddr, MPU9250_RA_XG_OFFS_H, offset);
+    }else{
+        I2Cdev::writeWord(devAddr, config, offset);
+    }
 }
 
 // YG_OFFS_USR* register
 
 int16_t MPU6050_MPU9250::getYGyroOffset() {
-    I2Cdev::readBytes(devAddr, MPU6050_MPU9250_RA_YG_OFFS_USRH, 2, buffer);
+    if(isMPU9250){
+        I2Cdev::readBytes(devAddr, MPU9250_RA_YG_OFFS_H, 2, buffer);
+    }else{
+        I2Cdev::readBytes(devAddr, MPU6050_MPU9250_RA_YG_OFFS_USRH, 2, buffer);
+    }
     return (((int16_t)buffer[0]) << 8) | buffer[1];
 }
-void MPU6050_MPU9250::setYGyroOffset(int16_t offset) {
-    I2Cdev::writeWord(devAddr, MPU6050_MPU9250_RA_YG_OFFS_USRH, offset);
+void MPU6050_MPU9250::setYGyroOffset(int16_t offset, int16_t config) {
+     if(isMPU9250){
+        I2Cdev::writeWord(devAddr, MPU9250_RA_YG_OFFS_H, offset);
+    }else{
+        I2Cdev::writeWord(devAddr, config, offset);
+    }
 }
 
 // ZG_OFFS_USR* register
 
 int16_t MPU6050_MPU9250::getZGyroOffset() {
-    I2Cdev::readBytes(devAddr, MPU6050_MPU9250_RA_ZG_OFFS_USRH, 2, buffer);
+    if(isMPU9250){
+        I2Cdev::readBytes(devAddr, MPU9250_RA_ZG_OFFS_H, 2, buffer);
+    }else{
+        I2Cdev::readBytes(devAddr, MPU6050_MPU9250_RA_ZG_OFFS_USRH, 2, buffer);
+    }
     return (((int16_t)buffer[0]) << 8) | buffer[1];
 }
-void MPU6050_MPU9250::setZGyroOffset(int16_t offset) {
-    I2Cdev::writeWord(devAddr, MPU6050_MPU9250_RA_ZG_OFFS_USRH, offset);
+void MPU6050_MPU9250::setZGyroOffset(int16_t offset, int16_t config) {
+    if(isMPU9250){
+        I2Cdev::writeWord(devAddr, MPU9250_RA_ZG_OFFS_H, offset);
+    }else{
+        I2Cdev::writeWord(devAddr, config, offset);
+    }
 }
 
 // INT_ENABLE register (DMP functions)
@@ -3033,7 +3219,9 @@ void MPU6050_MPU9250::readMemoryBlock(uint8_t *data, uint16_t dataSize, uint8_t 
         }
     }
 }
-bool MPU6050_MPU9250::writeMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t bank, uint8_t address, bool verify, bool useProgMem) {
+bool MPU6050_MPU9250::writeMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t bank, uint8_t address, bool verify, bool useProgMem, bool isDMP9250) {
+    // DEBUG_PRINT(F("writeMemoryBlock: "));
+    // DEBUG_PRINTLN(isDMP9250);
     setMemoryBank(bank);
     setMemoryStartAddress(address);
     uint8_t chunkSize;
@@ -3043,6 +3231,9 @@ bool MPU6050_MPU9250::writeMemoryBlock(const uint8_t *data, uint16_t dataSize, u
     uint8_t j;
     if (verify) verifyBuffer = (uint8_t *)malloc(MPU6050_MPU9250_DMP_MEMORY_CHUNK_SIZE);
     if (useProgMem) progBuffer = (uint8_t *)malloc(MPU6050_MPU9250_DMP_MEMORY_CHUNK_SIZE);
+
+    // DEBUG_PRINT(F("for i < dataSize: "));
+    // DEBUG_PRINTLN(dataSize);
     for (i = 0; i < dataSize;) {
         // determine correct chunk size according to bank position and data size
         chunkSize = MPU6050_MPU9250_DMP_MEMORY_CHUNK_SIZE;
@@ -3069,10 +3260,23 @@ bool MPU6050_MPU9250::writeMemoryBlock(const uint8_t *data, uint16_t dataSize, u
             setMemoryStartAddress(address);
             I2Cdev::readBytes(devAddr, MPU6050_MPU9250_RA_MEM_R_W, chunkSize, verifyBuffer);
             if (memcmp(progBuffer, verifyBuffer, chunkSize) != 0) {
-                /*Serial.print("Block write verification error, bank ");
+                /* 
+                Serial.print("Block write verification error, bank ");
                 Serial.print(bank, DEC);
                 Serial.print(", address ");
                 Serial.print(address, DEC);
+                Serial.print("!\nExpected:");
+                for (j = 0; j < chunkSize; j++) {
+                    Serial.print(", 0x");
+                    if (progBuffer[j] < 16) Serial.print("0");
+                    Serial.print(progBuffer[j], HEX);
+                }
+                Serial.print("\nReceived:");
+                for (uint8_t j = 0; j < chunkSize; j++) {
+                    Serial.print(", 0x");
+                    if (verifyBuffer[i + j] < 16) Serial.print("0");
+                    Serial.print(verifyBuffer[i + j], HEX);
+                }
                 Serial.print("!\nExpected:");
                 for (j = 0; j < chunkSize; j++) {
                     Serial.print(" 0x");
@@ -3085,10 +3289,11 @@ bool MPU6050_MPU9250::writeMemoryBlock(const uint8_t *data, uint16_t dataSize, u
                     if (verifyBuffer[i + j] < 16) Serial.print("0");
                     Serial.print(verifyBuffer[i + j], HEX);
                 }
-                Serial.print("\n");*/
+                Serial.print("\n");
+                */
                 free(verifyBuffer);
                 if (useProgMem) free(progBuffer);
-                return false; // uh oh.
+                return true; // uh oh.
             }
         }
 
@@ -3109,8 +3314,8 @@ bool MPU6050_MPU9250::writeMemoryBlock(const uint8_t *data, uint16_t dataSize, u
     if (useProgMem) free(progBuffer);
     return true;
 }
-bool MPU6050_MPU9250::writeProgMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t bank, uint8_t address, bool verify) {
-    return writeMemoryBlock(data, dataSize, bank, address, verify, true);
+bool MPU6050_MPU9250::writeProgMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t bank, uint8_t address, bool verify, bool isMPU9250) {
+    return writeMemoryBlock(data, dataSize, bank, address, verify, true, isMPU9250);
 }
 bool MPU6050_MPU9250::writeDMPConfigurationSet(const uint8_t *data, uint16_t dataSize, bool useProgMem) {
     uint8_t *progBuffer = 0;

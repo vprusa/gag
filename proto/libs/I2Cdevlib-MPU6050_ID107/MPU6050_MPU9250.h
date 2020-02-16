@@ -69,6 +69,40 @@ THE SOFTWARE.
 #define MPU6050_MPU9250_RA_YA_OFFS_L_TC     0x09
 #define MPU6050_MPU9250_RA_ZA_OFFS_H        0x0A //[15:0] ZA_OFFS
 #define MPU6050_MPU9250_RA_ZA_OFFS_L_TC     0x0B
+
+// this is fix for MPU9250
+#define MPU9250_RA_XA_OFFS_H        0x77 //[15:0] XA_OFFS
+#define MPU9250_RA_XA_OFFS_L_TC     0x78
+#define MPU9250_RA_YA_OFFS_H        0x7A //[15:0] YA_OFFS
+#define MPU9250_RA_YA_OFFS_L_TC     0x7B
+#define MPU9250_RA_ZA_OFFS_H        0x7D //[15:0] ZA_OFFS
+#define MPU9250_RA_ZA_OFFS_L_TC     0x7E
+
+#define MPU9250_RA_XG_OFFS_H        0x13 
+#define MPU9250_RA_XG_OFFS_L_TC     0x14
+#define MPU9250_RA_YG_OFFS_H        0x15 
+#define MPU9250_RA_YG_OFFS_L_TC     0x16
+#define MPU9250_RA_ZG_OFFS_H        0x17 
+#define MPU9250_RA_ZG_OFFS_L_TC     0x18
+
+
+
+// #define MPU9250_RA_XA_OFFS_H        0x06 //[15:0] XA_OFFS
+// #define MPU9250_RA_XA_OFFS_L_TC     0x07
+// #define MPU9250_RA_YA_OFFS_H        0x08 //[15:0] YA_OFFS
+// #define MPU9250_RA_YA_OFFS_L_TC     0x09
+// #define MPU9250_RA_ZA_OFFS_H        0x0A //[15:0] ZA_OFFS
+// #define MPU9250_RA_ZA_OFFS_L_TC     0x0B
+
+//Magnetometer Registers
+#define MPU9150_RA_MAG_ADDRESS		0x0C
+#define MPU9150_RA_MAG_XOUT_L		0x03
+#define MPU9150_RA_MAG_XOUT_H		0x04
+#define MPU9150_RA_MAG_YOUT_L		0x05
+#define MPU9150_RA_MAG_YOUT_H		0x06
+#define MPU9150_RA_MAG_ZOUT_L		0x07
+#define MPU9150_RA_MAG_ZOUT_H		0x08
+
 #define MPU6050_MPU9250_RA_SELF_TEST_X      0x0D //[7:5] XA_TEST[4-2], [4:0] XG_TEST[4-0]
 #define MPU6050_MPU9250_RA_SELF_TEST_Y      0x0E //[7:5] YA_TEST[4-2], [4:0] YG_TEST[4-0]
 #define MPU6050_MPU9250_RA_SELF_TEST_Z      0x0F //[7:5] ZA_TEST[4-2], [4:0] ZG_TEST[4-0]
@@ -752,28 +786,28 @@ class MPU6050_MPU9250 {
         void setZFineGain(int8_t gain);
 
         // XA_OFFS_* registers
-        int16_t getXAccelOffset();
-        void setXAccelOffset(int16_t offset);
+        int16_t getXAccelOffset(int16_t config = MPU6050_MPU9250_RA_XA_OFFS_H);
+        void setXAccelOffset(int16_t offset, int16_t config = MPU6050_MPU9250_RA_XA_OFFS_H);
 
         // YA_OFFS_* register
-        int16_t getYAccelOffset();
-        void setYAccelOffset(int16_t offset);
+        int16_t getYAccelOffset(int16_t config = MPU6050_MPU9250_RA_YA_OFFS_H);
+        void setYAccelOffset(int16_t offset, int16_t config = MPU6050_MPU9250_RA_YA_OFFS_H);
 
         // ZA_OFFS_* register
-        int16_t getZAccelOffset();
-        void setZAccelOffset(int16_t offset);
+        int16_t getZAccelOffset(int16_t config = MPU6050_MPU9250_RA_ZA_OFFS_H);
+        void setZAccelOffset(int16_t offset, int16_t config = MPU6050_MPU9250_RA_ZA_OFFS_H);
 
         // XG_OFFS_USR* registers
         int16_t getXGyroOffset();
-        void setXGyroOffset(int16_t offset);
+        void setXGyroOffset(int16_t offset, int16_t config = MPU6050_MPU9250_RA_XG_OFFS_USRH);
 
         // YG_OFFS_USR* register
         int16_t getYGyroOffset();
-        void setYGyroOffset(int16_t offset);
+        void setYGyroOffset(int16_t offset, int16_t config = MPU6050_MPU9250_RA_YG_OFFS_USRH);
 
         // ZG_OFFS_USR* register
         int16_t getZGyroOffset();
-        void setZGyroOffset(int16_t offset);
+        void setZGyroOffset(int16_t offset, int16_t config = MPU6050_MPU9250_RA_ZG_OFFS_USRH);
         
         // INT_ENABLE register (DMP functions)
         bool getIntPLLReadyEnabled();
@@ -808,8 +842,8 @@ class MPU6050_MPU9250 {
         uint8_t readMemoryByte();
         void writeMemoryByte(uint8_t data);
         void readMemoryBlock(uint8_t *data, uint16_t dataSize, uint8_t bank=0, uint8_t address=0);
-        bool writeMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t bank=0, uint8_t address=0, bool verify=true, bool useProgMem=false);
-        bool writeProgMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t bank=0, uint8_t address=0, bool verify=true);
+        bool writeMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t bank=0, uint8_t address=0, bool verify=true, bool useProgMem=false, bool isDMP9250=false);
+        bool writeProgMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t bank=0, uint8_t address=0, bool verify=true, bool isDMP9250=false);
 
         bool writeDMPConfigurationSet(const uint8_t *data, uint16_t dataSize, bool useProgMem=false);
         bool writeProgDMPConfigurationSet(const uint8_t *data, uint16_t dataSize);

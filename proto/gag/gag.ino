@@ -38,7 +38,6 @@
 #ifdef MASTER_HAND
 extern bool useSlaveHand = false;
 #endif
-
 void setup() {
     #ifdef GAG_DEBUG 
         Serial.begin(115200);
@@ -100,37 +99,7 @@ void setup() {
     SLAVE_SERIAL_NAME.begin(SLAVE_SERIAL_BAUD);
 #endif
 
-    // NOTE: 8MHz or slower host processors, like the Teensy @ 3.3v or Ardunio
-    // Pro Mini running at 3.3v, cannot handle this baud rate reliably due to
-    // the baud timing being too misaligned with processor ticks. You must use
-    // 38400 or slower in these cases, or use some kind of external separate
-    // crystal solution for the UART timer.
-
-    for (int i = FIRST_SENSOR; i <= LAST_SENSOR; i++) {
-        selectedSensor = (Sensor) i;
-        enableSingleMPU(selectedSensor);
-        if(i == HP) {
-            gyros[selectedSensor].mpu = new MPU6050_MPU9250(MPU6050_MPU9250_ADDRESS_AD0_LOW);//   0x68 / 0x69
-            gyros[selectedSensor].mpu->isMPU9250 = true;
-        } else {
-            gyros[selectedSensor].mpu = new MPU6050_MPU9250(MPU6050_MPU9250_ADDRESS_AD0_LOW); //   0x68 / 0x69
-        }
-
-        int selectorOffsettedPin = selectSingleMPU(i);
-
-        MASTER_SERIAL_NAME.print(F("selectedSensor: "));
-        MASTER_SERIAL_NAME.print((int)selectedSensor);
-        MASTER_SERIAL_NAME.println(F(""));
-
-        MASTER_SERIAL_NAME.print(F("Enabled on pin: "));
-        MASTER_SERIAL_NAME.print(selectorOffsettedPin);
-        MASTER_SERIAL_NAME.println(F(""));
-        
-        initMPUAndDMP(1, i);
-        
-        MASTER_SERIAL_NAME.println(F("\n\n"));
-
-    }
+    setupSensors();
     #ifdef MEASURE_OFFSETS
     calibrationDone = true;
     #endif
@@ -179,6 +148,7 @@ void loop() {
         //delay(remainingTimeBudget);
 
     }
+
   //return;
   //}
 #endif
@@ -195,7 +165,6 @@ void loop() {
         uint8_t sentPacketCharCounter = 0;
         uint8_t align = 0;
         int8_t ch = 0; 
-
         while(limit > 0) {
             if(masterHandCommandRequestHandler(
                 &limit,
@@ -206,6 +175,8 @@ void loop() {
                 &align, 
                 &ch)){ break; }
             limit--;
+            GAG_DEBUG_PRINT("limit ");
+            GAG_DEBUG_PRINTLN(limit);
         }
     }
 

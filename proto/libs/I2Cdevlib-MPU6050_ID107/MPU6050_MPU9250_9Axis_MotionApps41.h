@@ -183,6 +183,19 @@ THE SOFTWARE.
 #define MPU6050_DMP_CONFIG_SIZE     192     // dmpConfig[]
 #define MPU6050_DMP_UPDATES_SIZE    47      // dmpUpdates[]
 
+
+
+/* ================================================================================================ *
+ | Default MotionApps v4.1 48-byte FIFO packet structure:                                           |
+ |                                                                                                  |
+ | [QUAT W][      ][QUAT X][      ][QUAT Y][      ][QUAT Z][      ][GYRO X][      ][GYRO Y][      ] |
+ |   0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19  20  21  22  23  |
+ |                                                                                                  |
+ | [GYRO Z][      ][MAG X ][MAG Y ][MAG Z ][ACC X ][      ][ACC Y ][      ][ACC Z ][      ][      ] |
+ |  24  25  26  27  28  29  30  31  32  33  34  35  36  37  38  39  40  41  42  43  44  45  46  47  |
+ * ================================================================================================ */
+
+
 /* ================================================================================================ *
  | Default MotionApps v2.0 42-byte FIFO packet structure:                                           |
  |                                                                                                  |
@@ -647,7 +660,8 @@ const unsigned char  dmpUpdatesMPU9250[MPU9250_DMP_UPDATES_SIZE] PROGMEM = {
 };
 
 uint8_t MPU6050_MPU9250::dmpInitialize() {
-    // reset device
+
+            // reset device
     DEBUG_PRINTLN(F("\n\nResetting MPU6050_MPU9250..."));
     reset();
     delay(30); // wait after reset
@@ -690,7 +704,19 @@ uint8_t MPU6050_MPU9250::dmpInitialize() {
     DEBUG_PRINT(F("Z gyro offset = "));
     DEBUG_PRINTLN(zgOffsetTC);
 
+
     if(isMPU9250) {
+        // setup weird slave stuff (?)
+        DEBUG_PRINTLN(F("Setting slave 0 address to 0x7F..."));
+        setSlaveAddress(0, 0x7F);
+        DEBUG_PRINTLN(F("Disabling I2C Master mode..."));
+        setI2CMasterModeEnabled(false);
+        DEBUG_PRINTLN(F("Setting slave 0 address to 0x68 (self)..."));
+        setSlaveAddress(0, 0x68);
+        DEBUG_PRINTLN(F("Resetting I2C Master control..."));
+        resetI2CMaster();
+        delay(20);
+
         I2Cdev::readByte(devAddr, MPU6050_MPU9250_RA_USER_CTRL, buffer); // ?
         
         DEBUG_PRINTLN(F("Enabling interrupt latch, clear on any read, AUX bypass enabled"));
@@ -727,6 +753,8 @@ uint8_t MPU6050_MPU9250::dmpInitialize() {
         I2Cdev::writeByte(0x0E, 0x0A, 0x00);
     
     }else {
+
+
         // setup weird slave stuff (?)
         DEBUG_PRINTLN(F("Setting slave 0 address to 0x7F..."));
         setSlaveAddress(0, 0x7F);
@@ -744,24 +772,32 @@ uint8_t MPU6050_MPU9250::dmpInitialize() {
     
     const unsigned char * dmpUpdates;
 
-    
     bool writeProgMemoryBlockRes = false;
     if(isMPU9250) {
         dmpUpdates = dmpUpdatesMPU9250;
-        DEBUG_PRINT(MPU9250_DMP_CODE_SIZE);
+        DEBUG_PRINT(F("MPU9250_DMP_CODE_SIZE: "));
+        DEBUG_PRINTLN(MPU9250_DMP_CODE_SIZE);
         // bool writeProgMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t bank=0, uint8_t address=0, bool verify=true);
-        // 
         // writeProgMemoryBlockRes = writeProgMemoryBlock(dmpMemoryMPU9250, MPU9250_DMP_CODE_SIZE);
-
-        writeProgMemoryBlockRes = writeProgMemoryBlock(dmpMemoryMPU6050_MPU9250, MPU6050_MPU9250_DMP_CODE_SIZE,0,0,true);//MPU6050_DMP_CODE_SIZE);
-        writeProgMemoryBlockRes = writeProgMemoryBlock(dmpMemoryMPU9250, MPU9250_DMP_CODE_SIZE,2,MPU6050_MPU9250_DMP_CODE_SIZE,true);
-    }else{
+        writeProgMemoryBlockRes = writeProgMemoryBlock(dmpMemoryMPU6050_MPU9250, MPU6050_MPU9250_DMP_CODE_SIZE,0,0, true, true);//MPU6050_DMP_CODE_SIZE);
+        DEBUG_PRINT(F("writeProgMemoryBlockRes-1:"));
+        DEBUG_PRINTLN(writeProgMemoryBlockRes);
+        writeProgMemoryBlockRes = writeProgMemoryBlock(dmpMemoryMPU9250, MPU9250_DMP_CODE_SIZE,2,MPU6050_MPU9250_DMP_CODE_SIZE, true, true);
+        DEBUG_PRINT(F("writeProgMemoryBlockRes-2:"));
+        DEBUG_PRINTLN(writeProgMemoryBlockRes);
+    } else {
         dmpUpdates = dmpUpdatesMPU6050;
-        DEBUG_PRINT(MPU6050_DMP_CODE_SIZE);
+        DEBUG_PRINT(F("MPU6050_DMP_CODE_SIZE: "));
+        DEBUG_PRINTLN(MPU6050_DMP_CODE_SIZE);
         writeProgMemoryBlockRes = writeProgMemoryBlock(dmpMemoryMPU6050_MPU9250, MPU6050_MPU9250_DMP_CODE_SIZE,0,0,true);//MPU6050_DMP_CODE_SIZE);
+        DEBUG_PRINT(F("writeProgMemoryBlockRes-1:"));
+        DEBUG_PRINTLN(writeProgMemoryBlockRes);
         writeProgMemoryBlockRes = writeProgMemoryBlock(dmpMemoryMPU6050, MPU6050_DMP_CODE_SIZE,2,MPU6050_MPU9250_DMP_CODE_SIZE,true);
         //writeProgMemoryBlockRes = writeProgMemoryBlock(dmpMemoryMPU6050, MPU6050_DMP_CODE_SIZE);
+        DEBUG_PRINT(F("writeProgMemoryBlockRes-2:"));
+        DEBUG_PRINTLN(writeProgMemoryBlockRes);
     }
+
     if (writeProgMemoryBlockRes) {
         DEBUG_PRINTLN(F("Success! DMP code written and verified."));
 
@@ -838,6 +874,7 @@ uint8_t MPU6050_MPU9250::dmpInitialize() {
 
             DEBUG_PRINT(F("Current FIFO count="));
             DEBUG_PRINTLN(fifoCount);
+            if(isMPU9250){DEBUG_PRINTLN("isMPU9250_1");}
             if(isMPU9250){
                 DEBUG_PRINTLN(F("Writing final memory update 3/19 (function unknown)..."));
                 for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates[pos]);
@@ -867,6 +904,7 @@ uint8_t MPU6050_MPU9250::dmpInitialize() {
             DEBUG_PRINTLN(F("Setting zero-motion detection duration to 0..."));
             setZeroMotionDetectionDuration(0);
 
+            if(isMPU9250){DEBUG_PRINTLN("isMPU9250_2");}else{DEBUG_PRINTLN("!isMPU9250_2");}
             if(isMPU9250) {
                 DEBUG_PRINTLN(F("Setting AK8975 to single measurement mode..."));
                 //mag -> setMode(1);
@@ -900,6 +938,7 @@ uint8_t MPU6050_MPU9250::dmpInitialize() {
             }
 
             DEBUG_PRINTLN(F("Resetting FIFO..."));
+            if(isMPU9250){DEBUG_PRINTLN("isMPU9250_3");}
             if(isMPU9250){
                 I2Cdev::writeByte(0x68, MPU6050_MPU9250_RA_USER_CTRL, 0x24);
                 DEBUG_PRINTLN(F("Rewriting I2C master mode enabled because...I don't know"));
@@ -1127,7 +1166,7 @@ uint8_t MPU6050_MPU9250::dmpGetAccel(int32_t *data, const uint8_t* packet) {
 uint8_t MPU6050_MPU9250::dmpGetAccel(int16_t *data, const uint8_t* packet) {
     // TODO: accommodate different arrangements of sent data (ONLY default supported now)
     if (packet == 0) packet = dmpPacketBuffer;
-    if(isMPU9250){
+    if(!isMPU9250){
         data[0] = (packet[28] << 8) | packet[29];
         data[1] = (packet[32] << 8) | packet[33];
         data[2] = (packet[36] << 8) | packet[37];
@@ -1141,7 +1180,7 @@ uint8_t MPU6050_MPU9250::dmpGetAccel(int16_t *data, const uint8_t* packet) {
 uint8_t MPU6050_MPU9250::dmpGetAccel(VectorInt16 *v, const uint8_t* packet) {
     // TODO: accommodate different arrangements of sent data (ONLY default supported now)
     if (packet == 0) packet = dmpPacketBuffer;
-    if(isMPU9250) {
+    if(!isMPU9250) {
         v -> x = (packet[28] << 8) | packet[29];
         v -> y = (packet[32] << 8) | packet[33];
         v -> z = (packet[36] << 8) | packet[37];
@@ -1171,18 +1210,21 @@ uint8_t MPU6050_MPU9250::dmpGetQuaternion(int32_t *data, const uint8_t* packet) 
 }*/
 uint8_t MPU6050_MPU9250::dmpGetQuaternion(int16_t *data, const uint8_t* packet) {
     // TODO: accommodate different arrangements of sent data (ONLY default supported now)
-    if (packet == 0) packet = dmpPacketBuffer;\
-    if(isMPU9250) {
-        data[0] = ((packet[0] << 8) | packet[1]);
-        data[1] = ((packet[4] << 8) | packet[5]);
-        data[2] = ((packet[8] << 8) | packet[9]);
-        data[3] = ((packet[12] << 8) | packet[13]); 
-    } else {
-        data[0] = ((packet[0] << 8) + packet[1]);
-        data[1] = ((packet[4] << 8) + packet[5]);
-        data[2] = ((packet[8] << 8) + packet[9]);
-        data[3] = ((packet[12] << 8) + packet[13]);
+    if (packet == 0) {
+        packet = dmpPacketBuffer;
     }
+
+        // if(isMPU9250) { 
+            data[0] = ((packet[0] << 8) | packet[1]);
+            data[1] = ((packet[4] << 8) | packet[5]);
+            data[2] = ((packet[8] << 8) | packet[9]);
+            data[3] = ((packet[12] << 8) | packet[13]); 
+        // } else {
+            // data[0] = ((packet[0] << 8) + packet[1]);
+            // data[1] = ((packet[4] << 8) + packet[5]);
+            // data[2] = ((packet[8] << 8) + packet[9]);
+            // data[3] = ((packet[12] << 8) + packet[13]);
+        // }
     return 0;
 }
 uint8_t MPU6050_MPU9250::dmpGetQuaternion(Quaternion *q, const uint8_t* packet) {
@@ -1218,34 +1260,39 @@ uint8_t MPU6050_MPU9250::dmpGetGyro(int32_t *data, const uint8_t* packet) {
 uint8_t MPU6050_MPU9250::dmpGetGyro(int16_t *data, const uint8_t* packet) {
     // TODO: accommodate different arrangements of sent data (ONLY default supported now)
     if (packet == 0) packet = dmpPacketBuffer;
-    if(isMPU9250) {
+    // if(isMPU9250) {
         data[0] = (packet[16] << 8) | packet[17];
         data[1] = (packet[20] << 8) | packet[21];
         data[2] = (packet[24] << 8) | packet[25];
-    } else {
-        data[0] = (packet[16] << 8) + packet[17];
-        data[1] = (packet[20] << 8) + packet[21];
-        data[2] = (packet[24] << 8) + packet[25];
-    }
+    // } else {
+        // data[0] = (packet[16] << 8) + packet[17];
+        // data[1] = (packet[20] << 8) + packet[21];
+        // data[2] = (packet[24] << 8) + packet[25];
+    // }
     return 0;
 }
 uint8_t MPU6050_MPU9250::dmpGetGyro(VectorInt16 *v, const uint8_t* packet) {
     // TODO: accommodate different arrangements of sent data (ONLY default supported now)
     if (packet == 0) packet = dmpPacketBuffer;
-    if(isMPU9250) {
+    // if(isMPU9250) {
         v -> x = (packet[16] << 8) | packet[17];
         v -> y = (packet[20] << 8) | packet[21];
         v -> z = (packet[24] << 8) | packet[25];
-    } else {
+    // } else {
         /*
         data[0] = (packet[28] << 8) + packet[29];
         data[1] = (packet[30] << 8) + packet[31];
         data[2] = (packet[32] << 8) + packet[33];
         */
+       /*
         v -> x = (packet[28] << 8) | packet[29];
         v -> y = (packet[30] << 8) | packet[31];
         v -> z = (packet[32] << 8) | packet[33];
-    }
+        */
+        v -> x = (packet[16] << 8) | packet[17];
+        v -> y = (packet[20] << 8) | packet[21];
+        v -> z = (packet[24] << 8) | packet[25];
+    // }
     return 0;
 }
 // uint8_t MPU6050_MPU9250::dmpSetLinearAccelFilterCoefficient(float coef);

@@ -47,7 +47,14 @@
         "map": "cpp",
         "memory_resource": "cpp",
         "random": "cpp",
-        "string": "cpp"
+        "string": "cpp",
+        "chrono": "cpp",
+        "list": "cpp",
+        "iostream": "cpp",
+        "ratio": "cpp",
+        "bit": "cpp",
+        "set": "cpp",
+        "netfwd": "cpp"
     },
     "git.ignoreLimitWarning": true
 }

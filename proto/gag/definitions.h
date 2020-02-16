@@ -3,7 +3,7 @@
 */
 #define ESP32_RIGHT 1
 //#define SEND_ACC
-//#define MEASURE_OFFSETS 1
+#define MEASURE_OFFSETS 1
 #define SET_OFFSETS 1
 //#define SEND_DATA_ALSO_OVER_SERIAL 1 
 
@@ -16,7 +16,7 @@
     #define SLAVE_HAND
 #endif
 
-#define MEASUREMENT_LIMIT 20
+#define MEASUREMENT_LIMIT 40
 
 #define GAG_DEBUG
 #ifdef GAG_DEBUG
@@ -44,7 +44,8 @@
 #endif
 
 #define CMD_TEST_REPLY 't'
-#define CMD_RESTART_WITH_CALIBRATION 'a'
+#define CMD_CALIBRATION 'a'
+#define CMD_SET_SENSOR_DEBUG_FLAG 'd'
 #define CMD_RESTART_WITH_CALIBRATION_AND_SEND 's'
 #define CMD_RESTART 'r'
 #define CMD_READ_SLAVE 'i'
