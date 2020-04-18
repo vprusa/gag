@@ -6,9 +6,10 @@ ECLIPSE_GAG_WORKSPACE=~/ws
 PROJECT_PATH=~/workspace/p/notes/work/projects/arduino/gag/gag-web
 THIS_DIR_PATH=$(dirname `realpath "$0"`)
 IDEA_IDE_PATH=~/IDE/idea/idea-IC-192.5728.98/bin/idea.sh
+IDEA_WEB_IDE_PATH=~/IDE/WebStorm-193.6494.34/bin/webstorm.sh
 
 echo "Opening temrinator"
-cd ${PROJECT_PATH} && terminator -e "echo 'mvn wildfly:start wildfly:undeploy install wildfly:deploy -DskipTests=true -Dcheckstyle.skip | tee app.log' && zsh " & disown
+cd ${PROJECT_PATH} && terminator -e "echo 'mvn wildfly:start wildfly:undeploy install wildfly:deploy -DskipTests=true -Dcheckstyle.skip | tee app.log ' && echo 'cd services && mvn test -Dtest=RecordedDataFilterTest -Dcheckstyle.skip | tee test.log' && zsh " & disown
 
 echo "BASH_SOURCE[0]: ${BASH_SOURCE[0]}"
 PROCESSING_PROJECT_PATH=${THIS_DIR_PATH}/proto/processing/MPUTeapot/MPUTeapot.pde
@@ -22,4 +23,4 @@ code ${CODE_PROJECT_PATH}
 
 #${ECLIPSE_IDE_PATH} -data ${ECLIPSE_GAG_WORKSPACE}
 ${IDEA_IDE_PATH} & disown
-
+${IDEA_WEB_IDE_PATH} & 

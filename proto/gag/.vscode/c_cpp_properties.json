@@ -3,11 +3,11 @@
         {
             "name": "Linux",
             "includePath": [
+                "/home/vprusa/workspace/p/notes/work/projects/arduino/gag/proto/libs/I2Cdevlib-MPU6050_ID108/**",
                 "/home/vprusa/.arduino15/packages/esp32/hardware/esp32/1.0.4/**",
                 "/home/vprusa/.arduino15/packages/esp32/tools/**",
                 "/home/vprusa/.arduino15/packages/esp32/hardware/esp32/1.0.3/**",
                 "/home/vprusa/.arduino15/packages/esp32/tools/**",
-                "/home/vprusa/workspace/p/notes/work/projects/arduino/gag/proto/libs/I2Cdevlib-MPU6050_ID107/**",
                 "/home/vprusa/workspace/p/notes/work/projects/arduino/gag/proto/gag/**",
                 "/home/vprusa/.arduino15/packages/esp32/tools/**",
                 "/home/vprusa/.arduino15/packages/esp32/hardware/esp32/1.0.2/**",

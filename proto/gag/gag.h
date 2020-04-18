@@ -10,7 +10,7 @@
 #define _GAG_H_
 #include "definitions.h"
 
-#include "MPU6050_MPU9250_9Axis_MotionApps41.h"
+#include "MPU6050_MPU9150_9Axis_MotionApps41.h"
 #ifdef MEASURE_OFFSETS
 #include "gag_offsetting.h"
 #endif
@@ -83,7 +83,7 @@ uint8_t initMPUAndDMP(uint8_t attempt, uint8_t i);
 // MPU control/status vars
 uint8_t devStatus;   // return status after each device operation (0 = success, !0 = error)
 uint8_t packetSizeS = MPU6050_FIFO_PACKET_SIZE; // expected DMP packet size (default is 42 bytes)
-uint8_t packetSizeM = MPU9250_FIFO_PACKET_SIZE; // expected DMP packet size (default is 42 bytes)
+uint8_t packetSizeM = MPU9150_FIFO_PACKET_SIZE; // expected DMP packet size (default is 42 bytes)
 uint16_t fifoCount;  // count of all bytes currently in FIFO
 
 #ifdef SLAVE_HAND
@@ -207,7 +207,7 @@ enum Sensor {
 
 struct Gyro {
     uint8_t fifoBuffer[FIFO_SIZE]; // FIFO storage buffer
-    MPU6050_MPU9250 *mpu;
+    MPU6050_MPU9150 *mpu;
     // orientation/motion vars
     Quaternion *q;        // [w, x, y, z]         quaternion container
     //#define TEST_CALIB
@@ -341,10 +341,10 @@ void setupSensors(){
         selectedSensor = (Sensor) i;
         enableSingleMPU(selectedSensor);
         if(i == HP) {
-            gyros[selectedSensor].mpu = new MPU6050_MPU9250(MPU6050_MPU9250_ADDRESS_AD0_LOW);//   0x68 / 0x69
-            gyros[selectedSensor].mpu->isMPU9250 = true;
+            gyros[selectedSensor].mpu = new MPU6050_MPU9150(MPU6050_MPU9150_ADDRESS_AD0_LOW);//   0x68 / 0x69
+            gyros[selectedSensor].mpu->isMPU9150 = true;
         } else {
-            gyros[selectedSensor].mpu = new MPU6050_MPU9250(MPU6050_MPU9250_ADDRESS_AD0_LOW); //   0x68 / 0x69
+            gyros[selectedSensor].mpu = new MPU6050_MPU9150(MPU6050_MPU9150_ADDRESS_AD0_LOW); //   0x68 / 0x69
         }
 
         int selectorOffsettedPin = selectSingleMPU(i);
@@ -392,7 +392,7 @@ uint8_t initMPUAndDMP(uint8_t attempt, uint8_t i) {
 #endif
     MASTER_SERIAL_NAME.print(F("Enabling DMP... "));
     MASTER_SERIAL_NAME.println(selectedSensor);
-    MPU6050_MPU9250 mpu = *gyros[selectedSensor].mpu;
+    MPU6050_MPU9150 mpu = *gyros[selectedSensor].mpu;
     mpu.initialize();
     MASTER_SERIAL_NAME.println(F("Testing device connections..."));
     MASTER_SERIAL_NAME.println(mpu.testConnection() ? F("MPU* connection successful") : F("MPU* connection failed"));
@@ -404,10 +404,10 @@ uint8_t initMPUAndDMP(uint8_t attempt, uint8_t i) {
         devStatus = mpu.dmpInitialize();
         MASTER_SERIAL_NAME.print(F("DMP initialized..."));
     } else {
-        MASTER_SERIAL_NAME.println(F("dmpInitialize MPU9250..."));
-        mpu.isMPU9250 = true;
+        MASTER_SERIAL_NAME.println(F("dmpInitialize MPU9150..."));
+        mpu.isMPU9150 = true;
         devStatus = mpu.dmpInitialize();
-        MASTER_SERIAL_NAME.print(F("Skipping initialing DMP for MPU9250..."));
+        MASTER_SERIAL_NAME.print(F("Skipping initialing DMP for MPU9150..."));
     }
     // supply your own gyro offsets here for each mpu, scaled for min sensitivity
     // lets ignore this considering we want realtive values anyway
@@ -421,9 +421,9 @@ uint8_t initMPUAndDMP(uint8_t attempt, uint8_t i) {
     #endif
     #ifdef SET_OFFSETS
     if(selectedSensor == 5){
-        mpu.setXAccelOffset(sensorsOffsets[i][0], MPU9250_RA_XA_OFFS_H);
-        mpu.setYAccelOffset(sensorsOffsets[i][1], MPU9250_RA_YA_OFFS_H);
-        mpu.setZAccelOffset(sensorsOffsets[i][2], MPU9250_RA_ZA_OFFS_H);
+        mpu.setXAccelOffset(sensorsOffsets[i][0], MPU9150_RA_XA_OFFS_H);
+        mpu.setYAccelOffset(sensorsOffsets[i][1], MPU9150_RA_YA_OFFS_H);
+        mpu.setZAccelOffset(sensorsOffsets[i][2], MPU9150_RA_ZA_OFFS_H);
     }else{
         mpu.setXAccelOffset(sensorsOffsets[i][0]);
         mpu.setYAccelOffset(sensorsOffsets[i][1]);
@@ -473,7 +473,7 @@ void automaticFifoReset() {
     for(int i = 0; i < SENSORS_COUNT; i++){
         if(gyros[i].lastResetTime + MIN_TIME_TO_RESET < now) {
             int selectedNow = setOrRotateSelectedGyro(i);
-            MPU6050_MPU9250 mpu = *gyros[selectedSensor].mpu;
+            MPU6050_MPU9150 mpu = *gyros[selectedSensor].mpu;
             int localFifoCount = mpu.getFIFOCount();
             if(( localFifoCount >= MAX_FIFO_USAGE_FOR_RESET || 
                 ( gyros[i].lastResetTime + MAX_TIME_TO_RESET < now && 
@@ -484,7 +484,7 @@ void automaticFifoReset() {
         }
         // idk, offsets registeres do not work ...
         if(i == HP && now - lastTime > 1000){
-            MPU6050_MPU9250 mpu = *gyros[selectedSensor].mpu;
+            MPU6050_MPU9150 mpu = *gyros[selectedSensor].mpu;
             mpu.setXGyroOffset(35);
             mpu.setYGyroOffset(-35);
             mpu.setZGyroOffset(40); // 12?
@@ -515,46 +515,7 @@ void sendDataRequest(int selectedSensor) {
 }
 #endif
 
-//  Read more: https://blog.fpmurphy.com/2008/12/half-precision-floating-point-format_14.html#ixzz6E3v2yah7
-uint16_t floatToHalfI(uint32_t i) {
-    register int s =  (i >> 16) & 0x00008000;                   // sign
-    register int e = ((i >> 23) & 0x000000ff) - (127 - 15);     // exponent
-    register int f =   i        & 0x007fffff;                   // fraction
-
-    // need to handle NaNs and Inf?
-    if (e <= 0) {
-        if (e < -10) {
-            if (s)                                              // handle -0.0
-               return 0x8000;
-            else
-               return 0;
-        }
-        f = (f | 0x00800000) >> (1 - e);
-        return s | (f >> 13);
-    } else if (e == 0xff - (127 - 15)) {
-        if (f == 0)                                             // Inf
-            return s | 0x7c00;
-        else {                                                  // NAN
-            f >>= 13;
-            return s | 0x7c00 | f | (f == 0);
-        }
-    } else {
-        if (e > 30)                                             // Overflow
-            return s | 0x7c00;
-        return s | (e << 10) | (f >> 13);
-    }
-}
-
-uint16_t floatToHALF(float i) {
-    union { float f; uint32_t i; } v;
-    v.f = i;
-    return floatToHalfI(v.i);
-}
-
-/**
- * TODO: fix calculation, refactor
-*/
-void getMPU9250Data(MPU6050_MPU9250 * mpu) {
+void getMPU9150Data(MPU6050_MPU9150 * mpu) {
     int16_t ax, ay, az;
     int16_t gx, gy, gz;
     int16_t   mx, my, mz;
@@ -563,21 +524,38 @@ void getMPU9250Data(MPU6050_MPU9250 * mpu) {
 
     mpu->getMotion9(&ax, &ay, &az, &gx, &gy, &gz,&mx, &my, &mz);
 
-    // TODO fix
-    // 4096 8192 16384 32768 65536 
-    #define offsetDown 8192
-    
-    Gxyz[0] += (float) gx / (offsetDown) ;
-    Gxyz[1] += (float) gy / (offsetDown) ;
-    Gxyz[2] += (float) gz / (offsetDown) ;
+    // Note: Some magic is used here that divides and mupltiplies floats from uint16_t ...
+    // It is done to avoid unnecessary variables when dealing with (re)intereting 
+    // uint16_t to floating point (S, M, E) calculating stuff with minimal loss of precision
+    // and interpreting it back to uint16_t
+    // TODO use bit shifts, etc.
+    // 8192 16384 32768 65536
 
-    #define  offsetDownQ 8
+    #define offsetDown 16384
+    Gxyz[0] += (((float) gx / (offsetDown)) * 2);
+    Gxyz[1] += (((float) gy / (offsetDown)) * 2);
+    Gxyz[2] += (((float) gz / (offsetDown)) * 2);
+   
+    MPU9150_DEBUG_PRINT(F(" Gxyz x: "));    
+    MPU9150_DEBUG_PRINTF(Gxyz[0], 6);    
+    MPU9150_DEBUG_PRINT(F(" y: "));    
+    MPU9150_DEBUG_PRINTF(Gxyz[1], 6);    
+    MPU9150_DEBUG_PRINT(F(" z: "));    
+    MPU9150_DEBUG_PRINTF(Gxyz[2], 6); 
+    #define offsetDownQ 16
 
     float yaw = Gxyz[2] / offsetDownQ;
-    float pitch = Gxyz[1]/ offsetDownQ;
-    float roll = Gxyz[0]/ offsetDownQ;
+    float pitch = Gxyz[1] / offsetDownQ;
+    float roll = Gxyz[0] / offsetDownQ;
 
-    #define partition 1.0f
+    MPU9150_DEBUG_PRINT(F(" ypr y: "));    
+    MPU9150_DEBUG_PRINTF(yaw, 6);    
+    MPU9150_DEBUG_PRINT(F(" p: "));    
+    MPU9150_DEBUG_PRINTF(pitch, 6);    
+    MPU9150_DEBUG_PRINT(F(" r: "));    
+    MPU9150_DEBUG_PRINTF(roll, 6);    
+
+    #define partition 0.5
     float cy = cos(yaw * partition );
     float sy = sin(yaw * partition );
     float cp = cos(pitch * partition );
@@ -586,12 +564,22 @@ void getMPU9250Data(MPU6050_MPU9250 * mpu) {
     float sr = sin(roll * partition );
 
     //#define offsetUp 1024
+    // how to make this faster...?
+    // https://www.qtcentre.org/threads/60473-How-to-convert-float-to-uint32
     #define offsetUp 2048
-    
     qI[0] = (uint16_t)((cy * cp * cr + sy * sp * sr) * offsetUp);
     qI[1] = (uint16_t)((cy * cp * sr - sy * sp * cr) * offsetUp);
     qI[2] = (uint16_t)((sy * cp * sr + cy * sp * cr) * offsetUp);
     qI[3] = (uint16_t)((sy * cp * cr - cy * sp * sr) * offsetUp);
+
+    MPU9150_DEBUG_PRINT(F(" qI w: "));    
+    MPU9150_DEBUG_PRINT(qI[0]);    
+    MPU9150_DEBUG_PRINT(F(" x: "));    
+    MPU9150_DEBUG_PRINT(qI[1]);    
+    MPU9150_DEBUG_PRINT(F(" y: "));    
+    MPU9150_DEBUG_PRINT(qI[2]);    
+    MPU9150_DEBUG_PRINT(F(" z: "));    
+    MPU9150_DEBUG_PRINTLN(qI[3]);    
 
     uint8_t *fifoBuffer = gyros[selectedSensor].fifoBuffer; // FIFO storage buffer*/
 
@@ -609,11 +597,10 @@ void getMPU9250Data(MPU6050_MPU9250 * mpu) {
     fifoBuffer[12] = qI[3] >> 8;
 }
 
-
 bool loadDataFromFIFO(bool forceLoad) {
     if(selectedSensor != HP) {
     // if (true) {
-        MPU6050_MPU9250 mpu = *gyros[selectedSensor].mpu;
+        MPU6050_MPU9150 mpu = *gyros[selectedSensor].mpu;
         if(!gyros[selectedSensor].hasDataReady || forceLoad) {
             fifoCount = mpu.getFIFOCount();
             uint8_t *fifoBuffer = gyros[selectedSensor].fifoBuffer; // FIFO storage buffer
@@ -686,7 +673,7 @@ bool loadDataFromFIFO(bool forceLoad) {
     } else {
         forceLoad = true;
         if(!gyros[selectedSensor].hasDataReady || forceLoad) {
-            getMPU9250Data(gyros[selectedSensor].mpu);
+            getMPU9150Data(gyros[selectedSensor].mpu);
             gyros[selectedSensor].hasDataReady=true;
             gyros[selectedSensor].alreadySentData=false;
             return true;
@@ -788,7 +775,7 @@ void execCommand(/*const byte * ch */) {
             GAG_DEBUG_PRINTLN(sensorIndex);
 
             enableSingleMPU(sensorIndex);
-            MPU6050_MPU9250 * currentMpu = gyros[sensorIndex].mpu;
+            MPU6050_MPU9150 * currentMpu = gyros[sensorIndex].mpu;
 
             switch(cmdPacket[1]) {
                 case CMD_GET_CURRENT_OFFSET: {
@@ -811,25 +798,13 @@ void execCommand(/*const byte * ch */) {
                         case 'a': 
                             switch(cmdPacket[4]) {
                                 case 'x':
-                                    if(selectedSensor==HP){ // TODO
-                                        offset = currentMpu->getXAccelOffset(MPU9250_RA_XA_OFFS_H);
-                                    }else{
-                                        offset = currentMpu->getXAccelOffset();
-                                    }
+                                    offset = currentMpu->getXAccelOffset();
                                 break;
                                 case 'y':
-                                    if(selectedSensor==HP){ // TODO
-                                        offset = currentMpu->getYAccelOffset(MPU9250_RA_YA_OFFS_H);
-                                    }else{
-                                        offset = currentMpu->getYAccelOffset();
-                                    }
+                                    offset = currentMpu->getYAccelOffset();
                                 break;
                                 case 'z':
-                                    if(selectedSensor==HP){ // TODO
-                                        offset = currentMpu->getZAccelOffset(MPU9250_RA_ZA_OFFS_H);
-                                    }else{
-                                        offset = currentMpu->getZAccelOffset();
-                                    }
+                                    offset = currentMpu->getZAccelOffset();
                                 break;
                             }
                             break;
@@ -863,9 +838,6 @@ void execCommand(/*const byte * ch */) {
                     switch(cmdPacket[3]) {
                         case 'g':
                             switch(cmdPacket[4]){
-                                case '?':
-                                case '1':
-                                case 'X':
                                 case 'x':
                                     currentMpu->setXGyroOffset(offset);
                                     sensorsOffsets[sensorIndex][3] = offset;
@@ -885,13 +857,9 @@ void execCommand(/*const byte * ch */) {
                         case 'a':
                             // TODO use 2 bytes convert them to 2 uint8_t and merge them to uint16_t
                             switch(cmdPacket[4]){
-                                case '1':
-                                case 'X':
-                                case '?':
                                 case 'x':
                                     currentMpu->setXAccelOffset(offset);
                                     sensorsOffsets[sensorIndex][0] = offset;
-
                                 break;
                                 case 'y':
                                     currentMpu->setYAccelOffset(offset);

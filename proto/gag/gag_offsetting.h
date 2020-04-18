@@ -2,7 +2,7 @@
  * 
 */
 #include "definitions.h"
-#include "MPU6050_MPU9250.h"
+#include "MPU6050_MPU9150.h"
 
 #ifndef _GAG_OFFSETTING_H_
 #define _GAG_OFFSETTING_H_
@@ -19,16 +19,16 @@ int16_t ax_offset,ay_offset,az_offset,gx_offset,gy_offset,gz_offset;
 uint8_t measurementsLimit = 0;
 bool calibrationDone = false;
 
-void meansensors(MPU6050_MPU9250 *mpuP);
-void calibration(MPU6050_MPU9250 *mpuP, int16_t limit);
-void measureOffsets(MPU6050_MPU9250 *mpuP, uint8_t i, int16_t limit);
+void meansensors(MPU6050_MPU9150 *mpuP);
+void calibration(MPU6050_MPU9150 *mpuP, int16_t limit);
+void measureOffsets(MPU6050_MPU9150 *mpuP, uint8_t i, int16_t limit);
 
 #ifndef MASTER_SERIAL_NAME
 #define MASTER_SERIAL_NAME Serial
 #endif
 
-void meansensors(MPU6050_MPU9250 *mpuP){
-    MPU6050_MPU9250 accelgyro = *mpuP;
+void meansensors(MPU6050_MPU9150 *mpuP){
+    MPU6050_MPU9150 accelgyro = *mpuP;
     long i=0,buff_ax=0,buff_ay=0,buff_az=0,buff_gx=0,buff_gy=0,buff_gz=0;
 
     while (i<(buffersize+101)){
@@ -57,8 +57,8 @@ void meansensors(MPU6050_MPU9250 *mpuP){
     }
 }
 
-void calibration(MPU6050_MPU9250 *mpuP,  int16_t limit, uint8_t i){
-    MPU6050_MPU9250 accelgyro = *mpuP;
+void calibration(MPU6050_MPU9150 *mpuP,  int16_t limit, uint8_t i){
+    MPU6050_MPU9150 accelgyro = *mpuP;
     ax_offset=-mean_ax/8;
     ay_offset=-mean_ay/8;
     az_offset=(16384-mean_az)/8;
@@ -135,12 +135,12 @@ void calibration(MPU6050_MPU9250 *mpuP,  int16_t limit, uint8_t i){
 }
 extern int16_t sensorsOffsets[6][6];
 
-void measureOffsets(MPU6050_MPU9250 *mpuP, uint8_t i, int16_t limit){
+void measureOffsets(MPU6050_MPU9150 *mpuP, uint8_t i, int16_t limit){
     ax=0; ay=0; az=0;gx=0; gy=0; gz=0;
     mean_ax=0;mean_ay=0;mean_az=0;mean_gx=0;mean_gy=0;mean_gz=0;state=0;
     ax_offset=0;ay_offset=0;az_offset=0;gx_offset=0;gy_offset=0;gz_offset=0;
     
-    MPU6050_MPU9250 mpu = *mpuP;
+    MPU6050_MPU9150 mpu = *mpuP;
     mpu.setXAccelOffset(0);
     mpu.setYAccelOffset(0);
     mpu.setZAccelOffset(0);

@@ -31,8 +31,22 @@
     #define GAG_DEBUG_PRINTLNF(x, y)
 #endif
 
+#define MPU9150_DEBUG
+#ifdef MPU9150_DEBUG
+    #define MPU9150_DEBUG_PRINT(x) Serial.print(x)
+    #define MPU9150_DEBUG_PRINTF(x, y) Serial.print(x, y)
+    #define MPU9150_DEBUG_PRINTLN(x) Serial.println(x)
+    #define MPU9150_DEBUG_PRINTLNF(x, y) Serial.println(x, y)
+#else
+    #define GAG_DEBUG_PRINT(x)
+    #define GAG_DEBUG_PRINTF(x, y)
+    #define GAG_DEBUG_PRINTLN(x)
+    #define GAG_DEBUG_PRINTLNF(x, y)
+#endif
+
+
 #define MPU6050_FIFO_PACKET_SIZE 42
-#define MPU9250_FIFO_PACKET_SIZE 48
+#define MPU9150_FIFO_PACKET_SIZE 48
 // TODO fix..
 #define FIFO_SIZE 48
 
