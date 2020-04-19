@@ -766,55 +766,36 @@ void RenderImage( void) {
 // only needs to be called if Xan or Yan are changed.
 void SetVars(void) {
   float Xan2, Yan2, Zan2;
-  float s1, s2, s3, c1, c2, c3;
+  float _sx, _sy, _sz, _cx, _cy, _cz;
 
   Xan2 = Xan / fact; // convert degrees to radians.
   Yan2 = Yan / fact;
-  // Zan2 = Zan / fact;
+  Zan2 = Zan / fact;
 
   // Zan is assumed to be zero
 
-  s1 = sin(Yan2);
-  s2 = sin(Xan2);
-  s3 = sin(Zan2);
+  _sx = sin(Xan2);
+  _sy = sin(Yan2);
+  _sz = sin(Zan2);
 
-  c1 = cos(Yan2);
-  c2 = cos(Xan2);
-  c3 = cos(Zan2);
+  _cx = cos(Xan2);
+  _cy = cos(Yan2);
+  _cz = cos(Zan2);
 
-  xx = c1;
-  xy = 0;
-  xz = -s1;
+  // https://en.wikipedia.org/wiki/3D_projection
 
-  yx = (s1 * s2);
-  yy = c2;
-  yz = (c1 * s2);
+  xx = (_cy*_cz);
+  xy = _cy*_sz;
+  xz = -_sy;
 
-  zx = (s1 * c2);
-  zy = -s2;
-  zz = (c1 * c2);
+  yx = (_cz*_sx*_sy)-(_cx*_sz);
+  yy = (_cx*_cz)+(_sx*_sy*_sz);
+  yz = (_cy*_sx);
 
-/*
-  s1 = sin(Yan2);
-  s2 = sin(Xan2);
-  s3 = sin(Zan2);
+  zx = (_cx*_cz*_sy)+(_sx*_sz);
+  zy = (_cx*_sy*_sz)-(_cz*_sx);
+  zz = (_cx*_cy);
 
-  c1 = cos(Yan2);
-  c2 = cos(Xan2);
-  c3 = cos(Zan2);
-
-  xx = c1;
-  xy = 0;
-  xz = -s1;
-
-  yx = (s1 * s2);
-  yy = c2;
-  yz = (c1 * s2);
-
-  zx = (s1 * c2);
-  zy = -s2;
-  zz = (c1 * c2)
-  */
 }
 
 /***********************************************************************************************************************************/
@@ -1320,38 +1301,45 @@ int getNumberOfNeighbors(int x, int y) {
 
 #ifdef USE_DEMO_GY25
 void loop_gy25_cube(){
-    // Rotate around x and y axes in 1 degree increments
-    // Xan++;
-    // Yan++;
-        // String GY25Data = "ypr:\t" + String(ypr[0] * 180 / M_PI) + "\t" + String(ypr[1] * 180 / M_PI) + "\t" +  String(ypr[2] * 180 / M_PI);
+  // TODO fix ypr conversion when Xan over 90° makes Yan=Yan+180 ... 
 
-    // Yan = Yan % 360;
-    // Xan = Xan % 360; // prevents overflow.
+  // Rotate around x and y axes in 1 degree increments
+  // Xan++;
+  // Yan++;
+      // String GY25Data = "ypr:\t" + String(ypr[0] * 180 / M_PI) + "\t" + String(ypr[1] * 180 / M_PI) + "\t" +  String(ypr[2] * 180 / M_PI);
 
-    SetVars(); //sets up the global vars to do the 3D conversion.
+  // Yan = Yan % 360;
+  // Xan = Xan % 360; // prevents overflow.
 
-    // Zoom in and out on Z axis within limits
-    // the cube intersects with the screen for values < 160
-    // Zoff += inc; 
-    // if (Zoff > 500) inc = -1;     // Switch to zoom in
-    // else if (Zoff < 160) inc = 1; // Switch to zoom out
+  SetVars(); //sets up the global vars to do the 3D conversion.
 
-    Xan = -ypr[2]*100;
-    Yan = -ypr[1]*100;
-    Zan = -ypr[0]*100;
-    // Zan = ypr[2]*100;
-    // Zoff = ypr[2]*1000;
-    Zoff=500;
-    
-    for (int i = 0; i < LinestoRender ; i++)
-    {
-        ORender[i] = Render[i]; // stores the old line segment so we can delete it later.
-        ProcessLine(&Render[i], Lines[i]); // converts the 3d line segments to 2d.
-    }
-    RenderImage(); // go draw it!
+  // Zoom in and out on Z axis within limits
+  // the cube intersects with the screen for values < 160
+  // Zoff += inc; 
+  // if (Zoff > 500) inc = -1;     // Switch to zoom in
+  // else if (Zoff < 160) inc = 1; // Switch to zoom out
 
-    //delay(14); // Delay to reduce loop rate (reduces flicker caused by aliasing with TFT screen refresh rate)
-    espDelay(14);
+  Xan = -ypr[2]* 180 / M_PI;
+  Yan = -ypr[1]* 180 / M_PI;
+  Zan = -ypr[0]* 180 / M_PI;
+
+  // prevents overflow.
+  Xan = Xan % 360; 
+  Yan = Yan % 360;
+  Zan = Zan % 360; 
+
+  // Zan = ypr[2]*100;
+  // Zoff = ypr[2]*1000;
+  Zoff=500;
+  
+  for (int i = 0; i < LinestoRender ; i++)
+  {
+      ORender[i] = Render[i]; // stores the old line segment so we can delete it later.
+      ProcessLine(&Render[i], Lines[i]); // converts the 3d line segments to 2d.
+  }
+  RenderImage(); // go draw it!
+
+  espDelay(14); // Delay to reduce loop rate (reduces flicker caused by aliasing with TFT screen refresh rate)
 }
 #endif
 
@@ -1361,17 +1349,9 @@ void Task1code( void * pvParameters ){
         if (millis() - timeStamp > 1000) {
             Serial.print("Task1 running on core ");
             Serial.println(xPortGetCoreID());
-            // Serial.print(" delay ");
-            // Serial.println((int)(millis() - timeStamp));
-
             timeStamp = millis();
         }
         espDelay(1000);
-        //for(;;){
-        //digitalWrite(led2, HIGH);
-        //digitalWrite(led2, LOW);
-        //espDelay(1000);
-        //}
     }
     vTaskDelete( NULL );
 }
