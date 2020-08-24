@@ -4,7 +4,9 @@
 
 ## Goal
 
-Gestrue recongition glove
+Gestrue Automation Glove
+- mouse
+- VR interface
 
 ## Everything in progress ..
 
@@ -15,7 +17,7 @@ Gestrue recongition glove
 - [x] #2 ESP32
 - [x] #2 display (SSD1306)
 - [x] wireless communication over BT modules (BLE04?), etc.
-- [ ] create performance friendly protocol for communication between devices
+- [x] create performance friendly protocol for communication between devices
 - [ ] fix sensors offsets
 - [ ] ...
 
@@ -24,10 +26,10 @@ Gestrue recongition glove
 - [x] basic visualization
 - [x] basic web app sketch
 - [x] POC of gesture recognition
-- [ ] TODO web app..
-- [ ] using WebUSB or similar...  
-- [ ] configurable gesture recognition (with machine learning, etc.)
-- [ ] User Experience (in progress in web app)
+- [x] TODO web app..
+- [x] using WebUSB or similar...  
+- [x] configurable gesture recognition
+- [x] User Experience (in progress in web app)
 - [ ] Code refactoring (3+ times)
 
 More specific info can be found in team [trello]( https://trello.com/b/3HKvK85J/gag)
@@ -41,6 +43,10 @@ More specific info can be found in team [trello]( https://trello.com/b/3HKvK85J/
 
 Some basic [setup notes](./data/docu/setupInfo.md)
 
+### Sales notes
+
+Wanna buy? Use [patreon](https://www.patreon.com/gesture_automation_glove) or contact me <prusa.vojtech@gmail.com>
+
 ### Issues
 
-Please use issue
+Please use Issues
