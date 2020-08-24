@@ -86,6 +86,7 @@ uint8_t packetSizeS = MPU6050_FIFO_PACKET_SIZE; // expected DMP packet size (def
 uint8_t packetSizeM = MPU9150_FIFO_PACKET_SIZE; // expected DMP packet size (default is 42 bytes)
 uint16_t fifoCount;  // count of all bytes currently in FIFO
 
+#define SEND_ACC
 #ifdef SLAVE_HAND
 uint8_t cmdPacket[CMD_PACKET_LENGTH] = {'c', 0, 0, 0, 0, 0, 0, '\r', '\n'};
 
@@ -253,7 +254,7 @@ float Mxyz[3];
         // M
         // {507,1346,1743,20,26,-19},
         {507,1346,1743,20,26,-19},
-        // R
+        // L
         //{-1397,525,919,-1295,2057,-509},
         //{-1397,525,919,-3000,2057,-509},
         //{-1448, 453, 1111, -1379,1980,-514},
@@ -261,12 +262,24 @@ float Mxyz[3];
         // {1578,356,1180,-1630,1975, -200}, // 469
         //{-1584, 495, 1004, -1326, 2093, -495},
         // !!! One sensors's axis is broken... TODO replace sensor ...
-        {-1611, 466, 1081, -1468, 2020, -497},
+        // Sensor readings with offsets:	-190	195	16692	-5	5	-1
+        //Your offsets:	-1680	1199	1546	24	-11	0
+        // {199, -379, 1234, -168, -264, -637},
+
+        // Sensor readings with offsets:	-744	1000	12955	0	0	49
+        // Your offsets:	199	-379	1234	-168	-264	-637
+        // {-1680, 1199, 1546, -24, 11, -0},
+        // Sensor readings with offsets:	-520	-384	16725	-5	5	1
+        // Your offsets:	-3208	-1979	1487	47	-22	0
+
+        {-3208, -1979, 1487, 47, -22, 0},
+        // R
+        //        {-1611, 466, 1081, -1468, 2020, -497},
         //  {-1650,1000,-500,0,0,0}, // 469
         //{19440,-13312,2176,280,-144,5144}, // 469
         //{0,0,0,0,0,0},
-        // L
         {-1802,1287,1493,35,-19,6},
+        
         // W
         //{0,0,0,0,0,0}};
         // {500,500,500,0,0,0}};
@@ -277,6 +290,7 @@ float Mxyz[3];
         // {-127, -263, 1133, -511, -429, -1933}
         {-107, -183, 539, -13, -72, -588}
         // Your offsets:	-123	-224	707	-70	-85	-1441
+
         };
 #endif
 
@@ -340,11 +354,9 @@ void setupSensors(){
     for (int i = FIRST_SENSOR; i <= LAST_SENSOR; i++) {
         selectedSensor = (Sensor) i;
         enableSingleMPU(selectedSensor);
+        gyros[selectedSensor].mpu = new MPU6050_MPU9150(MPU6050_MPU9150_ADDRESS_AD0_LOW);//   0x68 / 0x69
         if(i == HP) {
-            gyros[selectedSensor].mpu = new MPU6050_MPU9150(MPU6050_MPU9150_ADDRESS_AD0_LOW);//   0x68 / 0x69
             gyros[selectedSensor].mpu->isMPU9150 = true;
-        } else {
-            gyros[selectedSensor].mpu = new MPU6050_MPU9150(MPU6050_MPU9150_ADDRESS_AD0_LOW); //   0x68 / 0x69
         }
 
         int selectorOffsettedPin = selectSingleMPU(i);
@@ -360,7 +372,6 @@ void setupSensors(){
         initMPUAndDMP(1, i);
         
         MASTER_SERIAL_NAME.println(F("\n\n"));
-
     }
 }
 
@@ -485,9 +496,10 @@ void automaticFifoReset() {
         // idk, offsets registeres do not work ...
         if(i == HP && now - lastTime > 1000){
             MPU6050_MPU9150 mpu = *gyros[selectedSensor].mpu;
-            mpu.setXGyroOffset(35);
-            mpu.setYGyroOffset(-35);
-            mpu.setZGyroOffset(40); // 12?
+            // mpu.setXGyroOffset(35);
+            // mpu.setYGyroOffset(-35);
+            // mpu.setZGyroOffset(40); // 12?
+            
             lastTime=now;
         }
     }
@@ -518,7 +530,7 @@ void sendDataRequest(int selectedSensor) {
 void getMPU9150Data(MPU6050_MPU9150 * mpu) {
     int16_t ax, ay, az;
     int16_t gx, gy, gz;
-    int16_t   mx, my, mz;
+    int16_t mx, my, mz;
     
     uint16_t qI[4];
 
@@ -532,10 +544,50 @@ void getMPU9150Data(MPU6050_MPU9150 * mpu) {
     // 8192 16384 32768 65536
 
     #define offsetDown 16384
+    float Gxyz_prev[3];
+    Gxyz_prev[0] = Gxyz[0];
+    Gxyz_prev[1] = Gxyz[1];
+    Gxyz_prev[2] = Gxyz[2];
+
     Gxyz[0] += (((float) gx / (offsetDown)) * 2);
     Gxyz[1] += (((float) gy / (offsetDown)) * 2);
     Gxyz[2] += (((float) gz / (offsetDown)) * 2);
    
+    // Gxyz[0] -= -0.020630f;
+    // Gxyz[1] -= 0.014893f;
+    // Gxyz[2] -= -0.0185f;
+    
+    // TODO static diff
+    float Gxyz_diff[3];
+    Gxyz_diff[0] = Gxyz[0] - Gxyz_prev[0];
+    Gxyz_diff[1] = Gxyz[1] - Gxyz_prev[1];
+    Gxyz_diff[2] = Gxyz[2] - Gxyz_prev[2];
+
+    MPU9150_DEBUG_PRINT(F(" Gxyz_diff x: "));    
+    MPU9150_DEBUG_PRINTF(Gxyz_diff[0], 6);    
+    MPU9150_DEBUG_PRINT(F(" y: "));    
+    MPU9150_DEBUG_PRINTF(Gxyz_diff[1], 6);    
+    MPU9150_DEBUG_PRINT(F(" z: "));    
+    MPU9150_DEBUG_PRINTF(Gxyz_diff[2], 6); 
+   
+    /*
+    if(abs(Gxyz_diff[0]) < 0.03f) {
+        Gxyz[0] = Gxyz_prev[0];
+    }else{
+        Gxyz[0] -= -0.020630f;
+    }
+    if(abs(Gxyz_diff[1]) < 0.03f) {
+        Gxyz[1] = Gxyz_prev[1];
+    }else{
+        Gxyz[1] -= 0.014893f;
+    }
+    if(abs(Gxyz_diff[2]) < 0.03f) {
+        Gxyz[2] = Gxyz_prev[2];
+    }else{
+        Gxyz[2] -= -0.0185f;
+    }
+    */
+
     MPU9150_DEBUG_PRINT(F(" Gxyz x: "));    
     MPU9150_DEBUG_PRINTF(Gxyz[0], 6);    
     MPU9150_DEBUG_PRINT(F(" y: "));    
@@ -591,7 +643,6 @@ void getMPU9150Data(MPU6050_MPU9150 * mpu) {
     
     fifoBuffer[9] = qI[2] & 0xFF;
     fifoBuffer[8] = qI[2] >> 8;
-    
 
     fifoBuffer[13] = qI[3] & 0xFF;
     fifoBuffer[12] = qI[3] >> 8;
@@ -615,9 +666,10 @@ bool loadDataFromFIFO(bool forceLoad) {
                 uint8_t res = mpu.dmpGetQuaternion(newQ,fifoBuffer);
                 // GAG_DEBUG_PRINT("res: ");
                 // GAG_DEBUG_PRINTLN(res);
-
                 //  fmod(2.*acos(A.dot(B)),2.*PI);
                 newQ->normalize();
+                // GAG_DEBUG_PRINTLN("DBL: ");
+
                 if(gyros[selectedSensor].debugDiff && gyros[selectedSensor].q != nullptr) {
                 // if(gyros[selectedSensor].q != nullptr) {
                     double dbl = fmod(2.*acos(newQ->dot(gyros[selectedSensor].q)),2.*PI);
@@ -658,11 +710,6 @@ bool loadDataFromFIFO(bool forceLoad) {
                     GAG_DEBUG_PRINT(" z:");
                     if(newQ->z - gyros[selectedSensor].q->z >= 0){GAG_DEBUG_PRINT(" ");};
                     GAG_DEBUG_PRINTLNF(newQ->z - gyros[selectedSensor].q->z, 6);
-                    
-                    //gyros[selectedSensor].
-                    // gyros[selectedSensor].mpu->
-                    // mpu.
-                    
                 }
                 gyros[selectedSensor].q = newQ;
                 //mpu.resetFIFO();
@@ -671,7 +718,7 @@ bool loadDataFromFIFO(bool forceLoad) {
             }
         }
     } else {
-        forceLoad = true;
+        // forceLoad = true;
         if(!gyros[selectedSensor].hasDataReady || forceLoad) {
             getMPU9150Data(gyros[selectedSensor].mpu);
             gyros[selectedSensor].hasDataReady=true;
@@ -688,10 +735,10 @@ void writePacket() {
     if(!gyros[selectedSensor].alreadySentData && gyros[selectedSensor].hasDataReady) {
         fifoToPacket(fifoBuffer, dataPacket, selectedSensor);
         // hotfix of broken sensor's z-axis
-        if(selectedSensor == 3) { // TODO fix names
-            dataPacket[9] = gyros[4].fifoBuffer[12];
-            dataPacket[10] = gyros[4].fifoBuffer[13];
-        }
+        // if(selectedSensor == 3) { // TODO fix names
+            // dataPacket[9] = gyros[4].fifoBuffer[12];
+            // dataPacket[10] = gyros[4].fifoBuffer[13];
+        // }
         #ifdef USE_BT_GATT_SERIAL
             MASTER_SERIAL_NAME.write(dataPacket, PACKET_LENGTH);
             //#define SEND_DATA_ALSO_OVER_SERIAL
@@ -752,6 +799,8 @@ void loadDataAndSendPacket() {
 void execCommand(/*const byte * ch */) {
     // {'c', 0, 0, 0, 0, 0, 0, '\r', '\n'};
     // {'C', 0, 0, 0, 0, 0, 0, '\r', '\n'};
+    // calibration
+    // {'C', 'a', 0, 0, 0, 0, 0, '\r', '\n'};
 
     //cmdPacket[1] = *ch;
     GAG_DEBUG_PRINT("execCommand: ");
@@ -877,7 +926,7 @@ void execCommand(/*const byte * ch */) {
                     // delay(100);
                 break;
                 }
-            enableSingleMPU(selectedSensorBkp);
+                enableSingleMPU(selectedSensorBkp);
             }
             break;
         case CMD_SET_SENSOR_DEBUG_FLAG:{
@@ -885,14 +934,14 @@ void execCommand(/*const byte * ch */) {
                 if(sensorIndex >= 48) {sensorIndex-=48;}
                 if(sensorIndex > 5) {sensorIndex -=5;}
                 
-                if(cmdPacket[3] == 'T'){
-                    GAG_DEBUG_PRINT("Enable");
+                if(cmdPacket[3] == 'T') {
+                    GAG_DEBUG_PRINT("En");
                     gyros[sensorIndex].debugDiff = true;
-                }else {
-                    GAG_DEBUG_PRINT("Disable");
+                } else {
+                    GAG_DEBUG_PRINT("Dis");
                     gyros[sensorIndex].debugDiff = false;
                 }
-                GAG_DEBUG_PRINT("debug for sensor: ");
+                GAG_DEBUG_PRINT("able debug for sensor: ");
                 GAG_DEBUG_PRINTLN(sensorIndex);
             }
             break;
@@ -904,7 +953,7 @@ void execCommand(/*const byte * ch */) {
                 uint8_t sensorIndex = cmdPacket[2];
                 uint8_t selectedSensorBkp = selectedSensor;
                 if(sensorIndex >= 48) {sensorIndex-=48;}
-                if(sensorIndex > 5) {sensorIndex -=5;}
+                if(sensorIndex > 5) {sensorIndex = sensorIndex % 6;}
                 enableSingleMPU(sensorIndex);
                 GAG_DEBUG_PRINT("Selected: ");
                 GAG_DEBUG_PRINTLN(sensorIndex);

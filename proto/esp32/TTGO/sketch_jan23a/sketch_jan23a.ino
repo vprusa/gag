@@ -2,8 +2,9 @@
  * Copytright Vojtěch Průša | prusa.vojtech@gmail.com 
  * 
  * TODO: 
- * - modularize and librarize
+ * - modularize and librarize 
  * - add macros for switching modules on/off
+ * - would not it be nice to have a script that extracts code from examples and puts them together ...
 */
 
 #include <TFT_eSPI.h>
@@ -150,6 +151,8 @@ uint8_t teapotPacket[14] = { '$', 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0x00, 0x00, '\r'
 
 #define MPU25_SDA 21
 #define MPU25_SCL 22
+
+uint16_t SDAs[] = {21, 17}; // TODO Where did Bimbo the Elephant lose the list of working SDA pins?
 
 void setup_gy25() {
   // initialize serial communication
@@ -741,6 +744,8 @@ void loop_cube() {
     espDelay(14);
 }
 
+int offsetX = 0;
+int offsetY = 100;
 
 /***********************************************************************************************************************************/
 void RenderImage( void) {
@@ -748,15 +753,14 @@ void RenderImage( void) {
   // in here is the only code actually interfacing with the OLED. so if you use a different lib, this is where to change it.
 
   for (int i = 0; i < OldLinestoRender; i++ ) {
-    tft.drawLine(ORender[i].p0.x, ORender[i].p0.y, ORender[i].p1.x, ORender[i].p1.y, BLACK); // erase the old lines.
+    tft.drawLine(ORender[i].p0.x, ORender[i].p0.y+offsetY, ORender[i].p1.x, ORender[i].p1.y+offsetY, BLACK); // erase the old lines.
   }
-
 
   for (int i = 0; i < LinestoRender; i++ ) {
     uint16_t color = TFT_BLUE;
     if (i < 4) color = TFT_RED;
     if (i > 7) color = TFT_GREEN;
-    tft.drawLine(Render[i].p0.x, Render[i].p0.y, Render[i].p1.x, Render[i].p1.y, color);
+    tft.drawLine(Render[i].p0.x, Render[i].p0.y+offsetY, Render[i].p1.x, Render[i].p1.y+offsetY, color);
   }
   OldLinestoRender = LinestoRender;
 }
@@ -783,6 +787,12 @@ void SetVars(void) {
   _cz = cos(Zan2);
 
   // https://en.wikipedia.org/wiki/3D_projection
+  // extract partial multiplication from camera transformation matrix
+  // and recalc these matrix multiplications (wolframalpha)
+  // {{1, 0, 0},{0, cos(d_x), sin(d_x)},{0,-sin(d_x),cos(d_x)}} * {{cos(d_y),0,-sin(d_y)},{0,1,0},{sin(d_y),0,cos(d_y)}} * {{cos(d_z), sin(d_z),0},{-sin(d_z),cons(d_z),0},{0,0,1}}\
+  // simplify to
+  // {{1, 0, 0},{0, cosdx, sindx},{0,-sindx,cosdx}} * {{cosdy,0,-sindy},{0,1,0},{sindy,0,cosdy}} * {{cosdz, sindz,0},{-sindz,cosdz,0},{0,0,1}}
+  // and write down as ... 
 
   xx = (_cy*_cz);
   xy = _cy*_sz;
@@ -1196,7 +1206,6 @@ void initGrid();
 void drawGrid();
 
 void loop_life() {
-
   //Display a simple splash screen
   tft.fillScreen(TFT_BLACK);
   tft.setTextSize(2);
@@ -1322,14 +1331,18 @@ void loop_gy25_cube(){
   Xan = -ypr[2]* 180 / M_PI;
   Yan = -ypr[1]* 180 / M_PI;
   Zan = -ypr[0]* 180 / M_PI;
-
   // prevents overflow.
   Xan = Xan % 360; 
   Yan = Yan % 360;
   Zan = Zan % 360; 
 
-  // Zan = ypr[2]*100;
-  // Zoff = ypr[2]*1000;
+  if(Xan >= 90){
+    Yan=180-Yan;
+    Zan=180-Zan;
+  }else if(Xan < -90){
+    Yan+=180;
+  }
+ 
   Zoff=500;
   
   for (int i = 0; i < LinestoRender ; i++)

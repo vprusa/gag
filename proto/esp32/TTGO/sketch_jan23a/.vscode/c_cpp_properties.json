@@ -6,7 +6,8 @@
                 "/home/vprusa/.arduino15/packages/esp32/tools/**",
                 "/home/vprusa/.arduino15/packages/esp32/hardware/esp32/1.0.2/**",
                 "${workspaceFolder}/**",
-                "/home/vprusa/Arduino/libraries/**"
+                "/home/vprusa/Arduino/libraries/**",
+                "/home/vprusa/.arduino15/packages/esp32/hardware/esp32/1.0.3-rc1/**"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",
