@@ -4,15 +4,15 @@ Read the joystick. Only print values that change.
 
 TODO .. like everythin ...
 */
-int analogInputPinX   = 27;
-int analogInputPinY   = 25;
-int digitalInputPin  = 12;
+int analogInputPinX   = 32;
+int analogInputPinY   = 34;
+int digitalInputPin  = 35;
 int skipDiff = 70;
 int wait = 1000; 
-long analogInputValX;
-long analogInputValY;
-long last_analogInputValX;
-long last_analogInputValY;
+int analogInputValX;
+int analogInputValY;
+int last_analogInputValX;
+int last_analogInputValY;
 int digitalInputVal;
 
 void setup()
@@ -21,7 +21,7 @@ void setup()
   pinMode(analogInputPinY,   INPUT);
   pinMode(digitalInputPin,   INPUT);
   
-  Serial.begin(9600);  // ...set up the serial ouput on 0004 style
+  Serial.begin(115200);  // ...set up the serial ouput on 0004 style
 }
 
 void loop()
