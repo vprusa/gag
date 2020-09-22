@@ -234,5 +234,5 @@ void loop() {
 //      digitalWrite(LED, LOW);
 //    }
   }
-  delay(500);
+  delay(20);
 }
