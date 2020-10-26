@@ -290,8 +290,7 @@ float Mxyz[3];
         // {-127, -263, 1133, -511, -429, -1933}
         {-107, -183, 539, -13, -72, -588}
         // Your offsets:	-123	-224	707	-70	-85	-1441
-
-        };
+    };
 #endif
 
 // start of code for measuring offsets 
@@ -1018,7 +1017,7 @@ uint8_t dataPacket[PACKET_LENGTH] = {'$', 0x99, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             
             MASTER_SERIAL_NAME.write(dataPacket, PACKET_LENGTH);
             MASTER_SERIAL_NAME.write((byte)0x00);    
-            dataPacket[PACKET_COUNTER_POSITION]++;
+            // dataPacket[PACKET_COUNTER_POSITION]++;
         #endif
         
         return;
