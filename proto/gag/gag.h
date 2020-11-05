@@ -374,7 +374,6 @@ void setupSensors(){
     }
 }
 
-
 /**
  * It has to happen in 2 loops because of the need to avoid having multiple uncertain choices
 */
