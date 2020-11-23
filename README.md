@@ -32,6 +32,11 @@ Gestrue Automation Glove
 - [x] User Experience (in progress in web app)
 - [ ] Code refactoring (3+ times)
 
+
+Multifunctinal diagram with notes
+![multifun-diagram](./data/docs/multifun-diagram.png)
+[latest version](https://app.diagrams.net/#G1gAnSopoRvAL5JQSFl59_ViQZIJ3lHGMG)
+
 More specific info can be found in team [trello]( https://trello.com/b/3HKvK85J/gag)
 
 ![Prototype #3 with display](./data/docs/protoNo3PairWithDisplay.jpg)
