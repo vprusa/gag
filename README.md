@@ -35,7 +35,7 @@ Gestrue Automation Glove
 
 Multifunctinal diagram with notes
 ![multifun-diagram](./data/docs/multifun-diagram.png)
-[latest version](https://app.diagrams.net/#G1gAnSopoRvAL5JQSFl59_ViQZIJ3lHGMG)
+[latest version](https://drive.google.com/file/d/1gAnSopoRvAL5JQSFl59_ViQZIJ3lHGMG/view)
 
 More specific info can be found in team [trello]( https://trello.com/b/3HKvK85J/gag)
 
