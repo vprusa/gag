@@ -12,7 +12,7 @@ ANDROID_STUDIO_IDE_PATH=~/IDE/android-studio/bin/studio.sh
 
 echo "Opening temrinator, goto"
 echo "~/workspace/p/notes/work/projects/arduino/gag/gag-web"
-cd ${PROJECT_PATH} && terminator -e "echo '~/workspace/p/notes/work/projects/arduino/gag/gag-web' && echo 'mvn wildfly:start wildfly:undeploy install wildfly:deploy -DskipTests=true -Dcheckstyle.skip | tee app.log ' && echo 'mvn clean wildfly:undeploy install wildfly:deploy -DskipTests=true -Dcheckstyle.skip | tee app.log' && echo './config/startKC.sh' && echo './wildfly-home/bin/standalone.sh --debug' && echo 'cd services && mvn clean install test -Dtest=RecognitionTest -Dcheckstyle.skip | tee test.log' && zsh " & disown
+cd ${PROJECT_PATH} && terminator -e "echo '~/workspace/p/notes/work/projects/arduino/gag/gag-web' && echo 'mvn wildfly:start wildfly:undeploy install wildfly:deploy -DskipTests=true -Dcheckstyle.skip | tee app.log ' && echo 'mvn clean wildfly:undeploy install wildfly:deploy -DskipTests=true -Dcheckstyle.skip | tee app.log' && echo './config/startKC.sh' && echo './wildfly-home/bin/standalone.sh --debug' && echo 'cd services && mvn clean install test -Dtest=RecognitionTest -Dcheckstyle.skip | tee test.log' && echo '/home/vprusa/workspace/school/MUNI/MGR/1ZS/PA165-Vyvoj-systemu-v-jazyce-Java/project/git/rms' && zsh " & disown
 
 echo "BASH_SOURCE[0]: ${BASH_SOURCE[0]}"
 PROCESSING_PROJECT_PATH=${THIS_DIR_PATH}/proto/processing/MPUTeapot/MPUTeapot.pde
@@ -28,3 +28,6 @@ code ${CODE_PROJECT_PATH}
 ${IDEA_IDE_PATH} & disown
 ${IDEA_WEB_IDE_PATH} & disown
 ${ANDROID_STUDIO_IDE_PATH} & disown 
+
+#echo "/home/vprusa/workspace/school/MUNI/MGR/1ZS/PA165-Vyvoj-systemu-v-jazyce-Java/project/git/rms"
+
