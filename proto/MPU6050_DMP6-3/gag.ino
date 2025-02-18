@@ -33,6 +33,10 @@
     CharCallbacks * cclbk;
 #endif
 
+#ifdef MASTER_HAND
+extern bool useSlaveHand = false;
+#endif
+
 void setup() {
     
     // WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
@@ -43,7 +47,10 @@ void setup() {
     //#ifdef MASTER_HAND
     #ifdef GAG_DEBUG 
         Serial.begin(115200);
+    #elif SEND_DATA_ALSO_OVER_SERIAL 
+        Serial.begin(115200);
     #endif
+    
 
     #ifdef USE_BT_GATT_SERIAL
         sclbk = new ServerCallbacks();
@@ -135,11 +142,14 @@ void setup() {
         MASTER_SERIAL_NAME.print(selectorOffsettedPin);
         MASTER_SERIAL_NAME.println(F(""));
         
-        initMPUAndDMP(1);
+        initMPUAndDMP(1, i);
+        
         MASTER_SERIAL_NAME.println(F("\n\n"));
 
     }
+    #ifdef MEASURE_OFFSETS
     calibrationDone = true;
+    #endif
     timeNow = millis(); //Start counting time in milliseconds
 
     //delay(3000);
@@ -222,8 +232,11 @@ void loop() {
 #endif
 
 #ifdef MASTER_HAND
-    //masterHandDataRequestHandler();
-    //loadSlaveHandData();
+    if(useSlaveHand) {
+        masterHandDataRequestHandler();
+        loadSlaveHandData();
+    }
+    
     gyros[selectedSensor].alreadySentData = false;
     //writePacket();
     loadDataAndSendPacket();
@@ -238,7 +251,9 @@ void loop() {
 #endif
     automaticFifoReset();
 #ifdef MASTER_HAND
-    //loadSlaveHandData();
+    if(useSlaveHand) {
+        loadSlaveHandData();
+    }
 #endif
 
 }

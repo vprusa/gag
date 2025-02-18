@@ -6,13 +6,12 @@
 
 #ifndef _GAG_H_
 #define _GAG_H_
-
-#ifdef MEASURE_OFFSETS
 #include "definitions.h"
-#endif
 
 #include "MPU6050_MPU9250_9Axis_MotionApps41.h"
+#ifdef MEASURE_OFFSETS
 #include "gag_offsetting.h"
+#endif
 
 #ifdef USE_DISPLAY
 #include "gag_display.h"
@@ -73,41 +72,9 @@
 #endif
 
 #ifdef USE_BT_GATT_SERIAL
-
-/*
-class ServerCallbacks: public BLEServerCallbacks {            
-    void onConnect(BLEServer* pServer) {
-        GAG_DEBUG_PRINTLN("onConnect");
-        MASTER_SERIAL_NAME.deviceConnected = true;
-    };
-
-    void onDisconnect(BLEServer* pServer) {
-        GAG_DEBUG_PRINTLN("onDisconnect");
-        MASTER_SERIAL_NAME.deviceConnected = false;
-    }
-};
-
-class CharCallbacks: public BLECharacteristicCallbacks {
-    void onWrite(BLECharacteristic *pCharacteristic) {
-    GAG_DEBUG_PRINTLN("onWrite");
-    std::string rxValue = pCharacteristic->getValue();
-    //timeNow = micros();
-    
-    if (rxValue.length() > 0) {
-        GAG_DEBUG_PRINTLN(rxValue.c_str());
-        for (int i = 0; i < rxValue.length(); i++)
-            SLAVE_SERIAL_NAME.print(rxValue[i]);
-            //GAG_DEBUG_PRINT(reinterpret_cast<uint8_t>([i]));
-        }
-    }
-};*/
-
-
-
 ServerCallbacks::ServerCallbacks(void){
     GAG_DEBUG_PRINTLN("ServerCallbacks");
     //MASTER_SERIAL_NAME.deviceConnected = true;
-
 }
 
 ServerCallbacks::~ServerCallbacks(void){
@@ -148,12 +115,6 @@ void CharCallbacks::onWrite(BLECharacteristic *pCharacteristic) {
         }
     }
 };
-
-
-/*uint8_t* string2char(String str){
-    return reinterpret_cast<uint8_t*>(&str[0]);
-}*/
-
 #endif
 
 
@@ -256,7 +217,18 @@ void loadDataAndSendPacket();
 #endif
 
 #ifdef MASTER_HAND
-//void loadSlaveHandData() {
+    extern bool useSlaveHand;
+#endif
+
+#ifdef SET_OFFSETS
+    // ax ay az gx gy gz
+    int sensorsOffsets[6][6] = {
+        {-2772,479,2063,119,-49,120},
+        {-3678,1461,1496,46,-43,-3},
+        {507,1346,1743,20,26,-19},
+        {-1397,525,919,-1295,2057,-509},
+        {-1802,1287,1493,35,-19,6},
+        {0,0,0,0,0,0}};
 #endif
 
 //int selectSingleMPU(int i);
@@ -324,7 +296,7 @@ void enableSingleMPU(int sensorToEnable) {
     }
 }
 
-int initMPUAndDMP(int attempt) {
+int initMPUAndDMP(int attempt, int i) {
     if (attempt <= 0) {
         return 0;
     }
@@ -349,10 +321,20 @@ int initMPUAndDMP(int attempt) {
     // lets ignore this considering we want realtive values anyway
     
     #ifdef MEASURE_OFFSETS
-    if(!calibrationDone) {
+    // TODO fix measuring offsets for HP
+    if(!calibrationDone && i != HP) {
         measureOffsets(&mpu);
     }
     #endif
+    #ifdef SET_OFFSETS
+        mpu.setXAccelOffset(sensorsOffsets[i][0]);
+        mpu.setYAccelOffset(sensorsOffsets[i][1]);
+        mpu.setZAccelOffset(sensorsOffsets[i][2]);
+        mpu.setXGyroOffset(sensorsOffsets[i][3]);
+        mpu.setYGyroOffset(sensorsOffsets[i][4]);
+        mpu.setZGyroOffset(sensorsOffsets[i][5]);
+    #endif
+
     // make sure it worked (returns 0 if so)
     MASTER_SERIAL_NAME.print(F("Enabling DMP... "));
     MASTER_SERIAL_NAME.println(selectedSensor);
@@ -446,7 +428,6 @@ void sendDataRequest(int selectedSensor) {
 }
 #endif
 
-
 void getMPU9250Data(MPU6050_MPU9250 * mpu) {
     int16_t ax, ay, az;
     int16_t gx, gy, gz;
@@ -509,7 +490,8 @@ void getMPU9250Data(MPU6050_MPU9250 * mpu) {
     qI[2] = (uint16_t)(q[2]*offsetUp);
     qI[3] = (uint16_t)(q[3]*offsetUp);
     */
-    #define offsetUp 1024
+    //#define offsetUp 1024
+    #define offsetUp 2048
     
     qI[0] = (uint16_t)((cy * cp * cr + sy * sp * sr)*offsetUp);
     qI[1] = (uint16_t)((cy * cp * sr - sy * sp * cr)*offsetUp);
@@ -578,7 +560,10 @@ void writePacket() {
         fifoToPacket(fifoBuffer, teapotPacket, selectedSensor);
         #ifdef USE_BT_GATT_SERIAL
             MASTER_SERIAL_NAME.write(teapotPacket, PACKET_LENGTH);
-
+            #ifdef SEND_DATA_ALSO_OVER_SERIAL
+                Serial.write(teapotPacket, PACKET_LENGTH);
+                Serial.write((byte)0x00);
+            #endif
             //if (deviceConnected) {
                 //MASTER_SERIAL_NAME.println(str);
                 //pTxCharacteristic->setValue(string2char(str), str.length());
@@ -645,9 +630,19 @@ void execCommand(byte ch){
         case CMD_RESTART:
             setup();
             break;
+        #ifdef MASTER_HAND
+            case CMD_READ_SLAVE:
+                useSlaveHand = true;
+                break;
+            case CMD_DONT_READ_SLAVE:
+                useSlaveHand = false;
+                break;
+        #endif
         default:
             break;
     }
+    #ifdef MEASURE_OFFSETS
+
     if(ch == CMD_RESTART_WITH_CALIBRATION_AND_SEND) {
 /*   
 uint8_t teapotPacket[PACKET_LENGTH] = {'$', 0x99, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -657,7 +652,6 @@ uint8_t teapotPacket[PACKET_LENGTH] = {'$', 0x99, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 0x00, 0x00, '\r', '\n'};
 #else
 */
-        
         teapotPacket[3] = 'g';
         teapotPacket[4] = 'g';
         teapotPacket[5] = gx_offset & 0xFF;
@@ -687,6 +681,8 @@ uint8_t teapotPacket[PACKET_LENGTH] = {'$', 0x99, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         
         return;
     }
+    #endif
+    
     MASTER_SERIAL_NAME.write(cmdPacket, CMD_PACKET_LENGTH);
     MASTER_SERIAL_NAME.write((byte)0x00);
 }
