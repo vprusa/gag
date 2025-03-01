@@ -12,6 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "definitions.h"
+
+#ifdef MASTER_HAND
+
+
 #include "sdkconfig.h"
 #include <cstdint>
 #include <cstdio>
@@ -70,9 +75,30 @@ bool BluetoothSerial::begin(std::string localName,
     GAG_BT_DEBUG_PRINTLN("createServer");
    
     pServer = BLEDevice::createServer();
+    
+    //pServer->updateConnParams(esp_ble_conn_update_params_t *params);
+    //esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT);
+    // pServer->getAdvertising()->setMinPreferred(0x06);  // Minimum preferred connection interval
+    // pServer->getAdvertising()->setMinPreferred(0x12);  // Maximum preferred connection interval
+
+    esp_ble_conn_update_params_t conn_params = {0};
+
+    conn_params.min_int = 0x10;  // 20ms (recommended: 0x10 to 0x30)
+    conn_params.max_int = 0x30;  // 60ms (recommended: 0x10 to 0x30)
+    conn_params.latency = 0;     // No slave latency
+    conn_params.timeout = 600;   // 6 seconds supervision timeout
+
+    uint16_t conn_id = pServer->getConnId(); // Get connection ID if available
+    if (conn_id) {
+        esp_ble_gap_update_conn_params(&conn_params);
+        GAG_DEBUG_PRINTLN("Connection parameters updated");
+    }
+
+
     delay(1);
     GAG_BT_DEBUG_PRINTLN("pServer - setCallbacks");
     pServer->setCallbacks(pServerCallbacks);
+    
 
     // Create the BLE Service
     GAG_BT_DEBUG_PRINTLN("createService");
@@ -267,3 +293,5 @@ void BluetoothSerial::loop() {
         oldDeviceConnected = deviceConnected;
     }
 }
+
+#endif

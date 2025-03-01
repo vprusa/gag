@@ -11,9 +11,11 @@
 #include "definitions.h"
 
 #include "MPU6050_MPU9150_9Axis_MotionApps41.h"
+// #include "MPU6050_9Axis_MotionApps41.h"
 #ifdef MEASURE_OFFSETS
 #include "gag_offsetting.h"
 #endif
+// #define USE_BT_GATT_SERIAL
 
 #ifdef USE_DISPLAY
 #include "gag_display.h"
@@ -55,13 +57,15 @@
     #define MASTER_SERIAL_NAME Serial
     #define MASTER_SERIAL_BAUD 57600
 
+    // #define LIB_SW_SERIAL
+    // #define LIB_ALT_SW_SERIAL
+
     #ifdef LIB_SW_SERIAL
         #include <SoftwareSerial.h>
     #endif
     #ifdef LIB_ALT_SW_SERIAL
         #include <AltSoftSerial.h>
     #endif
-
     // TODO check if using RX_MASTER=13 or any other SPI pin is faster? 
     #define RX_MASTER 8
     #define TX_MASTER 9
@@ -120,13 +124,29 @@ extern bool deviceConnected;
 void ServerCallbacks::onConnect(BLEServer* pServer) {
     GAG_DEBUG_PRINTLN("onConnect");
     //MASTER_SERIAL_NAME.deviceConnected = true;
+
     deviceConnected = true;
 };
 
 void ServerCallbacks::onDisconnect(BLEServer* pServer) {
     GAG_DEBUG_PRINTLN("onDisconnect");
-    //MASTER_SERIAL_NAME.deviceConnected = false;
+    // MASTER_SERIAL_NAME.deviceConnected = false;
     deviceConnected = false;
+    // Try to restart advertising to allow reconnection
+    // Restart advertising to allow reconnection
+    // BLEAdvertising *pAdvertising = pServer->getAdvertising();
+    // pAdvertising->start();
+
+    //BLEDevice::deinit();  // Forcefully reset BLE
+    //delay(100);           // Small delay before restarting
+    //BLEDevice::init("GAGGM");
+
+    BLEDevice::deinit();
+    delay(100);
+    BLEDevice::init("GAGGM");
+
+    pServer->getAdvertising()->start();
+    GAG_DEBUG_PRINTLN("Restarting BLE Advertising...");
 }
 
 
@@ -341,7 +361,7 @@ uint8_t selectSingleMPU(uint8_t i) {
 
 
 void setupSensors(){
-     // NOTE: 8MHz or slower host processors, like the Teensy @ 3.3v or Ardunio
+    // NOTE: 8MHz or slower host processors, like the Teensy @ 3.3v or Ardunio
     // Pro Mini running at 3.3v, cannot handle this baud rate reliably due to
     // the baud timing being too misaligned with processor ticks. You must use
     // 38400 or slower in these cases, or use some kind of external separate
@@ -525,6 +545,8 @@ void sendDataRequest(int selectedSensor) {
 }
 #endif
 
+
+
 void getMPU9150Data(MPU6050_MPU9150 * mpu) {
     int16_t ax, ay, az;
     int16_t gx, gy, gz;
@@ -561,12 +583,12 @@ void getMPU9150Data(MPU6050_MPU9150 * mpu) {
     Gxyz_diff[1] = Gxyz[1] - Gxyz_prev[1];
     Gxyz_diff[2] = Gxyz[2] - Gxyz_prev[2];
 
-    MPU9150_DEBUG_PRINT(F(" Gxyz_diff x: "));    
-    MPU9150_DEBUG_PRINTF(Gxyz_diff[0], 6);    
-    MPU9150_DEBUG_PRINT(F(" y: "));    
-    MPU9150_DEBUG_PRINTF(Gxyz_diff[1], 6);    
-    MPU9150_DEBUG_PRINT(F(" z: "));    
-    MPU9150_DEBUG_PRINTF(Gxyz_diff[2], 6); 
+    // MPU9150_DEBUG_PRINT(F(" Gxyz_diff x: "));    
+    // MPU9150_DEBUG_PRINTF(Gxyz_diff[0], 6);    
+    // MPU9150_DEBUG_PRINT(F(" y: "));    
+    // MPU9150_DEBUG_PRINTF(Gxyz_diff[1], 6);    
+    // MPU9150_DEBUG_PRINT(F(" z: "));    
+    // MPU9150_DEBUG_PRINTF(Gxyz_diff[2], 6); 
    
     /*
     if(abs(Gxyz_diff[0]) < 0.03f) {
@@ -586,24 +608,24 @@ void getMPU9150Data(MPU6050_MPU9150 * mpu) {
     }
     */
 
-    MPU9150_DEBUG_PRINT(F(" Gxyz x: "));    
-    MPU9150_DEBUG_PRINTF(Gxyz[0], 6);    
-    MPU9150_DEBUG_PRINT(F(" y: "));    
-    MPU9150_DEBUG_PRINTF(Gxyz[1], 6);    
-    MPU9150_DEBUG_PRINT(F(" z: "));    
-    MPU9150_DEBUG_PRINTF(Gxyz[2], 6); 
+    // MPU9150_DEBUG_PRINT(F(" Gxyz x: "));    
+    // MPU9150_DEBUG_PRINTF(Gxyz[0], 6);    
+    // MPU9150_DEBUG_PRINT(F(" y: "));    
+    // MPU9150_DEBUG_PRINTF(Gxyz[1], 6);    
+    // MPU9150_DEBUG_PRINT(F(" z: "));    
+    // MPU9150_DEBUG_PRINTF(Gxyz[2], 6); 
     #define offsetDownQ 16
 
     float yaw = Gxyz[2] / offsetDownQ;
     float pitch = Gxyz[1] / offsetDownQ;
     float roll = Gxyz[0] / offsetDownQ;
 
-    MPU9150_DEBUG_PRINT(F(" ypr y: "));    
-    MPU9150_DEBUG_PRINTF(yaw, 6);    
-    MPU9150_DEBUG_PRINT(F(" p: "));    
-    MPU9150_DEBUG_PRINTF(pitch, 6);    
-    MPU9150_DEBUG_PRINT(F(" r: "));    
-    MPU9150_DEBUG_PRINTF(roll, 6);    
+    // MPU9150_DEBUG_PRINT(F(" ypr y: "));    
+    // MPU9150_DEBUG_PRINTF(yaw, 6);    
+    // MPU9150_DEBUG_PRINT(F(" p: "));    
+    // MPU9150_DEBUG_PRINTF(pitch, 6);    
+    // MPU9150_DEBUG_PRINT(F(" r: "));    
+    // MPU9150_DEBUG_PRINTF(roll, 6);    
 
     #define partition 0.5
     float cy = cos(yaw * partition );
@@ -622,14 +644,14 @@ void getMPU9150Data(MPU6050_MPU9150 * mpu) {
     qI[2] = (uint16_t)((sy * cp * sr + cy * sp * cr) * offsetUp);
     qI[3] = (uint16_t)((sy * cp * cr - cy * sp * sr) * offsetUp);
 
-    MPU9150_DEBUG_PRINT(F(" qI w: "));    
-    MPU9150_DEBUG_PRINT(qI[0]);    
-    MPU9150_DEBUG_PRINT(F(" x: "));    
-    MPU9150_DEBUG_PRINT(qI[1]);    
-    MPU9150_DEBUG_PRINT(F(" y: "));    
-    MPU9150_DEBUG_PRINT(qI[2]);    
-    MPU9150_DEBUG_PRINT(F(" z: "));    
-    MPU9150_DEBUG_PRINTLN(qI[3]);    
+    // MPU9150_DEBUG_PRINT(F(" qI w: "));    
+    // MPU9150_DEBUG_PRINT(qI[0]);    
+    // MPU9150_DEBUG_PRINT(F(" x: "));    
+    // MPU9150_DEBUG_PRINT(qI[1]);    
+    // MPU9150_DEBUG_PRINT(F(" y: "));    
+    // MPU9150_DEBUG_PRINT(qI[2]);    
+    // MPU9150_DEBUG_PRINT(F(" z: "));    
+    // MPU9150_DEBUG_PRINTLN(qI[3]);    
 
     uint8_t *fifoBuffer = gyros[selectedSensor].fifoBuffer; // FIFO storage buffer*/
 
@@ -645,6 +667,85 @@ void getMPU9150Data(MPU6050_MPU9150 * mpu) {
     fifoBuffer[13] = qI[3] & 0xFF;
     fifoBuffer[12] = qI[3] >> 8;
 }
+
+void loadMPU9150Data(MPU6050_MPU9150 *mpu) {
+    int16_t ax, ay, az;
+    int16_t gx, gy, gz;
+    int16_t mx, my, mz;
+    uint16_t qI[4];
+    
+    // Read sensor data
+    mpu->getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
+
+    // constexpr float GYRO_SCALE = 2.0f / 16384.0f;
+    // constexpr float OFFSET_DOWN_Q = 16.0f;
+    // constexpr float PARTITION = 0.5f;
+    // constexpr uint16_t OFFSET_UP = 2048;
+    constexpr float GYRO_SCALE = 2.0f / 32768.0f;  // Smaller increments
+constexpr float OFFSET_DOWN_Q = 32.0f;         // Less drift
+constexpr float PARTITION = 0.25f;             // More stable quaternion calculation
+constexpr uint16_t OFFSET_UP = 4096;           // Higher precision
+ 
+
+    static float Gxyz[3] = {0.0f, 0.0f, 0.0f};
+    float Gxyz_prev[3] = {Gxyz[0], Gxyz[1], Gxyz[2]};
+    
+    // Update gyroscope values
+    Gxyz[0] += gx * GYRO_SCALE;
+    Gxyz[1] += gy * GYRO_SCALE;
+    Gxyz[2] += gz * GYRO_SCALE;
+
+    // Compute the differences for potential correction
+    float Gxyz_diff[3] = {
+        Gxyz[0] - Gxyz_prev[0],
+        Gxyz[1] - Gxyz_prev[1],
+        Gxyz[2] - Gxyz_prev[2]
+    };
+
+    // If needed, apply drift correction
+    constexpr float THRESHOLD = 0.03f;
+    constexpr float CORRECTION[3] = {-0.020630f, 0.014893f, -0.0185f};
+
+    for (int i = 0; i < 3; i++) {
+        if (fabs(Gxyz_diff[i]) < THRESHOLD) {
+            Gxyz[i] = Gxyz_prev[i];
+        } else {
+            Gxyz[i] -= CORRECTION[i];
+        }
+    }
+
+    // Convert gyroscope values to Yaw, Pitch, Roll
+    float yaw = Gxyz[2] / OFFSET_DOWN_Q;
+    float pitch = Gxyz[1] / OFFSET_DOWN_Q;
+    float roll = Gxyz[0] / OFFSET_DOWN_Q;
+
+    // Compute quaternion components
+    float cy = cos(yaw * PARTITION);
+    float sy = sin(yaw * PARTITION);
+    float cp = cos(pitch * PARTITION);
+    float sp = sin(pitch * PARTITION);
+    float cr = cos(roll * PARTITION);
+    float sr = sin(roll * PARTITION);
+
+    // Convert to fixed-point representation
+    qI[0] = static_cast<uint16_t>((cy * cp * cr + sy * sp * sr) * OFFSET_UP);
+    qI[1] = static_cast<uint16_t>((cy * cp * sr - sy * sp * cr) * OFFSET_UP);
+    qI[2] = static_cast<uint16_t>((sy * cp * sr + cy * sp * cr) * OFFSET_UP);
+    qI[3] = static_cast<uint16_t>((sy * cp * cr - cy * sp * sr) * OFFSET_UP);
+
+    // Store data in FIFO buffer
+    uint8_t *fifoBuffer = gyros[selectedSensor].fifoBuffer;
+
+    fifoBuffer[0]  = qI[0] >> 8;
+    fifoBuffer[1]  = qI[0] & 0xFF;
+    fifoBuffer[4]  = qI[1] >> 8;
+    fifoBuffer[5]  = qI[1] & 0xFF;
+    fifoBuffer[8]  = qI[2] >> 8;
+    fifoBuffer[9]  = qI[2] & 0xFF;
+    fifoBuffer[12] = qI[3] >> 8;
+    fifoBuffer[13] = qI[3] & 0xFF;
+}
+
 
 bool loadDataFromFIFO(bool forceLoad) {
     if(selectedSensor != HP) {
@@ -718,7 +819,8 @@ bool loadDataFromFIFO(bool forceLoad) {
     } else {
         // forceLoad = true;
         if(!gyros[selectedSensor].hasDataReady || forceLoad) {
-            getMPU9150Data(gyros[selectedSensor].mpu);
+            //getMPU9150Data(gyros[selectedSensor].mpu);
+            loadMPU9150Data(gyros[selectedSensor].mpu);
             gyros[selectedSensor].hasDataReady=true;
             gyros[selectedSensor].alreadySentData=false;
             return true;
@@ -958,7 +1060,9 @@ void execCommand(/*const byte * ch */) {
                 int16_t limit =  ((static_cast<uint16_t>(cmdPacket[6])) << 8) | cmdPacket[5];
                 GAG_DEBUG_PRINT("limit: ");
                 GAG_DEBUG_PRINTLN(limit);
+                #ifdef MEASURE_OFFSETS
                 measureOffsets(gyros[selectedSensor].mpu, sensorIndex, limit);
+                #endif
                 enableSingleMPU(selectedSensorBkp);
                 setupSensors();
             }
@@ -1112,9 +1216,9 @@ boolean masterHandCommandRequestHandler(
     // if (ch2 != -1) {
         // ch = ch2;
     // }
-
+  
     if (*ch != -1) {
-        // GAG_DEBUG_PRINT(*ch);
+        GAG_DEBUG_PRINT(*ch);
         if(*readAlign<=0) {
             if(*ch == 'C' || *ch == 'c') {
                 GAG_DEBUG_PRINT("received - C|c: ");

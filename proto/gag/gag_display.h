@@ -9,6 +9,7 @@
 
 #include "Wire.h"
 #include <TimeLib.h>
+//#include "SSD1306Wire.h" // legacy include: `#include "SSD1306.h"`
 #include "SSD1306Wire.h" // legacy include: `#include "SSD1306.h"`
 #include "OLEDDisplayUi.h"
 

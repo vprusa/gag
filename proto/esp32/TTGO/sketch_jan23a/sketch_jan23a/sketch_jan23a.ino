@@ -19,6 +19,7 @@
 #include <Button2.h>
 #include "esp_adc_cal.h"
 #include "bmp.h"
+#include "MyComplex.h"
 
 #ifndef TFT_DISPOFF
 #define TFT_DISPOFF 0x28
@@ -47,9 +48,10 @@
 #define MENU_CLOCK 5
 #define MENU_LIFE 6
 #define MENU_FRACTALS 7
-#define MENU_GY25 8
+#define MENU_MANDEL 8
+#define MENU_GY25 9
 
-#define MENU_ITEM_MAX 8
+#define MENU_ITEM_MAX 9
 
 #define BLACK 0x0000
 #define WHITE 0xFFFF
@@ -449,6 +451,8 @@ void zobrazInfo();
 // 120
 #define CELLXY 1
 //2
+#define MANDEL_X 128
+#define MANDEL_Y 240
 
 // 1 x 1 pixel cells, array size = 20480 bytes per array
 //#define GRIDX 160
@@ -568,14 +572,15 @@ int btnRClick = false;
 int btnLClick = false;
 
 boolean inMenu = false;
-int menuItem = 8;
+int menuItem = 9;
 //int menuItem = 7;
-int menuItemDefVal = 7;
+int menuItemDefVal = 8;
 bool menuItemChanged = false;
 bool cubePlaying = false;
 bool clockPlaying = false;
 bool lifePlaying = false;
 bool fractalsPlaying = false;
+bool mandelPlaying = false;
 
 #ifdef USE_DEMO_GY25
 bool gy25Playing = false;
@@ -589,6 +594,7 @@ void cube();
 void play_clock();
 void setup_life();
 void setup_fractals();
+void setup_mandel();
 void SetVars();
 void ProcessLine(struct Line2d *ret, struct Line3d vec);
 void RenderImage();
@@ -768,8 +774,9 @@ void showMenu()
     tft.drawString(" Clock", 25, 69);
     tft.drawString(" Life", 25, 80);
     tft.drawString(" Fractals", 25, 91);
+    tft.drawString(" MandelbrotSet", 25, 102);
 #ifdef USE_DEMO_GY25
-    tft.drawString(" GY25", 25, 101);
+    tft.drawString(" GY25", 25, 113);
 #endif
     tft.setCursor(0, 0);
     tft.drawString(">", 0, (menuItem * 11) + 5); // TODO fix cursor
@@ -859,6 +866,13 @@ void button_init()
                                btnLClick = false;
                                fractalsPlaying = true;
                                setup_fractals();
+                               break;
+                             case MENU_MANDEL:
+                               Serial.println("MandelbrotSet..");
+                               btnRClick = false;
+                               btnLClick = false;
+                               mandelPlaying = true;
+                               setup_mandel();
                                break;
                              case MENU_GY25:
                                Serial.println("GY25..");
@@ -1630,8 +1644,6 @@ void setup_fractals()
   tft.setCursor(0, 0);
 }
 
-
-
 void loop_fractals() {
   KochFractal koch(135, 240); // Assuming screen dimensions
   Serial.println("loop_fractals");
@@ -1647,12 +1659,13 @@ void loop_fractals() {
 
   espDelay(1000);
   // 6 is a limit for math precision
-  for (int i = 0; i < 6; i++) {
+  for (int i = 0; i < 5; i++) {
     tft.fillScreen(TFT_BLACK);
     koch.render();
     koch.nextLevel();
     espDelay(1000); // Slow down the animation
   }
+  tft.fillScreen(TFT_BLACK);
   koch.restart();
 
   fractalsPlaying = false;
@@ -1664,10 +1677,11 @@ void drawGrid();
 
 void initFGrid();
 void drawFGrid();
+
 int mandel(int x, int y) {
   int a=0; int b=0;
   for (int i = 0; i<250; ++i) {
-    // Complex z = z^2 + c
+    // MyComplex z = z^2 + c
     int  t = a*a - b*b;
     b = 2*a*b;
     a = t;
@@ -1682,8 +1696,177 @@ int mandel(int x, int y) {
 }
 
 
-void loop_life()
-{
+void setup_mandel() {
+  //Set up the display
+  // tft.init();
+  //tft.setRotation(3);
+  tft.fillScreen(TFT_BLACK);
+  tft.setTextSize(1);
+  tft.setTextColor(TFT_WHITE);
+  tft.setCursor(0, 0);
+}
+
+//void MandelbrotSet(float x, float y, float cx, float cy, float counter);
+
+// void MandelbrotSet(MyComplex c, MyComplex z = {0, 0}, int counter = 0);
+void MandelbrotSet(MyComplex c, MyComplex z, float counter);
+
+// #define MANDEL_INC_X 1.0
+// #define MANDEL_INC_Y (2.0/3.0)
+// #define MANDEL_INC_X 16.0
+// #define MANDEL_INC_Y 12.0
+// #define MANDEL_INC_X 8.0
+// #define MANDEL_INC_Y 8.0
+
+// #define MANDEL_INC_X 4.0
+// #define MANDEL_INC_Y 3.0
+
+// #define MANDEL_INC_X 16.0
+// #define MANDEL_INC_Y 16.0
+
+#define MANDEL_INC_X 2.0
+#define MANDEL_INC_Y 2.0
+
+#define MANDEL_DIS_X 4
+#define MANDEL_DIS_Y 4
+
+
+uint16_t colorMap(int iteration) {
+    if (iteration == 1000) return tft.color565(0, 0, 0); // Black for inside
+    return tft.color565(iteration % 256, 0, 0); // Red gradient for outside
+}
+
+
+int mandelbrot(float x0, float y0, float limit) {
+    float x = 0.0;
+    float y = 0.0;
+    int iteration = 0;
+    int max_iteration = 1000;  // Increase for finer detail
+
+    while (x*x + y*y <= limit && iteration < max_iteration) {
+        float xtemp = x*x - y*y + x0;
+        y = 2*x*y + y0;
+        x = xtemp;
+        iteration++;
+    }
+
+    return iteration;
+}
+
+void loop_mandel() {
+  for (int i = 1; i < 100; i++) {
+
+    // Iterate over every pixel according to scale on your display
+    // float x_inc = 4.0;
+    // float y_inc = 3.0;
+    // float xInc = 0.40 * (i);
+    // float yInc = 0.30 * (i);
+
+    float xInc = MANDEL_INC_X * (i);
+    float yInc = MANDEL_INC_Y * (i);
+
+
+    // float xShift = 0.40 * (i+1);
+    // float yShift = 0.30 * (i+1);
+    
+    // float xMin = -2.0, xMax = 2.0;
+    // float xMin = -1.5, xMax = 1.5;
+    // float xMin = -2.0; float xMax = 1.0;
+    // float yMin = -1.5; float yMax = 1.5;
+    // float xMin = -4.0; float xMax = 4.0;
+    // float yMin = -3.5; float yMax = 3.5;
+    // float xMin = -4.0; float xMax = 4.0;
+    // float yMin = -3.5; float yMax = 3.5;
+    
+    float xMin = -4.0; float xMax = 4.0;
+    float yMin = -4.0; float yMax = 4.0;
+
+    // float xMin = -40.0; float xMax = 40.0;
+    // float yMin = -40.0; float yMax = 40.0;
+
+    // float xMin = -5.0; float xMax = 5.0;
+    // float yMin = -3.5; float yMax = 3.5;
+    // float xMin = -50.0; float xMax = 50.0;
+    // float yMin = -30.5; float yMax = 30.5;
+    /*
+    Serial.println("mandel loop");
+    for (float x = xMin; x < xMax; x += xInc/MANDEL_X) {
+      for (float y = yMin; y < yMax; y += yInc/MANDEL_Y) {
+        // Serial.println("mandel loop - loop");
+        // MandelbrotSet(x, y, 0, 0, 0.0);
+        MandelbrotSet(c, t, 0.0);
+        // MandelbrotSet(y, x, 0, 0, 0);
+      }
+    }
+    */
+    /*
+    float z = 0.5;
+    for (float px = -2 - (i * z) ; px < 2 + (i * z); px += MANDEL_INC_X / MANDEL_X) {
+      for (float py = -1.5 - (i * z); py < 1.5 + (i * z); py += MANDEL_INC_Y / MANDEL_Y) {
+        MyComplex c(px, py);
+        // MyComplex z(0.1 * i, 0);
+        // MyComplex z(0, 0.1 * i);
+        MyComplex z(0, 0);
+        MandelbrotSet(c, z, 0);
+      }
+    }*/
+    float centerX = -0.5;  // Center of the view on the real axis
+    float centerY = 0;     // Center of the view on the imaginary axis
+    float scale1 = 0.01;   // Scale factor for zooming
+    float limit = 4.0; 
+    // float limit2 = limit - (limit / 10) * i;
+    float limit2 = limit - (limit / 10) * i;
+    float scale2 = scale1 - ( i * scale1 / 10);
+    for (int px = 0; px < MANDEL_X; px++) {
+      for (int py = 0; py < MANDEL_Y; py++) {
+        float x0 = (px - MANDEL_X / 2) * scale2 + centerX;
+        float y0 = (py - MANDEL_Y / 2) * scale2 + centerY;
+        int iteration = mandelbrot(x0, y0, limit2);
+        // tft.drawPixel(px, py, colorMap(iteration));
+        tft.drawPixel(px, py, colorMap(iteration));
+      }
+    }
+    Serial.println("mandel loop - wait");
+    espDelay(100);
+    setup_mandel();
+    Serial.println("mandel loop - done");
+    // tft.fillScreen(TFT_BLACK);
+  }
+}
+
+/*
+float cabs(MyComplex c) {
+  return sqrt(c.r * c.r + c.i * c.i);
+}
+*/
+
+void MandelbrotSet(const MyComplex& c, const MyComplex& z, int counter) {
+  MyComplex z_new1 = z.square();
+  MyComplex z_new = z_new1.add(c);
+
+  if (z_new.magnitude() > 4.0) {
+    int32_t displayX = (int32_t)((c.getReal() + 1.5) * (MANDEL_X / MANDEL_INC_X));
+    int32_t displayY = (int32_t)((c.getImag() + 1) * (MANDEL_Y / MANDEL_INC_Y));
+    uint32_t color = tft.color565(128 - 128 * z_new.magnitude() / 2, 
+                                  128 - 128 * z_new.magnitude() / 2, 
+                                  128 - 128 * z_new.magnitude() / 2);
+    tft.drawPixel(displayX, displayY, color);
+    return;
+  }
+
+  if (counter >= 100) {
+    int32_t displayX = (int32_t)((c.getReal() + 1.5) * (MANDEL_X / MANDEL_INC_X));
+    int32_t displayY = (int32_t)((c.getImag() + 1) * (MANDEL_Y / MANDEL_INC_Y));
+    uint32_t color = tft.color565(0, 255 * (z_new.magnitude() / 8), (255 - 255 * (z_new.magnitude())) / 8);
+    tft.drawPixel(displayX, displayY, color);
+    return;
+  }
+
+  MandelbrotSet(c, z_new, counter + 1);
+}
+
+
+void loop_life() {
   //Display a simple splash screen
   tft.fillScreen(TFT_BLACK);
   tft.setTextSize(2);
@@ -1965,6 +2148,10 @@ void Task2code(void *pvParameters)
       else if (fractalsPlaying)
       {
          loop_fractals();
+      }
+      else if (mandelPlaying)
+      {
+         loop_mandel();
       }
 #ifdef USE_DEMO_GY25
       else if (gy25Playing)

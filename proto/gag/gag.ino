@@ -14,10 +14,17 @@
 
 #define ESP32_RIGHT 1
 //#define USE_DISPLAY 1
+
 //#define MEASURE_OFFSETS 1
 #include "definitions.h"
 #include "gag.h"
 #include "Wire.h"
+// #include <WiFi.h>
+// #include "esp_wifi.h"  // Required for WiFi power management functions
+
+#ifdef ESP32_RIGHT
+#include "esp_pm.h"
+#endif
 
 #ifdef USE_DISPLAY
     extern SSD1306Wire display;
@@ -39,6 +46,28 @@
 extern bool useSlaveHand = false;
 #endif
 void setup() {
+  // #ifdef SLAVE_HAND
+  // Serial.begin(57600);
+  // Serial.println("SetupSlaveHand");
+  // Serial.flush();
+  // Serial.end();
+  // #endif
+   #ifdef ESP32_RIGHT
+   esp_sleep_enable_timer_wakeup(0);  // Prevent sleep mode
+   esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT); // Ensure only BLE is active
+  //  esp_pm_config_esp32_t pm_config = {
+  //     .max_freq_mhz = 240,  // Max CPU frequency
+  //     .min_freq_mhz = 80,   // Min CPU frequency
+  //     .light_sleep_enable = false
+  //   };
+  //  esp_pm_configure(&pm_config);
+  // esp_wifi_set_ps(WIFI_PS_NONE);
+  // setCpuFrequencyMhz(240);  // Set max CPU frequency
+  // WiFi.disconnect(true);
+  // WiFi.mode(WIFI_OFF);
+  // btStop();  // Stops Bluetooth Classic, leaving BLE active
+    #endif
+    
     #ifdef GAG_DEBUG 
         Serial.begin(115200);
     #elif SEND_DATA_ALSO_OVER_SERIAL 
