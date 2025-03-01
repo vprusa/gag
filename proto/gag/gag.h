@@ -10,6 +10,11 @@
 #define _GAG_H_
 #include "definitions.h"
 
+#define GAG_DEBUG_PRINT(x) Serial.print(x)
+#define GAG_DEBUG_PRINTF(x, y) Serial.print(x, y)
+#define GAG_DEBUG_PRINTLN(x) Serial.println(x)
+#define GAG_DEBUG_PRINTLNF(x, y) Serial.println(x, y)
+
 #include "MPU6050_MPU9150_9Axis_MotionApps41.h"
 // #include "MPU6050_9Axis_MotionApps41.h"
 #ifdef MEASURE_OFFSETS
@@ -435,7 +440,7 @@ uint8_t initMPUAndDMP(uint8_t attempt, uint8_t i) {
     } else {
         MASTER_SERIAL_NAME.println(F("dmpInitialize MPU9150..."));
         mpu.isMPU9150 = true;
-        devStatus = mpu.dmpInitialize();
+        devStatus = mpu.dmpInitialize2();
         MASTER_SERIAL_NAME.print(F("Skipping initialing DMP for MPU9150..."));
     }
     // supply your own gyro offsets here for each mpu, scaled for min sensitivity
@@ -474,6 +479,8 @@ uint8_t initMPUAndDMP(uint8_t attempt, uint8_t i) {
 
     if(selectedSensor == HP) {
         MASTER_SERIAL_NAME.print(packetSizeM);
+                        mpu.setFIFOEnabled(true);
+
     }else{
         MASTER_SERIAL_NAME.print(packetSizeS);
     }
@@ -512,6 +519,7 @@ void automaticFifoReset() {
             }
         }
         // idk, offsets registeres do not work ...
+        /*
         if(i == HP && now - lastTime > 1000){
             MPU6050_MPU9150 mpu = *gyros[selectedSensor].mpu;
             // mpu.setXGyroOffset(35);
@@ -519,7 +527,7 @@ void automaticFifoReset() {
             // mpu.setZGyroOffset(40); // 12?
             
             lastTime=now;
-        }
+        }*/
     }
     setOrRotateSelectedGyro(currentlySellectedSensor);
 }
@@ -747,6 +755,8 @@ constexpr uint16_t OFFSET_UP = 4096;           // Higher precision
 }
 
 
+
+
 bool loadDataFromFIFO(bool forceLoad) {
     if(selectedSensor != HP) {
     // if (true) {
@@ -755,6 +765,8 @@ bool loadDataFromFIFO(bool forceLoad) {
             fifoCount = mpu.getFIFOCount();
             uint8_t *fifoBuffer = gyros[selectedSensor].fifoBuffer; // FIFO storage buffer
             int packetSize = packetSizeS; 
+
+
             if (fifoCount >= packetSize && fifoCount <= 1024 && fifoCount != 0 ) {
                 // wait for correct available data length, should be a VERY short wait
                 while (fifoCount >= packetSize) {
@@ -817,11 +829,103 @@ bool loadDataFromFIFO(bool forceLoad) {
             }
         }
     } else {
-        // forceLoad = true;
+        forceLoad = true;
+        // Serial.println("HP");
+        MPU6050_MPU9150 mpu = *gyros[selectedSensor].mpu;
         if(!gyros[selectedSensor].hasDataReady || forceLoad) {
             //getMPU9150Data(gyros[selectedSensor].mpu);
-            loadMPU9150Data(gyros[selectedSensor].mpu);
-            gyros[selectedSensor].hasDataReady=true;
+            // loadMPU9150Data(gyros[selectedSensor].mpu);
+            // gyros[selectedSensor].hasDataReady=true;
+
+
+            fifoCount = mpu.getFIFOCount2();
+            uint8_t *fifoBuffer = gyros[selectedSensor].fifoBuffer; // FIFO storage buffer
+            int packetSize = packetSizeM; 
+            // Serial.println("fifoCount: ");
+            // GAG_DEBUG_PRINT("fifoCount: ");
+            // GAG_DEBUG_PRINTLN(fifoCount);
+
+
+                mpu.resetFIFO();
+
+                // DEBUG_PRINTLN(F("Enabling FIFO..."));
+                // mpu.setFIFOEnabled(true);
+
+                // DEBUG_PRINTLN(F("Enabling DMP..."));
+                // mpu.setDMPEnabled(true);
+
+                // DEBUG_PRINTLN(F("Resetting DMP..."));
+                // mpu.resetDMP();
+            
+                // DEBUG_PRINTLN(F("Waiting for FIFO count > 2..."));
+                // while ((fifoCount = mpu.getFIFOCount()) < 3);
+                while ((fifoCount = mpu.getFIFOCount()) < packetSizeM);
+                
+            if (fifoCount >= packetSize /*&& fifoCount <= 1024*/ && fifoCount != 0 ) {
+                // wait for correct available data length, should be a VERY short wait
+                while (fifoCount >= packetSize) {
+                    mpu.getFIFOBytes(fifoBuffer, packetSize);
+                    fifoCount -= packetSize;
+                }
+                Quaternion *newQ = new Quaternion();
+                uint8_t res = mpu.dmpGetQuaternion(newQ,fifoBuffer);
+                // GAG_DEBUG_PRINT("res: ");
+                // GAG_DEBUG_PRINTLN(res);
+                //  fmod(2.*acos(A.dot(B)),2.*PI);
+                newQ->normalize();
+                // GAG_DEBUG_PRINTLN("DBL: ");
+
+                // if(gyros[selectedSensor].debugDiff && gyros[selectedSensor].q != nullptr) {
+                // // if(gyros[selectedSensor].q != nullptr) {
+                //     double dbl = fmod(2.*acos(newQ->dot(gyros[selectedSensor].q)),2.*PI);
+                //     #ifdef TEST_CALIB
+                //     #endif
+
+                //     GAG_DEBUG_PRINT("DBL: ");
+                //     GAG_DEBUG_PRINT(selectedSensor);
+                //     GAG_DEBUG_PRINT(" ");
+                //     GAG_DEBUG_PRINTF(dbl, 6);
+                    
+                //     GAG_DEBUG_PRINT(" w:");
+                //     GAG_DEBUG_PRINTF(newQ->w, 6);
+                //     GAG_DEBUG_PRINT(" x:");
+                //     GAG_DEBUG_PRINTF(newQ->x, 6);
+                //     GAG_DEBUG_PRINT(" y:");
+                //     GAG_DEBUG_PRINTF(newQ->y, 6);
+                //     GAG_DEBUG_PRINT(" z:");
+                //     GAG_DEBUG_PRINTF(newQ->z, 6);
+                //     GAG_DEBUG_PRINT(" prev w:");
+                //     GAG_DEBUG_PRINTF(gyros[selectedSensor].q->w, 6);
+                //     GAG_DEBUG_PRINT(" x:");
+                //     GAG_DEBUG_PRINTF(gyros[selectedSensor].q->x, 6);
+                //     GAG_DEBUG_PRINT(" y:");
+                //     GAG_DEBUG_PRINTF(gyros[selectedSensor].q->y, 6);
+                //     GAG_DEBUG_PRINT(" z:");
+                //     GAG_DEBUG_PRINTLNF(gyros[selectedSensor].q->z, 6);
+                   
+                //     GAG_DEBUG_PRINT(" diff w:");
+                //     if(newQ->w - gyros[selectedSensor].q->w >= 0){GAG_DEBUG_PRINT(" ");};
+                //     GAG_DEBUG_PRINTF(newQ->w - gyros[selectedSensor].q->w, 6);
+                //     GAG_DEBUG_PRINT(" x:");
+                //     if(newQ->x - gyros[selectedSensor].q->x >= 0){GAG_DEBUG_PRINT(" ");};
+                //     GAG_DEBUG_PRINTF(newQ->x - gyros[selectedSensor].q->x, 6);
+                //     GAG_DEBUG_PRINT(" y:");
+                //     if(newQ->y - gyros[selectedSensor].q->y >= 0){GAG_DEBUG_PRINT(" ");};
+                //     GAG_DEBUG_PRINTF(newQ->y - gyros[selectedSensor].q->y, 6);
+                //     GAG_DEBUG_PRINT(" z:");
+                //     if(newQ->z - gyros[selectedSensor].q->z >= 0){GAG_DEBUG_PRINT(" ");};
+                //     GAG_DEBUG_PRINTLNF(newQ->z - gyros[selectedSensor].q->z, 6);
+                // }
+                gyros[selectedSensor].q = newQ;
+                mpu.resetFIFO();
+                gyros[selectedSensor].hasDataReady=true;
+                // return true;
+            }
+
+
+
+
+            
             gyros[selectedSensor].alreadySentData=false;
             return true;
         }
