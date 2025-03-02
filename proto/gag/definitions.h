@@ -77,11 +77,11 @@
 #endif
 #ifdef ESP32_RIGHT
 
-#define SENSORS_COUNT 6
+#define SENSORS_COUNT 7
 // SENSORs <0,5>
 #define FIRST_SENSOR 0
 // or set LAST_SENSOR to 5
-#define LAST_SENSOR 5
+#define LAST_SENSOR 6
 // time for internal interrupt to trigger in loop - working up to 50 ms but freezes may occure - so reset MPU's FIFO more ften (20ms each?)
 #define SWITCH_SENSORS_MS 0
 
@@ -99,6 +99,8 @@
 #define SENSOR_PIN_EU_COMPENSATION 2
 #define SENSOR_PIN_HP HP  // HAND PALM
 #define SENSOR_PIN_HP_COMPENSATION 15
+#define SENSOR_PIN_HG HG  // HAND PALM MPU6050
+#define SENSOR_PIN_HG_COMPENSATION 23
 #define SENSOR_PIN_NF NF
 
 //#define SENSOR_PIN_OFFSET 3
