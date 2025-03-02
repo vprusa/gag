@@ -314,6 +314,9 @@ float Mxyz[3];
 // Sensor readings with offsets:	280	741	17068	-22	10	5
 // Your offsets:	1659	1620	1108	62	-23	-1
         {1659, 1620, 1108, 62, -23, -1},
+        // Sensor readings with offsets:	319	721	17083	-21	10	5
+// Your offsets:	1652	1614	1110	62	-23	-1
+
 
 
         // W
@@ -332,10 +335,14 @@ float Mxyz[3];
 
 // Sensor readings with offsets:	771	483	12423	-33	4	1
 // Your offsets:	-130	-53	808	60	-2	0
-        {-130, -53, 808, 60, -2, 0}
+        // {-130, -53, 808, 60, -2, 0}
 
 
         // Your offsets:	-123	-224	707	-70	-85	-1441
+        // Sensor readings with offsets:	960	448	11182	-4	2	0
+// Your offsets:	-147	-84	737	41	-3	-4
+        {-147, -84, 737, 41, -3, -4}
+
     };
 #endif
 
@@ -390,6 +397,96 @@ uint8_t selectSingleMPU(uint8_t i) {
     }
     return selectorOffsettedPin;
 }
+
+// Global variables to store gyro offsets
+float gx_offset3 = 0, gy_offset3 = 0, gz_offset3 = 0;
+float ax_offset3 = 0, ay_offset3 = 0, az_offset3 = 0;
+bool offsets_calculated = false;
+
+// Function to calculate gyro offsets
+void calibrateGyro(MPU6050_MPU9150 *mpu, int numSamples = 10) {
+      int16_t ax, ay, az, gx, gy, gz, mx, my, mz;
+    long gx_sum = 0, gy_sum = 0, gz_sum = 0;
+    long ax_sum = 0, ay_sum = 0, az_sum = 0;
+
+    // Collect multiple samples
+    for (int i = 0; i < numSamples; i++) {
+        // mpu->getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+ // Get sensor data
+    mpu->getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
+        gx_sum += gx;
+        gy_sum += gy;
+        gz_sum += gz;
+        ax_sum += gx;
+        ay_sum += gy;
+        az_sum += gz;
+        delay(100); // Small delay to allow data sampling
+
+    Serial.print("Gyro Offsets: ");
+    Serial.print("gx_offset: "); Serial.print(gx);
+    Serial.print("  gy_offset: "); Serial.print(gy);
+    Serial.print("  gz_offset: "); Serial.print(gz);
+    Serial.print("  ax_offset: "); Serial.print(ax);
+    Serial.print("  ay_offset: "); Serial.print(ay);
+    Serial.print("  az_offset: "); Serial.println(az);
+
+    }
+
+    // Compute the average offset
+    gx_offset3 = gx_sum / numSamples;
+    gy_offset3 = gy_sum / numSamples;
+    gz_offset3 = gz_sum / numSamples;
+
+    ax_offset3 = gx_sum / numSamples;
+    ay_offset3 = gy_sum / numSamples;
+    az_offset3 = gz_sum / numSamples;
+
+    // Print calculated offsets
+    Serial.print("Gyro Offsets: ");
+    Serial.print("gx_offset: "); Serial.print(gx_offset);
+    Serial.print("  gy_offset: "); Serial.print(gy_offset);
+    Serial.print("  gz_offset: "); Serial.println(gz_offset);
+
+    offsets_calculated = true; // Mark that calibration is complete
+}
+
+// // Function to get gyro data and compute quaternion
+// void getQuaternion(MPU6050_MPU9150 *mpu, float dt, float q[4]) {
+//     int16_t ax, ay, az, gx, gy, gz;
+
+//     if (!offsets_calculated) {
+//         calibrateGyro(mpu); // Ensure offsets are calculated before using
+//     }
+
+//     mpu->getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+
+//     // Convert gyro data to radians per second and apply offset correction
+//     float gyroX = ((float)(gx - gx_offset)) * (250.0f / 32768.0f) * (M_PI / 180.0f);
+//     float gyroY = ((float)(gy - gy_offset)) * (250.0f / 32768.0f) * (M_PI / 180.0f);
+//     float gyroZ = ((float)(gz - gz_offset)) * (250.0f / 32768.0f) * (M_PI / 180.0f);
+
+//     // Compute quaternion derivative
+//     float qw = q[0], qx = q[1], qy = q[2], qz = q[3];
+
+//     float dqW = 0.5 * (-qx * gyroX - qy * gyroY - qz * gyroZ);
+//     float dqX = 0.5 * (qw * gyroX + qy * gyroZ - qz * gyroY);
+//     float dqY = 0.5 * (qw * gyroY - qx * gyroZ + qz * gyroX);
+//     float dqZ = 0.5 * (qw * gyroZ + qx * gyroY - qy * gyroX);
+
+//     // Integrate quaternion using Euler method
+//     q[0] += dqW * dt;
+//     q[1] += dqX * dt;
+//     q[2] += dqY * dt;
+//     q[3] += dqZ * dt;
+
+//     // Normalize quaternion
+//     float norm = sqrt(q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3]);
+//     q[0] /= norm;
+//     q[1] /= norm;
+//     q[2] /= norm;
+//     q[3] /= norm;
+// }
+
 
 
 void setupSensors(){
@@ -469,6 +566,7 @@ void setupSensors(){
         MASTER_SERIAL_NAME.println(F("\n\n"));
     }
 }
+void calibrateQuaternionOffset(MPU6050_MPU9150 *mpu);
 
 /**
  * It has to happen in 2 loops because of the need to avoid having multiple uncertain choices
@@ -480,11 +578,13 @@ void enableSingleMPU(uint8_t sensorToEnable) {
             digitalWrite(selectSingleMPU(i), HIGH);
         }
     }
+    // delay(1);
     for (i = 0; i < SENSORS_COUNT; i++) {
         if ( i == sensorToEnable ) {
             digitalWrite(selectSingleMPU(i), LOW);     
         }
     }
+    // delay(1);
 }
 
 uint8_t initMPUAndDMP(uint8_t attempt, uint8_t i) {
@@ -522,8 +622,13 @@ uint8_t initMPUAndDMP(uint8_t attempt, uint8_t i) {
     // TODO fix measuring offsets for HP
     // if(!calibrationDone && i != HP) {
     // if(!calibrationDone && i == 3) {
-    if(selectedSensor == HP || selectedSensor == HG) {
+    // if(selectedSensor == HP || selectedSensor == HG) {
+    if(selectedSensor == HP) {
         // measureOffsets(&mpu, i, 10);
+        //  if (!offsets_calculated) {
+        // calibrateGyro(&mpu); // Ensure offsets are calculated before using
+        // }
+
     }
     #endif
     #ifdef SET_OFFSETS
@@ -531,18 +636,20 @@ uint8_t initMPUAndDMP(uint8_t attempt, uint8_t i) {
         // mpu.setXAccelOffset(sensorsOffsets[i][0], MPU9150_RA_XA_OFFS_H);
         // mpu.setYAccelOffset(sensorsOffsets[i][1], MPU9150_RA_YA_OFFS_H);
         // mpu.setZAccelOffset(sensorsOffsets[i][2], MPU9150_RA_ZA_OFFS_H);
-        mpu.setXAccelOffset(sensorsOffsets[i][0]);
-        mpu.setYAccelOffset(sensorsOffsets[i][1]);
-        mpu.setZAccelOffset(sensorsOffsets[i][2]);
-
+        mpu.setXAccelOffset(sensorsOffsets[i][0], MPU9150_RA_XA_OFFS_H);
+        mpu.setYAccelOffset(sensorsOffsets[i][1], MPU9150_RA_YA_OFFS_H);
+        mpu.setZAccelOffset(sensorsOffsets[i][2], MPU9150_RA_ZA_OFFS_H);
+        mpu.setXGyroOffset(sensorsOffsets[i][3], MPU9150_RA_XG_OFFS_USRH);
+        mpu.setYGyroOffset(sensorsOffsets[i][4], MPU9150_RA_YG_OFFS_USRH);
+        mpu.setZGyroOffset(sensorsOffsets[i][5], MPU9150_RA_ZG_OFFS_USRH);
     }else{
         mpu.setXAccelOffset(sensorsOffsets[i][0]);
         mpu.setYAccelOffset(sensorsOffsets[i][1]);
         mpu.setZAccelOffset(sensorsOffsets[i][2]);
+        mpu.setXGyroOffset(sensorsOffsets[i][3]);
+        mpu.setYGyroOffset(sensorsOffsets[i][4]);
+        mpu.setZGyroOffset(sensorsOffsets[i][5]);
     }
-    mpu.setXGyroOffset(sensorsOffsets[i][3]);
-    mpu.setYGyroOffset(sensorsOffsets[i][4]);
-    mpu.setZGyroOffset(sensorsOffsets[i][5]);
         
     #endif
 
@@ -557,6 +664,8 @@ uint8_t initMPUAndDMP(uint8_t attempt, uint8_t i) {
     if(selectedSensor == HP) {
         MASTER_SERIAL_NAME.print(packetSizeM);
         mpu.setFIFOEnabled(true);
+        // calibrateQuaternionOffset(&mpu);
+
 
     }else{
         MASTER_SERIAL_NAME.print(packetSizeS);
@@ -753,8 +862,9 @@ void getMPU9150Data(MPU6050_MPU9150 * mpu) {
 // struct Quaternion {
 //     float w, x, y, z;
 // };
-#define GYRO_SCALE 131.0f  // 1 LSB = 1/131 deg/s
-#define DEG_TO_RAD 0.0174533f  // (π / 180)
+// #define GYRO_SCALE 131.0f  // 1 LSB = 1/131 deg/s
+// #define DEG_TO_RAD 0.0174533f  // (π / 180)
+// #define DEG_TO_RAD 0.0174532925199f  // (π / 180)
 Quaternion q = {1.0f, 0.0f, 0.0f, 0.0f};  // Identity quaternion
 float dt = 0.5;  // Adjust based on actual loop rate
 uint16_t qI[4];   // Integer quaternion for FIFO storage
@@ -779,31 +889,53 @@ void correctDriftWithAccel(int16_t ax, int16_t ay, int16_t az) {
     float ez = (ax_n * gy_n - ay_n * gx_n);
 
     // Apply correction (simple proportional feedback)
-    float driftGain = 0.01f;
+    float driftGain = 0.1f;
     gx_offset2 += ex * driftGain;
     gy_offset2 += ey * driftGain;
     gz_offset2 += ez * driftGain;
 }
 
 void updateQuaternion(int16_t gx, int16_t gy, int16_t gz) {
-   gx -= gx_offset2;
-    gy -= gy_offset2;
-    gz -= gz_offset2;
+    // gx -= gx_offset2 + gx_offset3;
+    // gy -= gy_offset2 + gy_offset3;
+    // gz -= gz_offset2 + gz_offset3;
+    gx -= gx_offset2 ;
+    gy -= gy_offset2 ;
+    gz -= gz_offset2 ;
 
+    
     // Convert gyro readings from degrees/s to radians/s
     // float gyroScale = 131.0;  // Scale factor for ±250°/s
     float gyroScale = 131.0;  // Scale factor for ±250°/s
     // float gx_r = (gx / gyroScale) * (3.14159265359f / 180.0f);
     // float gy_r = (gy / gyroScale) * (3.14159265359f / 180.0f);
     // float gz_r = (gz / gyroScale) * (3.14159265359f / 180.0f);
-  unsigned long currentTime = micros();  // Current time in microseconds
-    float dt = (currentTime - lastTime) / 1e6;  // Convert to seconds
+    // unsigned long currentTime = micros();  // Current time in microseconds
+    // unsigned long currentTime = micros();  // Current time in microseconds
+    // float dt = (currentTime - lastTime) / 1e6;  // Convert to seconds
+    // float dt = (currentTime - lastTime) / 1e6;  // Convert to seconds
+    unsigned long currentTime = millis();
+    float dt = (currentTime - lastTime) / 1000.0f;  // Convert ms to seconds
+    // Serial.println(dt);
     lastTime = currentTime;  // Update time for next iteration
+        if (dt <= 0.00) return; 
+    const float gyro_scale = 131.0f;  // ±250°/s scale factor
+    const float deg_to_rad = 3.14159265359f / 180.0f;
+    
+    // Convert gyro data to radians per second
+    // float gx_r = (gx / gyro_scale) * deg_to_rad;
+    // float gy_r = (gy / gyro_scale) * deg_to_rad;
+    // float gz_r = (gz / gyro_scale) * deg_to_rad;
 
-    // ✅ Convert gyro data to radians per second
-    float gx_r = (gx / GYRO_SCALE) * DEG_TO_RAD;
-    float gy_r = (gy / GYRO_SCALE) * DEG_TO_RAD;
-    float gz_r = (gz / GYRO_SCALE) * DEG_TO_RAD;
+    // Fix sensor rotation by rotating raw gyro values around Z-axis by -90°
+    int16_t new_gx = gy;  // Rotated -90°: gx' = -gy
+    int16_t new_gy = -gx;   // Rotated -90°: gy' = gx
+    int16_t new_gz = gz;   // Z remains the same
+
+
+    float gx_r = (new_gx / gyro_scale) * deg_to_rad;
+    float gy_r = (new_gy / gyro_scale) * deg_to_rad;
+    float gz_r = (new_gz / gyro_scale) * deg_to_rad;
 
 
     // Compute quaternion derivative
@@ -832,13 +964,13 @@ void updateQuaternion(int16_t gx, int16_t gy, int16_t gz) {
 void storeQuaternionInFIFO() {
     int16_t qI[4];
 
-    // ✅ Use correct scaling (16384 like dmpGetQuaternion expects)
+    // Use correct scaling (16384 like dmpGetQuaternion expects)
     qI[0] = (int16_t)(q.w * 16384.0f);
     qI[1] = (int16_t)(q.x * 16384.0f);
     qI[2] = (int16_t)(q.y * 16384.0f);
     qI[3] = (int16_t)(q.z * 16384.0f);
 
-    // ✅ Store in FIFO using correct order (Big Endian)
+    // Store in FIFO using correct order (Big Endian)
     uint8_t *fifoBuffer = gyros[selectedSensor].fifoBuffer;
 
     fifoBuffer[0]  = (qI[0] >> 8) & 0xFF;  // High Byte
@@ -854,306 +986,192 @@ void storeQuaternionInFIFO() {
     fifoBuffer[13] = qI[3] & 0xFF;
 }
 
+// Define quaternion offset
+float q_offset_w = 0.0f, q_offset_x = 0.0f, q_offset_y = 0.0f, q_offset_z = 0.0f;
 
-// Kalman filter state (4D state for quaternion)
-float Q_angle = 0.001;  // Process noise covariance
-float Q_bias = 0.003;   // Process noise covariance for bias
-float R_measure = 0.03; // Measurement noise covariance
+// Number of samples for calibration
+#define CALIBRATION_SAMPLES 100
 
-// Kalman state variables
-float P[4][4] = {0}; // Error covariance matrix
-float K[4] = {0};    // Kalman gain
-float q_est[4] = {1, 0, 0, 0}; // Estimated quaternion
-float bias[3] = {0,0,0};
-void predictQuaternion(float gx, float gy, float gz, float dt) {
-    // Apply bias correction
-    gx -= bias[0];
-    gy -= bias[1];
-    gz -= bias[2];
 
-    // Convert gyro rates to radians
-    gx *= (PI / 180.0);
-    gy *= (PI / 180.0);
-    gz *= (PI / 180.0);
+// Function to calibrate the quaternion offset
+void calibrateQuaternionOffset(MPU6050_MPU9150 *mpu) {
+    float sum_w = 0.0f, sum_x = 0.0f, sum_y = 0.0f, sum_z = 0.0f;
+
+    Serial.println("Calibrating... Keep the sensor still.");
+
+    // Collect multiple samples to compute the offset
+    for (int i = 0; i < CALIBRATION_SAMPLES; i++) {
+        int16_t ax, ay, az, gx, gy, gz, mx, my, mz;
+        
+        // Get sensor data
+        mpu->getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
+
+        // Convert to quaternion (assuming function getQuaternionFromIMU exists)
+        // Quaternion q = getQuaternionFromIMU(ax, ay, az, gx, gy, gz, mx, my, mz);
+     updateQuaternion(gx, gy, gz);
+    correctDriftWithAccel(ax, ay, az);
+
+        // Accumulate sum for offset calculation
+        sum_w += q.w;
+        sum_x += q.x;
+        sum_y += q.y;
+        sum_z += q.z;
+
+        delay(100); // Small delay to stabilize readings
+    }
+
+    // Compute the average offset
+    q_offset_w = sum_w / CALIBRATION_SAMPLES;
+    q_offset_x = sum_x / CALIBRATION_SAMPLES;
+    q_offset_y = sum_y / CALIBRATION_SAMPLES;
+    q_offset_z = sum_z / CALIBRATION_SAMPLES;
+
+    Serial.println("Calibration completed!");
+    Serial.print("Offsets - w: "); Serial.print(q_offset_w, 6);
+    Serial.print(", x: "); Serial.print(q_offset_x, 6);
+    Serial.print(", y: "); Serial.print(q_offset_y, 6);
+    Serial.print(", z: "); Serial.println(q_offset_z, 6);
+}
+
+
+// Function to get gyro data and compute quaternion
+void getQuaternion(MPU6050_MPU9150 *mpu, float dt, float q[4]) {
+    int16_t ax, ay, az, gx, gy, gz;
+
+    if (!offsets_calculated) {
+        calibrateGyro(mpu); // Ensure offsets are calculated before using
+    }
+
+    mpu->getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+
+    // Convert gyro data to radians per second and apply offset correction
+    float gyroX = ((float)(gx - gx_offset)) * (250.0f / 32768.0f) * (M_PI / 180.0f);
+    float gyroY = ((float)(gy - gy_offset)) * (250.0f / 32768.0f) * (M_PI / 180.0f);
+    float gyroZ = ((float)(gz - gz_offset)) * (250.0f / 32768.0f) * (M_PI / 180.0f);
 
     // Compute quaternion derivative
-    float q_dot[4] = {
-        0.5 * (-q_est[1] * gx - q_est[2] * gy - q_est[3] * gz),
-        0.5 * ( q_est[0] * gx + q_est[2] * gz - q_est[3] * gy),
-        0.5 * ( q_est[0] * gy - q_est[1] * gz + q_est[3] * gx),
-        0.5 * ( q_est[0] * gz + q_est[1] * gy - q_est[2] * gx)
-    };
+    float qw = q[0], qx = q[1], qy = q[2], qz = q[3];
 
-    // Update quaternion estimate
-    q_est[0] += q_dot[0] * dt;
-    q_est[1] += q_dot[1] * dt;
-    q_est[2] += q_dot[2] * dt;
-    q_est[3] += q_dot[3] * dt;
+    float dqW = 0.5 * (-qx * gyroX - qy * gyroY - qz * gyroZ);
+    float dqX = 0.5 * (qw * gyroX + qy * gyroZ - qz * gyroY);
+    float dqY = 0.5 * (qw * gyroY - qx * gyroZ + qz * gyroX);
+    float dqZ = 0.5 * (qw * gyroZ + qx * gyroY - qy * gyroX);
 
-    // Normalize quaternion
-    float norm = sqrt(q_est[0] * q_est[0] + q_est[1] * q_est[1] +
-                      q_est[2] * q_est[2] + q_est[3] * q_est[3]);
-    q_est[0] /= norm;
-    q_est[1] /= norm;
-    q_est[2] /= norm;
-    q_est[3] /= norm;
-
-    // Update error covariance matrix (adding process noise)
-    for (int i = 0; i < 4; i++) {
-        P[i][i] += Q_angle * dt;
-    }
-}
-
-
-
-// void updateQuaternion2(float ax, float ay, float az, float mx, float my, float mz) {
-//     // Normalize accelerometer data
-//     float norm = sqrt(ax * ax + ay * ay + az * az);
-//     ax /= norm;
-//     ay /= norm;
-//     az /= norm;
-
-//     // Normalize magnetometer data
-//     norm = sqrt(mx * mx + my * my + mz * mz);
-//     mx /= norm;
-//     my /= norm;
-//     mz /= norm;
-
-//     // Compute reference quaternion from accelerometer & magnetometer
-//     float ref_q[4];
-//     ref_q[0] = sqrt(0.5f * (1.0f + ax));
-//     ref_q[1] = ay / (2.0f * ref_q[0]);
-//     ref_q[2] = az / (2.0f * ref_q[0]);
-//     ref_q[3] = 0.0f;
-
-//     // Compute quaternion difference (error)
-//     float error[4] = {
-//         q_est[0] - ref_q[0],
-//         q_est[1] - ref_q[1],
-//         q_est[2] - ref_q[2],
-//         q_est[3] - ref_q[3]
-//     };
-
-//     // Kalman gain calculation
-//     for (int i = 0; i < 4; i++) {
-//         K[i] = P[i][i] / (P[i][i] + R_measure);
-//     }
-
-//     // Correct quaternion estimate
-//     for (int i = 0; i < 4; i++) {
-//         q_est[i] -= K[i] * error[i];
-//     }
-
-//     // Normalize quaternion
-//     norm = sqrt(q_est[0] * q_est[0] + q_est[1] * q_est[1] +
-//                 q_est[2] * q_est[2] + q_est[3] * q_est[3]);
-//     q_est[0] /= norm;
-//     q_est[1] /= norm;
-//     q_est[2] /= norm;
-//     q_est[3] /= norm;
-// }
-
-void predictQuaternion2(float gx, float gy, float gz, float dt) {
-    // Apply bias correction
-    gx -= bias[0];
-    gy -= bias[1];
-    gz -= bias[2];
-
-    // Convert gyro rates to radians
-    gx *= (PI / 180.0);
-    gy *= (PI / 180.0);
-    gz *= (PI / 180.0);
-
-    // Compute quaternion derivative
-    float q_dot[4] = {
-        0.5 * (-q_est[1] * gx - q_est[2] * gy - q_est[3] * gz),
-        0.5 * ( q_est[0] * gx + q_est[2] * gz - q_est[3] * gy),
-        0.5 * ( q_est[0] * gy - q_est[1] * gz + q_est[3] * gx),
-        0.5 * ( q_est[0] * gz + q_est[1] * gy - q_est[2] * gx)
-    };
-
-    // Update quaternion estimate
-    q_est[0] += q_dot[0] * dt;
-    q_est[1] += q_dot[1] * dt;
-    q_est[2] += q_dot[2] * dt;
-    q_est[3] += q_dot[3] * dt;
+    // Integrate quaternion using Euler method
+    q[0] += dqW * dt;
+    q[1] += dqX * dt;
+    q[2] += dqY * dt;
+    q[3] += dqZ * dt;
 
     // Normalize quaternion
-    float norm = sqrt(q_est[0] * q_est[0] + q_est[1] * q_est[1] +
-                      q_est[2] * q_est[2] + q_est[3] * q_est[3]);
-    q_est[0] /= norm;
-    q_est[1] /= norm;
-    q_est[2] /= norm;
-    q_est[3] /= norm;
-
-    // Update error covariance matrix (adding process noise)
-    for (int i = 0; i < 4; i++) {
-        P[i][i] += Q_angle * dt;
-    }
+    float norm = sqrt(q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3]);
+    q[0] /= norm;
+    q[1] /= norm;
+    q[2] /= norm;
+    q[3] /= norm;
 }
 
-
-// // Kalman filter state variables
-// float P[4][4] = {0};  // Error covariance matrix
-// float Q_angle = 0.001; // Process noise covariance for quaternion
-// float Q_bias = 0.003;  // Process noise covariance for gyroscope bias
-// float R_measure = 0.03; // Measurement noise covariance
-
-// float bias[3] = {0, 0, 0}; // Gyroscope bias correction (X, Y, Z)
-
-// float q_est[4] = {1, 0, 0, 0}; // Quaternion estimate (initialized to identity)
-
-// // Function to predict quaternion using gyroscope
-// void predictQuaternion(float gx, float gy, float gz, float dt) {
-//     // Apply bias correction
-//     gx -= bias[0];
-//     gy -= bias[1];
-//     gz -= bias[2];
-
-//     // Convert gyro rates to radians
-//     gx *= (PI / 180.0);
-//     gy *= (PI / 180.0);
-//     gz *= (PI / 180.0);
-
-//     // Compute quaternion derivative
-//     float q_dot[4] = {
-//         0.5 * (-q_est[1] * gx - q_est[2] * gy - q_est[3] * gz),
-//         0.5 * ( q_est[0] * gx + q_est[2] * gz - q_est[3] * gy),
-//         0.5 * ( q_est[0] * gy - q_est[1] * gz + q_est[3] * gx),
-//         0.5 * ( q_est[0] * gz + q_est[1] * gy - q_est[2] * gx)
-//     };
-
-//     // Update quaternion estimate
-//     q_est[0] += q_dot[0] * dt;
-//     q_est[1] += q_dot[1] * dt;
-//     q_est[2] += q_dot[2] * dt;
-//     q_est[3] += q_dot[3] * dt;
-
-//     // Normalize quaternion
-//     float norm = sqrt(q_est[0] * q_est[0] + q_est[1] * q_est[1] +
-//                       q_est[2] * q_est[2] + q_est[3] * q_est[3]);
-//     q_est[0] /= norm;
-//     q_est[1] /= norm;
-//     q_est[2] /= norm;
-//     q_est[3] /= norm;
-
-//     // Update error covariance matrix
-//     for (int i = 0; i < 4; i++) {
-//         P[i][i] += Q_angle * dt;
-//     }
-// }
-
-// Function to update quaternion using accelerometer and magnetometer
-void updateQuaternion2(float ax, float ay, float az, float mx, float my, float mz) {
-    // Normalize accelerometer
-    float norm = sqrt(ax * ax + ay * ay + az * az);
-    ax /= norm;
-    ay /= norm;
-    az /= norm;
-
-    // Normalize magnetometer
-    norm = sqrt(mx * mx + my * my + mz * mz);
-    mx /= norm;
-    my /= norm;
-    mz /= norm;
-
-    // Compute reference quaternion from accelerometer & magnetometer
-    float ref_q[4];
-    ref_q[0] = sqrt(0.5f * (1.0f + ax));
-    ref_q[1] = ay / (2.0f * ref_q[0]);
-    ref_q[2] = az / (2.0f * ref_q[0]);
-    ref_q[3] = 0.0f;
-
-    // Compute quaternion error
-    float error[4] = {
-        q_est[0] - ref_q[0],
-        q_est[1] - ref_q[1],
-        q_est[2] - ref_q[2],
-        q_est[3] - ref_q[3]
-    };
-
-    // Compute Kalman gain
-    float S = P[0][0] + R_measure;
-    float K[4];
-    for (int i = 0; i < 4; i++) {
-        K[i] = P[i][i] / S;
-    }
-
-    // Update quaternion
-    for (int i = 0; i < 4; i++) {
-        q_est[i] -= K[i] * error[i];
-    }
-
-    // Normalize quaternion
-    norm = sqrt(q_est[0] * q_est[0] + q_est[1] * q_est[1] +
-                q_est[2] * q_est[2] + q_est[3] * q_est[3]);
-    q_est[0] /= norm;
-    q_est[1] /= norm;
-    q_est[2] /= norm;
-    q_est[3] /= norm;
-
-    // Update bias estimate
-    for (int i = 0; i < 3; i++) {
-        bias[i] += Q_bias * K[i] * error[i];
-    }
-
-    // Update error covariance
-    for (int i = 0; i < 4; i++) {
-        P[i][i] *= (1 - K[i]);
-    }
-}
+int16_t ax_c, ay_c, az_c, gx_c, gy_c, gz_c, mx, my, mz;
 
 
 void loadMPU9150Data(MPU6050_MPU9150 *mpu) {
       int16_t ax, ay, az, gx, gy, gz, mx, my, mz;
 
  // Get sensor data
-    // mpu->getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
+    mpu->getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
+
+
+     // Print everything in one line
+    Serial.print("Accel: X="); Serial.print(ax);
+    Serial.print(" Y="); Serial.print(ay);
+    Serial.print(" Z="); Serial.print(az);
+    
+    Serial.print(" | Gyro: X="); Serial.print(gx);
+    Serial.print(" Y="); Serial.print(gy);
+    Serial.print(" Z="); Serial.print(gz);
+    Serial.print(" ");
+    
+    // Serial.print(" | Mag: X="); Serial.print(mx);
+    // Serial.print(" Y="); Serial.print(my);
+    // Serial.print(" Z="); Serial.print(mz);
+   gx -= -148;
+   gy -= 84;
+   gz -= -150; 
+   // -147, -84, 737
+
+  //  ax -= 600;
+  //  ay -= 200;
+  //  az -= 1400; 
 
     // Update quaternion from gyro data
-    // updateQuaternion(gx, gy, gz);
-    // updateQuaternion(gx, gy, gz);
-        // correctDriftWithAccel(ax, ay, az);
-          // Read raw sensor data
+    updateQuaternion(gx, gy, gz);
+    correctDriftWithAccel(ax, ay, az);
 
 
-    mpu->getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
+    // Apply calibration offset
+    // q.w -= q_offset_w;
+    // q.x -= q_offset_x;
+    // q.y -= q_offset_y;
+    // q.z -= q_offset_z;
+                // q.normalize();
+
+                
+
     // Convert raw data
-    gx /= 131.0f; gy /= 131.0f; gz /= 131.0f;
-    ax /= 16384.0f; ay /= 16384.0f; az /= 16384.0f;
+    // gx /= 131.0f; gy /= 131.0f; gz /= 131.0f;
+    // ax /= 16384.0f; ay /= 16384.0f; az /= 16384.0f;
 
-    // Compute time delta
-    static unsigned long lastTime = 0;
-    unsigned long now = millis();
-    float dt = (now - lastTime) / 1000.0f;
-    lastTime = now;
+    // // Compute time delta
+    // static unsigned long lastTime = 0;
+    // unsigned long now = millis();
+    // float dt = (now - lastTime) / 1000.0f;
+    // lastTime = now;
 
-    // Predict quaternion using gyroscope
-    predictQuaternion2(gx, gy, gz, dt);
+    // // Predict quaternion using gyroscope
+    // predictQuaternion(gx, gy, gz, dt);
 
-    // Correct drift using accelerometer and magnetometer
-    updateQuaternion2(ax, ay, az, mx, my, mz);
+    // // Correct drift using accelerometer and magnetometer
+    // updateQuaternion2(ax, ay, az, mx, my, mz);
 
-    // Print quaternion
-    Serial.print("Quaternion: ");
-    Serial.print(q_est[0]); Serial.print(", ");
-    Serial.print(q_est[1]); Serial.print(", ");
-    Serial.print(q_est[2]); Serial.print(", ");
-    Serial.println(q_est[3]);
+    // // Print quaternion
+    // Serial.print("Quaternion: ");
+    // Serial.print(q_est[0]); Serial.print(", ");
+    // Serial.print(q_est[1]); Serial.print(", ");
+    // Serial.print(q_est[2]); Serial.print(", ");
+    // Serial.println(q_est[3]);
 
     // delay(10);
 
 
-        storeQuaternionInFIFO();
+ // Get sensor data
+    // mpu.getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
 
-    // // Print quaternion values
-    // Serial.print("Quaternion: ");
-    // Serial.print(q.w, 6); Serial.print(", ");
-    // Serial.print(q.x, 6); Serial.print(", ");
-    // Serial.print(q.y, 6); Serial.print(", ");
-    // Serial.println(q.z, 6);
+    // Convert sensor data to float
+    // float dt = (millis() - lastTime) / 1000.0f;
+    // lastTime = millis();
+
+    // predictQuaternion(gx / 131.0, gy / 131.0, gz / 131.0, dt);
+    // updateQuaternion(ax / 16384.0, ay / 16384.0, az / 16384.0,
+    //                  mx / 4096.0, my / 4096.0, mz / 4096.0);
+
+    // // Store quaternion in global variable
+    // q.w = q_est[0];
+    // q.x = q_est[1];
+    // q.y = q_est[2];
+    // q.z = q_est[3];
+
+    // Print quaternion values
+    Serial.print("Quaternion: ");
+    Serial.print(q.w, 6); Serial.print(", ");
+    Serial.print(q.x, 6); Serial.print(", ");
+    Serial.print(q.y, 6); Serial.print(", ");
+    Serial.println(q.z, 6);
+
+     storeQuaternionInFIFO();
+
 
 }
+
 
 
 void loadMPU60500Data(MPU6050_MPU9150 *mpu) {
@@ -1162,18 +1180,22 @@ void loadMPU60500Data(MPU6050_MPU9150 *mpu) {
  // Get sensor data
     mpu->getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
 
+
+
     // Update quaternion from gyro data
     // updateQuaternion(gx, gy, gz);
     updateQuaternion(gx, gy, gz);
         correctDriftWithAccel(ax, ay, az);
+
+
         storeQuaternionInFIFO();
 
     // // Print quaternion values
-    // Serial.print("Quaternion: ");
-    // Serial.print(q.w, 6); Serial.print(", ");
-    // Serial.print(q.x, 6); Serial.print(", ");
-    // Serial.print(q.y, 6); Serial.print(", ");
-    // Serial.println(q.z, 6);
+    Serial.print("Quaternion: ");
+    Serial.print(q.w, 6); Serial.print(", ");
+    Serial.print(q.x, 6); Serial.print(", ");
+    Serial.print(q.y, 6); Serial.print(", ");
+    Serial.println(q.z, 6);
 
 }
 
@@ -1196,11 +1218,17 @@ bool loadDataFromFIFO(bool forceLoad) {
 //             gyros[selectedSensor].alreadySentData=false;
 //             return true;
       // mpu.dmpInitialize3();
+// mpu.resetFIFO();
+// mpu.setFIFOEnabled(true);
+// mpu.setDMPEnabled(true);
+// mpu.resetDMP();
+// Serial.print("Interrupt status: ");
+// Serial.println(mpu.getIntStatus(), HEX);
 
             fifoCount = mpu.getFIFOCount();
             uint8_t *fifoBuffer = gyros[selectedSensor].fifoBuffer; // FIFO storage buffer
             int packetSize = packetSizeS; 
-mpu.setFIFOEnabled(true);
+    mpu.setFIFOEnabled(true);
   //  DEBUG_PRINTLN(F("Waiting for FIRO count >= 46..."));
    
             // while ((fifoCount = mpu.getFIFOCount()) < 46);
@@ -1230,6 +1258,7 @@ mpu.setFIFOEnabled(true);
     // Serial.print(newQ->x, 6); Serial.print(", ");
     // Serial.print(newQ->y, 6); Serial.print(", ");
     // Serial.println(newQ->z, 6);
+    
                 gyros[selectedSensor].q = newQ;
                 //mpu.resetFIFO();
                 gyros[selectedSensor].hasDataReady=true;
