@@ -133,7 +133,7 @@ void calibration(MPU6050_MPU9150 *mpuP,  int16_t limit, uint8_t i){
         if (--measurementsLimit <= 0 || ready>=6 ) break;
     }
 }
-extern int16_t sensorsOffsets[6][6];
+extern int16_t sensorsOffsets[7][6];
 
 void measureOffsets(MPU6050_MPU9150 *mpuP, uint8_t i, int16_t limit){
     ax=0; ay=0; az=0;gx=0; gy=0; gz=0;
@@ -195,7 +195,7 @@ void measureOffsets(MPU6050_MPU9150 *mpuP, uint8_t i, int16_t limit){
         MASTER_SERIAL_NAME.println(F("Check that your sensor readings are close to 0 0 16384 0 0 0"));
         //MASTER_SERIAL_NAME.println(F("If calibration was succesful write down your offsets so you can set them in your projects using something similar to mpu.setXAccelOffset(youroffset)"));
         //while (1);
-        MASTER_SERIAL_NAME.println(F("Setting measured offsets..."));
+        MASTER_SERIAL_NAME.println(F("Setting measurmeasureed offsets..."));
 
         sensorsOffsets[i][0] = ax_offset;
         sensorsOffsets[i][1] = ay_offset;

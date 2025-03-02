@@ -3,7 +3,7 @@
 */
 #define ESP32_RIGHT 1
 #define SEND_ACC
-// #define MEASURE_OFFSETS 1
+#define MEASURE_OFFSETS 1
 #define SET_OFFSETS 1
 // #define SEND_DATA_ALSO_OVER_SERIAL 1
 

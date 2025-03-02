@@ -154,32 +154,32 @@ THE SOFTWARE.
 
 #define DEBUG
 #ifdef DEBUG
-    #define DEBUG_PRINT(x) Serial.print(x)
-    #define DEBUG_PRINTF(x, y) Serial.print(x, y)
-    #define DEBUG_PRINTLN(x) Serial.println(x)
-    #define DEBUG_PRINTLNF(x, y) Serial.println(x, y)
+    #define MPU_DEBUG_PRINT(x) Serial.print(x)
+    #define MPU_DEBUG_PRINTF(x, y) Serial.print(x, y)
+    #define MPU_DEBUG_PRINTLN(x) Serial.println(x)
+    #define MPU_DEBUG_PRINTLNF(x, y) Serial.println(x, y)
     #define DEBUG_WRITE(x) Serial.write(x)
     #define DEBUG_WRITE_LEN(x,y) Serial.write(x,y)
 #else
-    #define DEBUG_PRINT(x)
-    #define DEBUG_PRINTF(x, y)
-    #define DEBUG_PRINTLN(x)
-    #define DEBUG_PRINTLNF(x, y)
+    #define MPU_DEBUG_PRINT(x)
+    #define MPU_DEBUG_PRINTF(x, y)
+    #define MPU_DEBUG_PRINTLN(x)
+    #define MPU_DEBUG_PRINTLNF(x, y)
 #endif
 
 #define MPU9150_DEBUG
 #ifdef MPU9150_DEBUG
-    #define MPU9150_DEBUG_PRINT(x) Serial.print(x)
-    #define MPU9150_DEBUG_PRINTF(x, y) Serial.print(x, y)
-    #define MPU9150_DEBUG_PRINTLN(x) Serial.println(x)
-    #define MPU9150_DEBUG_PRINTLNF(x, y) Serial.println(x, y)
+    #define MPU9150_MPU_DEBUG_PRINT(x) Serial.print(x)
+    #define MPU9150_MPU_DEBUG_PRINTF(x, y) Serial.print(x, y)
+    #define MPU9150_MPU_DEBUG_PRINTLN(x) Serial.println(x)
+    #define MPU9150_MPU_DEBUG_PRINTLNF(x, y) Serial.println(x, y)
     #define MPU9150_DEBUG_WRITE(x) Serial.write(x)
     #define MPU9150_DEBUG_WRITE_LEN(x,y) Serial.write(x,y)
 #else
-    #define MPU9150_DEBUG_PRINT(x)
-    #define MPU9150_DEBUG_PRINTF(x, y)
-    #define MPU9150_DEBUG_PRINTLN(x)
-    #define MPU9150_DEBUG_PRINTLNF(x, y)
+    #define MPU9150_MPU_DEBUG_PRINT(x)
+    #define MPU9150_MPU_DEBUG_PRINTF(x, y)
+    #define MPU9150_MPU_DEBUG_PRINTLN(x)
+    #define MPU9150_MPU_DEBUG_PRINTLNF(x, y)
 #endif
 
 #define MPU6050_MPU9150_DMP_CODE_SIZE 512
@@ -457,16 +457,16 @@ const unsigned char dmpUpdatesMPU6050[MPU6050_DMP_UPDATES_SIZE] PROGMEM = {
 };
 
 
-#ifdef DEBUG
-    #define DEBUG_PRINT(x) Serial.print(x)
-    #define DEBUG_PRINTF(x, y) Serial.print(x, y)
-    #define DEBUG_PRINTLN(x) Serial.println(x)
-    #define DEBUG_PRINTLNF(x, y) Serial.println(x, y)
+#ifdef MPU_DEBUG
+    #define MPU_DEBUG_PRINT(x) Serial.print(x)
+    #define MPU_DEBUG_PRINTF(x, y) Serial.print(x, y)
+    #define MPU_DEBUG_PRINTLN(x) Serial.println(x)
+    #define MPU_DEBUG_PRINTLNF(x, y) Serial.println(x, y)
 #else
-    #define DEBUG_PRINT(x)
-    #define DEBUG_PRINTF(x, y)
-    #define DEBUG_PRINTLN(x)
-    #define DEBUG_PRINTLNF(x, y)
+    #define MPU_DEBUG_PRINT(x)
+    #define MPU_DEBUG_PRINTF(x, y)
+    #define MPU_DEBUG_PRINTLN(x)
+    #define MPU_DEBUG_PRINTLNF(x, y)
 #endif
 
 #define MPU9150_DMP_CODE_SIZE       1962    // dmpMemory[]
@@ -702,7 +702,7 @@ const unsigned char dmpUpdates2[MPU9150_DMP_UPDATES_SIZE] PROGMEM = {
 uint8_t MPU6050_MPU9150::dmpInitialize() {
 
             // reset device
-    DEBUG_PRINTLN(F("\n\nResetting MPU6050_MPU9150..."));
+    MPU_DEBUG_PRINTLN(F("\n\nResetting MPU6050_MPU9150..."));
     reset();
     delay(30); // wait after reset
 
@@ -713,91 +713,91 @@ uint8_t MPU6050_MPU9150::dmpInitialize() {
     setWakeCycleEnabled(true);*/
 
     // disable sleep mode
-    DEBUG_PRINTLN(F("Disabling sleep mode..."));
+    MPU_DEBUG_PRINTLN(F("Disabling sleep mode..."));
     setSleepEnabled(false);
 
     // get MPU hardware revision
-    DEBUG_PRINTLN(F("Selecting user bank 16..."));
+    MPU_DEBUG_PRINTLN(F("Selecting user bank 16..."));
     if(isMPU9150) {
       setMemoryBank(0x10, true, true);
-      DEBUG_PRINTLN(F("Selecting memory byte 6..."));
+      MPU_DEBUG_PRINTLN(F("Selecting memory byte 6..."));
       //setMemoryStartAddress(0x06);
       // setMemoryBank(0x10, true, false);  // Instead of true, true
       setMemoryStartAddress(0x06);
     } else {
       setMemoryBank(0, false, false);
     }
-    DEBUG_PRINTLN(F("Checking hardware revision..."));
-    DEBUG_PRINT(F("Revision @ user[16][6] = "));
-    DEBUG_PRINTLNF(readMemoryByte(), HEX);
-    DEBUG_PRINTLN(F("Resetting memory bank selection to 0..."));
+    MPU_DEBUG_PRINTLN(F("Checking hardware revision..."));
+    MPU_DEBUG_PRINT(F("Revision @ user[16][6] = "));
+    MPU_DEBUG_PRINTLNF(readMemoryByte(), HEX);
+    MPU_DEBUG_PRINTLN(F("Resetting memory bank selection to 0..."));
     if(isMPU9150) {
       setMemoryBank(0x10, true, false);  // Instead of true, true
     } else {
       setMemoryBank(0, false, false);
     }
     // check OTP bank valid
-    DEBUG_PRINTLN(F("Reading OTP bank valid flag..."));
-    DEBUG_PRINT(F("OTP bank is "));
-    DEBUG_PRINTLN(getOTPBankValid() ? F("valid!") : F("invalid!"));
+    MPU_DEBUG_PRINTLN(F("Reading OTP bank valid flag..."));
+    MPU_DEBUG_PRINT(F("OTP bank is "));
+    MPU_DEBUG_PRINTLN(getOTPBankValid() ? F("valid!") : F("invalid!"));
 
     // get X/Y/Z gyro offsets
-    DEBUG_PRINTLN(F("Reading gyro offset TC values..."));
+    MPU_DEBUG_PRINTLN(F("Reading gyro offset TC values..."));
     int8_t xgOffsetTC = getXGyroOffsetTC();
     int8_t ygOffsetTC = getYGyroOffsetTC();
     int8_t zgOffsetTC = getZGyroOffsetTC();
-    DEBUG_PRINT(F("X gyro offset = "));
-    DEBUG_PRINTLN(xgOffsetTC);
-    DEBUG_PRINT(F("Y gyro offset = "));
-    DEBUG_PRINTLN(ygOffsetTC);
-    DEBUG_PRINT(F("Z gyro offset = "));
-    DEBUG_PRINTLN(zgOffsetTC);
+    MPU_DEBUG_PRINT(F("X gyro offset = "));
+    MPU_DEBUG_PRINTLN(xgOffsetTC);
+    MPU_DEBUG_PRINT(F("Y gyro offset = "));
+    MPU_DEBUG_PRINTLN(ygOffsetTC);
+    MPU_DEBUG_PRINT(F("Z gyro offset = "));
+    MPU_DEBUG_PRINTLN(zgOffsetTC);
 
 
     if(isMPU9150) {
         // setup weird slave stuff (?)
-        DEBUG_PRINTLN(F("Setting slave 0 address to 0x7F..."));
+        MPU_DEBUG_PRINTLN(F("Setting slave 0 address to 0x7F..."));
         setSlaveAddress(0, 0x7F);
-        DEBUG_PRINTLN(F("Disabling I2C Master mode..."));
+        MPU_DEBUG_PRINTLN(F("Disabling I2C Master mode..."));
         setI2CMasterModeEnabled(false);
-        DEBUG_PRINTLN(F("Setting slave 0 address to 0x68 (self)..."));
+        MPU_DEBUG_PRINTLN(F("Setting slave 0 address to 0x68 (self)..."));
         setSlaveAddress(0, 0x68);
-        DEBUG_PRINTLN(F("Resetting I2C Master control..."));
+        MPU_DEBUG_PRINTLN(F("Resetting I2C Master control..."));
         resetI2CMaster();
         delay(20);
 
         I2Cdev::readByte(devAddr, MPU6050_MPU9150_RA_USER_CTRL, buffer); // ?
         
-        DEBUG_PRINTLN(F("Enabling interrupt latch, clear on any read, AUX bypass enabled"));
+        MPU_DEBUG_PRINTLN(F("Enabling interrupt latch, clear on any read, AUX bypass enabled"));
         I2Cdev::writeByte(devAddr, MPU6050_MPU9150_RA_INT_PIN_CFG, 0x32);
     
         // enable MPU AUX I2C bypass mode
-        //DEBUG_PRINTLN(F("Enabling AUX I2C bypass mode..."));
+        //MPU_DEBUG_PRINTLN(F("Enabling AUX I2C bypass mode..."));
         //setI2CBypassEnabled(true);
     
-        DEBUG_PRINTLN(F("Setting magnetometer mode to power-down..."));
+        MPU_DEBUG_PRINTLN(F("Setting magnetometer mode to power-down..."));
         //mag -> setMode(0);
         I2Cdev::writeByte(0x0E, 0x0A, 0x00);
     
-        DEBUG_PRINTLN(F("Setting magnetometer mode to fuse access..."));
+        MPU_DEBUG_PRINTLN(F("Setting magnetometer mode to fuse access..."));
         //mag -> setMode(0x0F);
         I2Cdev::writeByte(0x0E, 0x0A, 0x0F);
     
-        DEBUG_PRINTLN(F("Reading mag magnetometer factory calibration..."));
+        MPU_DEBUG_PRINTLN(F("Reading mag magnetometer factory calibration..."));
         int8_t asax, asay, asaz;
         //mag -> getAdjustment(&asax, &asay, &asaz);
         I2Cdev::readBytes(0x0E, 0x10, 3, buffer);
         asax = (int8_t)buffer[0];
         asay = (int8_t)buffer[1];
         asaz = (int8_t)buffer[2];
-        DEBUG_PRINT(F("Adjustment X/Y/Z = "));
-        DEBUG_PRINT(asax);
-        DEBUG_PRINT(F(" / "));
-        DEBUG_PRINT(asay);
-        DEBUG_PRINT(F(" / "));
-        DEBUG_PRINTLN(asaz);
+        MPU_DEBUG_PRINT(F("Adjustment X/Y/Z = "));
+        MPU_DEBUG_PRINT(asax);
+        MPU_DEBUG_PRINT(F(" / "));
+        MPU_DEBUG_PRINT(asay);
+        MPU_DEBUG_PRINT(F(" / "));
+        MPU_DEBUG_PRINTLN(asaz);
     
-        DEBUG_PRINTLN(F("Setting magnetometer mode to power-down..."));
+        MPU_DEBUG_PRINTLN(F("Setting magnetometer mode to power-down..."));
         //mag -> setMode(0);
         I2Cdev::writeByte(0x0E, 0x0A, 0x00);
     
@@ -805,215 +805,215 @@ uint8_t MPU6050_MPU9150::dmpInitialize() {
 
 
         // setup weird slave stuff (?)
-        DEBUG_PRINTLN(F("Setting slave 0 address to 0x7F..."));
+        MPU_DEBUG_PRINTLN(F("Setting slave 0 address to 0x7F..."));
         setSlaveAddress(0, 0x7F);
-        DEBUG_PRINTLN(F("Disabling I2C Master mode..."));
+        MPU_DEBUG_PRINTLN(F("Disabling I2C Master mode..."));
         setI2CMasterModeEnabled(false);
-        DEBUG_PRINTLN(F("Setting slave 0 address to 0x68 (self)..."));
+        MPU_DEBUG_PRINTLN(F("Setting slave 0 address to 0x68 (self)..."));
         setSlaveAddress(0, 0x68);
-        DEBUG_PRINTLN(F("Resetting I2C Master control..."));
+        MPU_DEBUG_PRINTLN(F("Resetting I2C Master control..."));
         resetI2CMaster();
         delay(20);
     }
     // load DMP code into memory banks
-    DEBUG_PRINT(F("Writing DMP code to MPU memory banks ("));
-    DEBUG_PRINTLN(F(" bytes)"));
+    MPU_DEBUG_PRINT(F("Writing DMP code to MPU memory banks ("));
+    MPU_DEBUG_PRINTLN(F(" bytes)"));
     
     const unsigned char * dmpUpdates;
 
     bool writeProgMemoryBlockRes = false;
     if(isMPU9150) {
-        DEBUG_PRINT("MPU9150 - skipping");
+        MPU_DEBUG_PRINT("MPU9150 - skipping");
         // may be removed
          dmpUpdates = dmpUpdatesMPU6050;
-        DEBUG_PRINT(F("MPU6050_DMP_CODE_SIZE: "));
-        DEBUG_PRINTLN(MPU6050_DMP_CODE_SIZE);
+        MPU_DEBUG_PRINT(F("MPU6050_DMP_CODE_SIZE: "));
+        MPU_DEBUG_PRINTLN(MPU6050_DMP_CODE_SIZE);
         writeProgMemoryBlockRes = writeProgMemoryBlock(dmpMemoryMPU6050_MPU9150, MPU6050_MPU9150_DMP_CODE_SIZE,0,0,true);//MPU6050_DMP_CODE_SIZE);
-        DEBUG_PRINT(F("writeProgMemoryBlockRes-1:"));
-        DEBUG_PRINTLN(writeProgMemoryBlockRes);
+        MPU_DEBUG_PRINT(F("writeProgMemoryBlockRes-1:"));
+        MPU_DEBUG_PRINTLN(writeProgMemoryBlockRes);
         writeProgMemoryBlockRes = writeProgMemoryBlock(dmpMemoryMPU6050, MPU6050_DMP_CODE_SIZE,2,MPU6050_MPU9150_DMP_CODE_SIZE,true);
         //writeProgMemoryBlockRes = writeProgMemoryBlock(dmpMemoryMPU6050, MPU6050_DMP_CODE_SIZE);
-        DEBUG_PRINT(F("writeProgMemoryBlockRes-2:"));
-        DEBUG_PRINTLN(writeProgMemoryBlockRes);
+        MPU_DEBUG_PRINT(F("writeProgMemoryBlockRes-2:"));
+        MPU_DEBUG_PRINTLN(writeProgMemoryBlockRes);
         
     } else {
         dmpUpdates = dmpUpdatesMPU6050;
-        DEBUG_PRINT(F("MPU6050_DMP_CODE_SIZE: "));
-        DEBUG_PRINTLN(MPU6050_DMP_CODE_SIZE);
+        MPU_DEBUG_PRINT(F("MPU6050_DMP_CODE_SIZE: "));
+        MPU_DEBUG_PRINTLN(MPU6050_DMP_CODE_SIZE);
         writeProgMemoryBlockRes = writeProgMemoryBlock(dmpMemoryMPU6050_MPU9150, MPU6050_MPU9150_DMP_CODE_SIZE,0,0,true);//MPU6050_DMP_CODE_SIZE);
-        DEBUG_PRINT(F("writeProgMemoryBlockRes-1:"));
-        DEBUG_PRINTLN(writeProgMemoryBlockRes);
+        MPU_DEBUG_PRINT(F("writeProgMemoryBlockRes-1:"));
+        MPU_DEBUG_PRINTLN(writeProgMemoryBlockRes);
         writeProgMemoryBlockRes = writeProgMemoryBlock(dmpMemoryMPU6050, MPU6050_DMP_CODE_SIZE,2,MPU6050_MPU9150_DMP_CODE_SIZE,true);
         //writeProgMemoryBlockRes = writeProgMemoryBlock(dmpMemoryMPU6050, MPU6050_DMP_CODE_SIZE);
-        DEBUG_PRINT(F("writeProgMemoryBlockRes-2:"));
-        DEBUG_PRINTLN(writeProgMemoryBlockRes);
+        MPU_DEBUG_PRINT(F("writeProgMemoryBlockRes-2:"));
+        MPU_DEBUG_PRINTLN(writeProgMemoryBlockRes);
     }
 
     if (writeProgMemoryBlockRes) {
-        DEBUG_PRINTLN(F("Success! DMP code written and verified."));
+        MPU_DEBUG_PRINTLN(F("Success! DMP code written and verified."));
 
         // write DMP configuration
-        DEBUG_PRINT(F("Writing DMP configuration to MPU memory banks ("));
-        //DEBUG_PRINT(MPU6050_MPU9150_DMP_CONFIG_SIZE);
-        DEBUG_PRINTLN(F(" bytes in config def)"));
+        MPU_DEBUG_PRINT(F("Writing DMP configuration to MPU memory banks ("));
+        //MPU_DEBUG_PRINT(MPU6050_MPU9150_DMP_CONFIG_SIZE);
+        MPU_DEBUG_PRINTLN(F(" bytes in config def)"));
         bool writeProgDMPConfigurationSetRes = false;
         if(isMPU9150) {
-            DEBUG_PRINTLN("MPU9150 - skipping");
+            MPU_DEBUG_PRINTLN("MPU9150 - skipping");
         }else{
-            DEBUG_PRINT("MPU6050");
-            DEBUG_PRINT(MPU6050_DMP_CODE_SIZE);
+            MPU_DEBUG_PRINT("MPU6050");
+            MPU_DEBUG_PRINT(MPU6050_DMP_CODE_SIZE);
             writeProgDMPConfigurationSetRes = writeProgDMPConfigurationSet(dmpConfigMPU6050, MPU6050_DMP_CONFIG_SIZE);
         }
         if (writeProgDMPConfigurationSetRes) {
-            DEBUG_PRINTLN(F("Success! DMP configuration written and verified."));
+            MPU_DEBUG_PRINTLN(F("Success! DMP configuration written and verified."));
 
-            DEBUG_PRINTLN(F("Setting clock source to Z Gyro..."));
+            MPU_DEBUG_PRINTLN(F("Setting clock source to Z Gyro..."));
             setClockSource(MPU6050_MPU9150_CLOCK_PLL_ZGYRO);
 
-            DEBUG_PRINTLN(F("Setting DMP and FIFO_OFLOW interrupts enabled..."));
+            MPU_DEBUG_PRINTLN(F("Setting DMP and FIFO_OFLOW interrupts enabled..."));
             setIntEnabled(1<<MPU6050_MPU9150_INTERRUPT_FIFO_OFLOW_BIT|1<<MPU6050_MPU9150_INTERRUPT_DMP_INT_BIT);
 
-            DEBUG_PRINTLN(F("Setting sample rate to 200Hz..."));
+            MPU_DEBUG_PRINTLN(F("Setting sample rate to 200Hz..."));
             setRate(4); // 1khz / (1 + 4) = 200 Hz
 
-            DEBUG_PRINTLN(F("Setting external frame sync to TEMP_OUT_L[0]..."));
+            MPU_DEBUG_PRINTLN(F("Setting external frame sync to TEMP_OUT_L[0]..."));
             setExternalFrameSync(MPU6050_MPU9150_EXT_SYNC_TEMP_OUT_L);
 
-            DEBUG_PRINTLN(F("Setting DLPF bandwidth to 42Hz..."));
+            MPU_DEBUG_PRINTLN(F("Setting DLPF bandwidth to 42Hz..."));
             setDLPFMode(MPU6050_MPU9150_DLPF_BW_42);
 
-            DEBUG_PRINTLN(F("Setting gyro sensitivity to +/- 2000 deg/sec..."));
+            MPU_DEBUG_PRINTLN(F("Setting gyro sensitivity to +/- 2000 deg/sec..."));
             setFullScaleGyroRange(MPU6050_MPU9150_GYRO_FS_2000);
 
-            DEBUG_PRINTLN(F("Setting DMP programm start address"));
+            MPU_DEBUG_PRINTLN(F("Setting DMP programm start address"));
             //write start address MSB into register
             setDMPConfig1(0x03);
             //write start address LSB into register
             setDMPConfig2(0x00);
 
-            DEBUG_PRINTLN(F("Clearing OTP Bank flag..."));
+            MPU_DEBUG_PRINTLN(F("Clearing OTP Bank flag..."));
             setOTPBankValid(false);
 
-            DEBUG_PRINTLN(F("Setting X/Y/Z gyro offset TCs to previous values..."));
+            MPU_DEBUG_PRINTLN(F("Setting X/Y/Z gyro offset TCs to previous values..."));
             setXGyroOffsetTC(xgOffsetTC);
             setYGyroOffsetTC(ygOffsetTC);
             setZGyroOffsetTC(zgOffsetTC);
 
-            //DEBUG_PRINTLN(F("Setting X/Y/Z gyro user offsets to zero..."));
+            //MPU_DEBUG_PRINTLN(F("Setting X/Y/Z gyro user offsets to zero..."));
             //setXGyroOffset(0);
             //setYGyroOffset(0);
             //setZGyroOffset(0);
 
-            DEBUG_PRINTLN(F("Writing final memory update 1/7 (function unknown)..."));
+            MPU_DEBUG_PRINTLN(F("Writing final memory update 1/7 (function unknown)..."));
             uint8_t dmpUpdate[16], j;
             uint16_t pos = 0;
             for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
 
-            DEBUG_PRINTLN(F("Writing final memory update 2/7 (function unknown)..."));
+            MPU_DEBUG_PRINTLN(F("Writing final memory update 2/7 (function unknown)..."));
             for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
 
-            DEBUG_PRINTLN(F("Resetting FIFO..."));
+            MPU_DEBUG_PRINTLN(F("Resetting FIFO..."));
             resetFIFO();
 
-            DEBUG_PRINTLN(F("Reading FIFO count..."));
+            MPU_DEBUG_PRINTLN(F("Reading FIFO count..."));
             uint16_t fifoCount = getFIFOCount();
             uint8_t fifoBuffer[128];
 
-            DEBUG_PRINT(F("Current FIFO count="));
-            DEBUG_PRINTLN(fifoCount);
+            MPU_DEBUG_PRINT(F("Current FIFO count="));
+            MPU_DEBUG_PRINTLN(fifoCount);
             if(isMPU9150){
-                DEBUG_PRINTLN("MPU9150 - skipping");
+                MPU_DEBUG_PRINTLN("MPU9150 - skipping");
             }else{
                 getFIFOBytes(fifoBuffer, fifoCount);
             }
-            DEBUG_PRINTLN(F("Setting motion detection threshold to 2..."));
+            MPU_DEBUG_PRINTLN(F("Setting motion detection threshold to 2..."));
             setMotionDetectionThreshold(2);
 
-            DEBUG_PRINTLN(F("Setting zero-motion detection threshold to 156..."));
+            MPU_DEBUG_PRINTLN(F("Setting zero-motion detection threshold to 156..."));
             setZeroMotionDetectionThreshold(156);
 
-            DEBUG_PRINTLN(F("Setting motion detection duration to 80..."));
+            MPU_DEBUG_PRINTLN(F("Setting motion detection duration to 80..."));
             setMotionDetectionDuration(80);
 
-            DEBUG_PRINTLN(F("Setting zero-motion detection duration to 0..."));
+            MPU_DEBUG_PRINTLN(F("Setting zero-motion detection duration to 0..."));
             setZeroMotionDetectionDuration(0);
 
             if(isMPU9150) {
-                DEBUG_PRINTLN("MPU9150 - skipping");
+                MPU_DEBUG_PRINTLN("MPU9150 - skipping");
             }
 
-            DEBUG_PRINTLN(F("Resetting FIFO..."));
+            MPU_DEBUG_PRINTLN(F("Resetting FIFO..."));
             if(isMPU9150){
-                DEBUG_PRINTLN("MPU9150 - skipping");
+                MPU_DEBUG_PRINTLN("MPU9150 - skipping");
             }else{
                 resetFIFO();
 
-                DEBUG_PRINTLN(F("Enabling FIFO..."));
+                MPU_DEBUG_PRINTLN(F("Enabling FIFO..."));
                 setFIFOEnabled(true);
 
-                DEBUG_PRINTLN(F("Enabling DMP..."));
+                MPU_DEBUG_PRINTLN(F("Enabling DMP..."));
                 setDMPEnabled(true);
 
-                DEBUG_PRINTLN(F("Resetting DMP..."));
+                MPU_DEBUG_PRINTLN(F("Resetting DMP..."));
                 resetDMP();
             
     // e1
-                DEBUG_PRINTLN(F("Writing final memory update 3/7 (function unknown)..."));
+                MPU_DEBUG_PRINTLN(F("Writing final memory update 3/7 (function unknown)..."));
                 for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates[pos]);
                 writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
 
-                DEBUG_PRINTLN(F("Writing final memory update 4/7 (function unknown)..."));
+                MPU_DEBUG_PRINTLN(F("Writing final memory update 4/7 (function unknown)..."));
                 for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates[pos]);
                 writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
 
-                DEBUG_PRINTLN(F("Writing final memory update 5/7 (function unknown)..."));
+                MPU_DEBUG_PRINTLN(F("Writing final memory update 5/7 (function unknown)..."));
                 for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates[pos]);
                 writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
 
-                DEBUG_PRINTLN(F("Waiting for FIFO count > 2..."));
+                MPU_DEBUG_PRINTLN(F("Waiting for FIFO count > 2..."));
                 while ((fifoCount = getFIFOCount()) < 3);
 
-                DEBUG_PRINT(F("Current FIFO count="));
-                DEBUG_PRINTLN(fifoCount);
-                DEBUG_PRINTLN(F("Reading FIFO data..."));
+                MPU_DEBUG_PRINT(F("Current FIFO count="));
+                MPU_DEBUG_PRINTLN(fifoCount);
+                MPU_DEBUG_PRINTLN(F("Reading FIFO data..."));
                 getFIFOBytes(fifoBuffer, fifoCount);
 
-                DEBUG_PRINTLN(F("Reading interrupt status..."));
+                MPU_DEBUG_PRINTLN(F("Reading interrupt status..."));
 
-                DEBUG_PRINT(F("Current interrupt status="));
-                DEBUG_PRINTLNF(getIntStatus(), HEX);
+                MPU_DEBUG_PRINT(F("Current interrupt status="));
+                MPU_DEBUG_PRINTLNF(getIntStatus(), HEX);
 
-                DEBUG_PRINTLN(F("Reading final memory update 6/7 (function unknown)..."));
+                MPU_DEBUG_PRINTLN(F("Reading final memory update 6/7 (function unknown)..."));
                 for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates[pos]);
                 readMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
 
-                DEBUG_PRINTLN(F("Waiting for FIFO count > 2..."));
+                MPU_DEBUG_PRINTLN(F("Waiting for FIFO count > 2..."));
                 while ((fifoCount = getFIFOCount()) < 3);
 
-                DEBUG_PRINT(F("Current FIFO count="));
-                DEBUG_PRINTLN(fifoCount);
+                MPU_DEBUG_PRINT(F("Current FIFO count="));
+                MPU_DEBUG_PRINTLN(fifoCount);
 
-                DEBUG_PRINTLN(F("Reading FIFO data..."));
+                MPU_DEBUG_PRINTLN(F("Reading FIFO data..."));
                 getFIFOBytes(fifoBuffer, fifoCount);
 
-                DEBUG_PRINTLN(F("Reading interrupt status..."));
+                MPU_DEBUG_PRINTLN(F("Reading interrupt status..."));
 
-                DEBUG_PRINT(F("Current interrupt status="));
-                DEBUG_PRINTLNF(getIntStatus(), HEX);
+                MPU_DEBUG_PRINT(F("Current interrupt status="));
+                MPU_DEBUG_PRINTLNF(getIntStatus(), HEX);
 
-                DEBUG_PRINTLN(F("Writing final memory update 7/7 (function unknown)..."));
+                MPU_DEBUG_PRINTLN(F("Writing final memory update 7/7 (function unknown)..."));
                 for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates[pos]);
                 writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
             }
 // e2
-            DEBUG_PRINTLN(F("DMP is good to go! Finally."));
+            MPU_DEBUG_PRINTLN(F("DMP is good to go! Finally."));
 
-            DEBUG_PRINTLN(F("Disabling DMP (you turn it on later)..."));
+            MPU_DEBUG_PRINTLN(F("Disabling DMP (you turn it on later)..."));
             setDMPEnabled(false);
 
-            DEBUG_PRINTLN(F("Setting up internal 42-byte (default) DMP packet buffer..."));
+            MPU_DEBUG_PRINTLN(F("Setting up internal 42-byte (default) DMP packet buffer..."));
             if(isMPU9150){
                 dmpPacketSize = 48;
             }else{
@@ -1023,15 +1023,15 @@ uint8_t MPU6050_MPU9150::dmpInitialize() {
                 return 3; // TODO: proper error code for no memory
             }*/
 
-            DEBUG_PRINTLN(F("Resetting FIFO and clearing INT status one last time..."));
+            MPU_DEBUG_PRINTLN(F("Resetting FIFO and clearing INT status one last time..."));
             resetFIFO();
             getIntStatus();
         } else {
-            DEBUG_PRINTLN(F("ERROR! DMP configuration verification failed."));
+            MPU_DEBUG_PRINTLN(F("ERROR! DMP configuration verification failed."));
             return 2; // configuration block loading failed
         }
     } else {
-        DEBUG_PRINTLN(F("ERROR! DMP code verification failed."));
+        MPU_DEBUG_PRINTLN(F("ERROR! DMP code verification failed."));
         return 1; // main binary block loading failed
     }
     return 0; // success
@@ -1043,7 +1043,7 @@ uint8_t MPU6050_MPU9150::dmpInitialize() {
 uint8_t MPU6050_MPU9150::dmpInitialize3() {
 
             // reset device
-    // DEBUG_PRINTLN(F("\n\nResetting MPU6050_MPU9150..."));
+    // MPU_DEBUG_PRINTLN(F("\n\nResetting MPU6050_MPU9150..."));
     // reset();
     // delay(30); // wait after reset
 
@@ -1054,243 +1054,243 @@ uint8_t MPU6050_MPU9150::dmpInitialize3() {
     setWakeCycleEnabled(true);*/
 
     // disable sleep mode
-    // DEBUG_PRINTLN(F("Disabling sleep mode..."));
+    // MPU_DEBUG_PRINTLN(F("Disabling sleep mode..."));
     // setSleepEnabled(false);
 
     // get MPU hardware revision
-    // DEBUG_PRINTLN(F("Selecting user bank 16..."));
+    // MPU_DEBUG_PRINTLN(F("Selecting user bank 16..."));
       // setMemoryBank(0, false, false);
-    // DEBUG_PRINTLN(F("Checking hardware revision..."));
-    // DEBUG_PRINT(F("Revision @ user[16][6] = "));
-    // DEBUG_PRINTLNF(readMemoryByte(), HEX);
-    // DEBUG_PRINTLN(F("Resetting memory bank selection to 0..."));
+    // MPU_DEBUG_PRINTLN(F("Checking hardware revision..."));
+    // MPU_DEBUG_PRINT(F("Revision @ user[16][6] = "));
+    // MPU_DEBUG_PRINTLNF(readMemoryByte(), HEX);
+    // MPU_DEBUG_PRINTLN(F("Resetting memory bank selection to 0..."));
       // setMemoryBank(0, false, false);
     // check OTP bank valid
-    // DEBUG_PRINTLN(F("Reading OTP bank valid flag..."));
-    // DEBUG_PRINT(F("OTP bank is "));
-    // DEBUG_PRINTLN(getOTPBankValid() ? F("valid!") : F("invalid!"));
+    // MPU_DEBUG_PRINTLN(F("Reading OTP bank valid flag..."));
+    // MPU_DEBUG_PRINT(F("OTP bank is "));
+    // MPU_DEBUG_PRINTLN(getOTPBankValid() ? F("valid!") : F("invalid!"));
 
     // get X/Y/Z gyro offsets
-    // DEBUG_PRINTLN(F("Reading gyro offset TC values..."));
+    // MPU_DEBUG_PRINTLN(F("Reading gyro offset TC values..."));
     // int8_t xgOffsetTC = getXGyroOffsetTC();
     // int8_t ygOffsetTC = getYGyroOffsetTC();
     // int8_t zgOffsetTC = getZGyroOffsetTC();
-    // DEBUG_PRINT(F("X gyro offset = "));
-    // DEBUG_PRINTLN(xgOffsetTC);
-    // DEBUG_PRINT(F("Y gyro offset = "));
-    // DEBUG_PRINTLN(ygOffsetTC);
-    // DEBUG_PRINT(F("Z gyro offset = "));
-    // DEBUG_PRINTLN(zgOffsetTC);
+    // MPU_DEBUG_PRINT(F("X gyro offset = "));
+    // MPU_DEBUG_PRINTLN(xgOffsetTC);
+    // MPU_DEBUG_PRINT(F("Y gyro offset = "));
+    // MPU_DEBUG_PRINTLN(ygOffsetTC);
+    // MPU_DEBUG_PRINT(F("Z gyro offset = "));
+    // MPU_DEBUG_PRINTLN(zgOffsetTC);
 
 
    
         // setup weird slave stuff (?)
-        // DEBUG_PRINTLN(F("Setting slave 0 address to 0x7F..."));
+        // MPU_DEBUG_PRINTLN(F("Setting slave 0 address to 0x7F..."));
         // setSlaveAddress(0, 0x7F);
-        // DEBUG_PRINTLN(F("Disabling I2C Master mode..."));
+        // MPU_DEBUG_PRINTLN(F("Disabling I2C Master mode..."));
         // setI2CMasterModeEnabled(false);
-        // DEBUG_PRINTLN(F("Setting slave 0 address to 0x68 (self)..."));
+        // MPU_DEBUG_PRINTLN(F("Setting slave 0 address to 0x68 (self)..."));
         // setSlaveAddress(0, 0x68);
-        // DEBUG_PRINTLN(F("Resetting I2C Master control..."));
+        // MPU_DEBUG_PRINTLN(F("Resetting I2C Master control..."));
         // resetI2CMaster();
         // delay(20);
 
 
     // load DMP code into memory banks
-    // DEBUG_PRINT(F("Writing DMP code to MPU memory banks ("));
-    // DEBUG_PRINTLN(F(" bytes)"));
+    // MPU_DEBUG_PRINT(F("Writing DMP code to MPU memory banks ("));
+    // MPU_DEBUG_PRINTLN(F(" bytes)"));
     
     const unsigned char * dmpUpdates;
 
     bool writeProgMemoryBlockRes = false;
    
         // dmpUpdates = dmpUpdatesMPU6050;
-        // DEBUG_PRINT(F("MPU6050_DMP_CODE_SIZE: "));
-        // DEBUG_PRINTLN(MPU6050_DMP_CODE_SIZE);
+        // MPU_DEBUG_PRINT(F("MPU6050_DMP_CODE_SIZE: "));
+        // MPU_DEBUG_PRINTLN(MPU6050_DMP_CODE_SIZE);
         // writeProgMemoryBlockRes = writeProgMemoryBlock(dmpMemoryMPU6050_MPU9150, MPU6050_MPU9150_DMP_CODE_SIZE,0,0,true);//MPU6050_DMP_CODE_SIZE);
-        // DEBUG_PRINT(F("writeProgMemoryBlockRes-1:"));
-        // DEBUG_PRINTLN(writeProgMemoryBlockRes);
+        // MPU_DEBUG_PRINT(F("writeProgMemoryBlockRes-1:"));
+        // MPU_DEBUG_PRINTLN(writeProgMemoryBlockRes);
         // writeProgMemoryBlockRes = writeProgMemoryBlock(dmpMemoryMPU6050, MPU6050_DMP_CODE_SIZE,2,MPU6050_MPU9150_DMP_CODE_SIZE,true);
         // //writeProgMemoryBlockRes = writeProgMemoryBlock(dmpMemoryMPU6050, MPU6050_DMP_CODE_SIZE);
-        // DEBUG_PRINT(F("writeProgMemoryBlockRes-2:"));
-        // DEBUG_PRINTLN(writeProgMemoryBlockRes);
+        // MPU_DEBUG_PRINT(F("writeProgMemoryBlockRes-2:"));
+        // MPU_DEBUG_PRINTLN(writeProgMemoryBlockRes);
 
 //     if (writeProgMemoryBlockRes) {
-//         DEBUG_PRINTLN(F("Success! DMP code written and verified."));
+//         MPU_DEBUG_PRINTLN(F("Success! DMP code written and verified."));
 
 //         // write DMP configuration
-//         DEBUG_PRINT(F("Writing DMP configuration to MPU memory banks ("));
-//         //DEBUG_PRINT(MPU6050_MPU9150_DMP_CONFIG_SIZE);
-//         DEBUG_PRINTLN(F(" bytes in config def)"));
+//         MPU_DEBUG_PRINT(F("Writing DMP configuration to MPU memory banks ("));
+//         //MPU_DEBUG_PRINT(MPU6050_MPU9150_DMP_CONFIG_SIZE);
+//         MPU_DEBUG_PRINTLN(F(" bytes in config def)"));
 //         bool writeProgDMPConfigurationSetRes = false;
-//             DEBUG_PRINT("MPU6050");
-//             DEBUG_PRINT(MPU6050_DMP_CODE_SIZE);
+//             MPU_DEBUG_PRINT("MPU6050");
+//             MPU_DEBUG_PRINT(MPU6050_DMP_CODE_SIZE);
 //             writeProgDMPConfigurationSetRes = writeProgDMPConfigurationSet(dmpConfigMPU6050, MPU6050_DMP_CONFIG_SIZE);
 //         if (writeProgDMPConfigurationSetRes) {
-//             DEBUG_PRINTLN(F("Success! DMP configuration written and verified."));
+//             MPU_DEBUG_PRINTLN(F("Success! DMP configuration written and verified."));
 
-//             DEBUG_PRINTLN(F("Setting clock source to Z Gyro..."));
+//             MPU_DEBUG_PRINTLN(F("Setting clock source to Z Gyro..."));
 //             setClockSource(MPU6050_MPU9150_CLOCK_PLL_ZGYRO);
 
-//             DEBUG_PRINTLN(F("Setting DMP and FIFO_OFLOW interrupts enabled..."));
+//             MPU_DEBUG_PRINTLN(F("Setting DMP and FIFO_OFLOW interrupts enabled..."));
 //             setIntEnabled(1<<MPU6050_MPU9150_INTERRUPT_FIFO_OFLOW_BIT|1<<MPU6050_MPU9150_INTERRUPT_DMP_INT_BIT);
 
-//             DEBUG_PRINTLN(F("Setting sample rate to 200Hz..."));
+//             MPU_DEBUG_PRINTLN(F("Setting sample rate to 200Hz..."));
 //             setRate(4); // 1khz / (1 + 4) = 200 Hz
 
-//             DEBUG_PRINTLN(F("Setting external frame sync to TEMP_OUT_L[0]..."));
+//             MPU_DEBUG_PRINTLN(F("Setting external frame sync to TEMP_OUT_L[0]..."));
 //             setExternalFrameSync(MPU6050_MPU9150_EXT_SYNC_TEMP_OUT_L);
 
-//             DEBUG_PRINTLN(F("Setting DLPF bandwidth to 42Hz..."));
+//             MPU_DEBUG_PRINTLN(F("Setting DLPF bandwidth to 42Hz..."));
 //             setDLPFMode(MPU6050_MPU9150_DLPF_BW_42);
 
-//             DEBUG_PRINTLN(F("Setting gyro sensitivity to +/- 2000 deg/sec..."));
+//             MPU_DEBUG_PRINTLN(F("Setting gyro sensitivity to +/- 2000 deg/sec..."));
 //             setFullScaleGyroRange(MPU6050_MPU9150_GYRO_FS_2000);
 
-//             DEBUG_PRINTLN(F("Setting DMP programm start address"));
+//             MPU_DEBUG_PRINTLN(F("Setting DMP programm start address"));
 //             //write start address MSB into register
 //             setDMPConfig1(0x03);
 //             //write start address LSB into register
 //             setDMPConfig2(0x00);
 
-//             DEBUG_PRINTLN(F("Clearing OTP Bank flag..."));
+//             MPU_DEBUG_PRINTLN(F("Clearing OTP Bank flag..."));
 //             setOTPBankValid(false);
 
-//             DEBUG_PRINTLN(F("Setting X/Y/Z gyro offset TCs to previous values..."));
+//             MPU_DEBUG_PRINTLN(F("Setting X/Y/Z gyro offset TCs to previous values..."));
 //             setXGyroOffsetTC(xgOffsetTC);
 //             setYGyroOffsetTC(ygOffsetTC);
 //             setZGyroOffsetTC(zgOffsetTC);
 
-//             //DEBUG_PRINTLN(F("Setting X/Y/Z gyro user offsets to zero..."));
+//             //MPU_DEBUG_PRINTLN(F("Setting X/Y/Z gyro user offsets to zero..."));
 //             //setXGyroOffset(0);
 //             //setYGyroOffset(0);
 //             //setZGyroOffset(0);
 
-//             DEBUG_PRINTLN(F("Writing final memory update 1/7 (function unknown)..."));
+//             MPU_DEBUG_PRINTLN(F("Writing final memory update 1/7 (function unknown)..."));
             uint8_t dmpUpdate[16], j;
             uint16_t pos = 0;
 //             for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates[pos]);
 //             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
 
-//             DEBUG_PRINTLN(F("Writing final memory update 2/7 (function unknown)..."));
+//             MPU_DEBUG_PRINTLN(F("Writing final memory update 2/7 (function unknown)..."));
 //             for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates[pos]);
 //             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
 
-//             DEBUG_PRINTLN(F("Resetting FIFO..."));
+//             MPU_DEBUG_PRINTLN(F("Resetting FIFO..."));
 //             resetFIFO();
 
-//             DEBUG_PRINTLN(F("Reading FIFO count..."));
+//             MPU_DEBUG_PRINTLN(F("Reading FIFO count..."));
                      setDMPEnabled(true);
    uint16_t fifoCount = getFIFOCount();
             uint8_t fifoBuffer[128];
 
-//             DEBUG_PRINT(F("Current FIFO count="));
-//             DEBUG_PRINTLN(fifoCount);
+//             MPU_DEBUG_PRINT(F("Current FIFO count="));
+//             MPU_DEBUG_PRINTLN(fifoCount);
 //             if(isMPU9150){
-//                 DEBUG_PRINTLN("MPU9150 - skipping");
+//                 MPU_DEBUG_PRINTLN("MPU9150 - skipping");
 //             }else{
 //                 getFIFOBytes(fifoBuffer, fifoCount);
 //             }
-//             DEBUG_PRINTLN(F("Setting motion detection threshold to 2..."));
+//             MPU_DEBUG_PRINTLN(F("Setting motion detection threshold to 2..."));
 //             setMotionDetectionThreshold(2);
 
-//             DEBUG_PRINTLN(F("Setting zero-motion detection threshold to 156..."));
+//             MPU_DEBUG_PRINTLN(F("Setting zero-motion detection threshold to 156..."));
 //             setZeroMotionDetectionThreshold(156);
 
-//             DEBUG_PRINTLN(F("Setting motion detection duration to 80..."));
+//             MPU_DEBUG_PRINTLN(F("Setting motion detection duration to 80..."));
 //             setMotionDetectionDuration(80);
 
-//             DEBUG_PRINTLN(F("Setting zero-motion detection duration to 0..."));
+//             MPU_DEBUG_PRINTLN(F("Setting zero-motion detection duration to 0..."));
 //             setZeroMotionDetectionDuration(0);
 
 //             if(isMPU9150) {
-//                 DEBUG_PRINTLN("MPU9150 - skipping");
+//                 MPU_DEBUG_PRINTLN("MPU9150 - skipping");
 //             }
 
-//             DEBUG_PRINTLN(F("Resetting FIFO..."));
+//             MPU_DEBUG_PRINTLN(F("Resetting FIFO..."));
 //                 resetFIFO();
 
-//                 DEBUG_PRINTLN(F("Enabling FIFO..."));
+//                 MPU_DEBUG_PRINTLN(F("Enabling FIFO..."));
 //                 setFIFOEnabled(true);
 
-//                 DEBUG_PRINTLN(F("Enabling DMP..."));
+//                 MPU_DEBUG_PRINTLN(F("Enabling DMP..."));
 //                 setDMPEnabled(true);
 
-//                 DEBUG_PRINTLN(F("Resetting DMP..."));
+//                 MPU_DEBUG_PRINTLN(F("Resetting DMP..."));
 //                 resetDMP();
             
 //     // e1
-                // DEBUG_PRINTLN(F("Writing final memory update 3/7 (function unknown)..."));
+                // MPU_DEBUG_PRINTLN(F("Writing final memory update 3/7 (function unknown)..."));
                 // for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates[pos]);
                 // writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
 
-                // // DEBUG_PRINTLN(F("Writing final memory update 4/7 (function unknown)..."));
+                // // MPU_DEBUG_PRINTLN(F("Writing final memory update 4/7 (function unknown)..."));
                 // for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates[pos]);
                 // writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
 
-                // // DEBUG_PRINTLN(F("Writing final memory update 5/7 (function unknown)..."));
+                // // MPU_DEBUG_PRINTLN(F("Writing final memory update 5/7 (function unknown)..."));
                 // for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates[pos]);
                 // writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
 
-                // DEBUG_PRINTLN(F("Waiting for FIFO count > 2..."));
+                // MPU_DEBUG_PRINTLN(F("Waiting for FIFO count > 2..."));
                 // while ((fifoCount = getFIFOCount()) < 3);
 
-                // DEBUG_PRINT(F("Current FIFO count="));
-                // DEBUG_PRINTLN(fifoCount);
-                // DEBUG_PRINTLN(F("Reading FIFO data..."));
+                // MPU_DEBUG_PRINT(F("Current FIFO count="));
+                // MPU_DEBUG_PRINTLN(fifoCount);
+                // MPU_DEBUG_PRINTLN(F("Reading FIFO data..."));
                 // getFIFOBytes(fifoBuffer, fifoCount);
 
-                // DEBUG_PRINTLN(F("Reading interrupt status..."));
+                // MPU_DEBUG_PRINTLN(F("Reading interrupt status..."));
 
-                // DEBUG_PRINT(F("Current interrupt status="));
-                // DEBUG_PRINTLNF(getIntStatus(), HEX);
+                // MPU_DEBUG_PRINT(F("Current interrupt status="));
+                // MPU_DEBUG_PRINTLNF(getIntStatus(), HEX);
                 // getIntStatus();
 
-                // DEBUG_PRINTLN(F("Reading final memory update 6/7 (function unknown)..."));
+                // MPU_DEBUG_PRINTLN(F("Reading final memory update 6/7 (function unknown)..."));
                 // for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates[pos]);
                 // readMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
 
-                // DEBUG_PRINTLN(F("Waiting for FIFO count > 2..."));
+                // MPU_DEBUG_PRINTLN(F("Waiting for FIFO count > 2..."));
                 // while ((fifoCount = getFIFOCount()) < 3);
 
-                // DEBUG_PRINT(F("Current FIFO count="));
-                // DEBUG_PRINTLN(fifoCount);
+                // MPU_DEBUG_PRINT(F("Current FIFO count="));
+                // MPU_DEBUG_PRINTLN(fifoCount);
 
-                // DEBUG_PRINTLN(F("Reading FIFO data..."));
+                // MPU_DEBUG_PRINTLN(F("Reading FIFO data..."));
                 // getFIFOBytes(fifoBuffer, fifoCount);
 
-                // DEBUG_PRINTLN(F("Reading interrupt status..."));
+                // MPU_DEBUG_PRINTLN(F("Reading interrupt status..."));
 
-                // DEBUG_PRINT(F("Current interrupt status="));
-                // DEBUG_PRINTLNF(getIntStatus(), HEX);
+                // MPU_DEBUG_PRINT(F("Current interrupt status="));
+                // MPU_DEBUG_PRINTLNF(getIntStatus(), HEX);
 
-                // DEBUG_PRINTLN(F("Writing final memory update 7/7 (function unknown)..."));
+                // MPU_DEBUG_PRINTLN(F("Writing final memory update 7/7 (function unknown)..."));
                 // for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates[pos]);
                 // writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
 // e2
-            // DEBUG_PRINTLN(F("DMP is good to go! Finally."));
+            // MPU_DEBUG_PRINTLN(F("DMP is good to go! Finally."));
 
-//             DEBUG_PRINTLN(F("Disabling DMP (you turn it on later)..."));
+//             MPU_DEBUG_PRINTLN(F("Disabling DMP (you turn it on later)..."));
 //             setDMPEnabled(false);
 
-//             DEBUG_PRINTLN(F("Setting up internal 42-byte (default) DMP packet buffer..."));
+//             MPU_DEBUG_PRINTLN(F("Setting up internal 42-byte (default) DMP packet buffer..."));
 //                 dmpPacketSize = 42;
 //             /*if ((dmpPacketBuffer = (uint8_t *)malloc(42)) == 0) {
 //                 return 3; // TODO: proper error code for no memory
 //             }*/
 
-  // DEBUG_PRINTLN(F("Waiting for FIFO count > 2..."));
+  // MPU_DEBUG_PRINTLN(F("Waiting for FIFO count > 2..."));
                 // while ((fifoCount = getFIFOCount()) < 3);
 
-            // DEBUG_PRINTLN(F("Resetting FIFO and clearing INT status one last time..."));
+            // MPU_DEBUG_PRINTLN(F("Resetting FIFO and clearing INT status one last time..."));
             resetFIFO();
             getIntStatus();
 //         } else {
-//             DEBUG_PRINTLN(F("ERROR! DMP configuration verification failed."));
+//             MPU_DEBUG_PRINTLN(F("ERROR! DMP configuration verification failed."));
 //             return 2; // configuration block loading failed
 //         }
     // } else {
-        // DEBUG_PRINTLN(F("ERROR! DMP code verification failed."));
+        // MPU_DEBUG_PRINTLN(F("ERROR! DMP code verification failed."));
         // return 1; // main binary block loading failed
     // }
     return 0; // success
@@ -1665,342 +1665,342 @@ uint8_t MPU6050_MPU9150::dmpInitialize3() {
 
 //#define DEBUG
 #ifdef DEBUG
-    #define DEBUG_PRINT(x) Serial.print(x)
-    #define DEBUG_PRINTF(x, y) Serial.print(x, y)
-    #define DEBUG_PRINTLN(x) Serial.println(x)
-    #define DEBUG_PRINTLNF(x, y) Serial.println(x, y)
+    #define MPU_DEBUG_PRINT(x) Serial.print(x)
+    #define MPU_DEBUG_PRINTF(x, y) Serial.print(x, y)
+    #define MPU_DEBUG_PRINTLN(x) Serial.println(x)
+    #define MPU_DEBUG_PRINTLNF(x, y) Serial.println(x, y)
 #else
-    #define DEBUG_PRINT(x)
-    #define DEBUG_PRINTF(x, y)
-    #define DEBUG_PRINTLN(x)
-    #define DEBUG_PRINTLNF(x, y)
+    #define MPU_DEBUG_PRINT(x)
+    #define MPU_DEBUG_PRINTF(x, y)
+    #define MPU_DEBUG_PRINTLN(x)
+    #define MPU_DEBUG_PRINTLNF(x, y)
 #endif
 
 // note: DMP code memory blocks defined at end of header file
 
 uint8_t MPU6050_MPU9150::dmpInitialize2() {
     // reset device
-    DEBUG_PRINTLN(F("\n\nResetting MPU9150..."));
+    MPU_DEBUG_PRINTLN(F("\n\nResetting MPU9150..."));
     reset();
     delay(30); // wait after reset
 
     // disable sleep mode
-    DEBUG_PRINTLN(F("Disabling sleep mode..."));
+    MPU_DEBUG_PRINTLN(F("Disabling sleep mode..."));
     setSleepEnabled(false);
 
     // get MPU product ID
-    DEBUG_PRINTLN(F("Getting product ID..."));
+    MPU_DEBUG_PRINTLN(F("Getting product ID..."));
     uint8_t productID = 0; //getProductID();
-    DEBUG_PRINT(F("Product ID = "));
-    DEBUG_PRINT(productID);
+    MPU_DEBUG_PRINT(F("Product ID = "));
+    MPU_DEBUG_PRINT(productID);
 
     // get MPU hardware revision
-    DEBUG_PRINTLN(F("Selecting user bank 16..."));
+    MPU_DEBUG_PRINTLN(F("Selecting user bank 16..."));
     setMemoryBank(0x10, true, true);
-    DEBUG_PRINTLN(F("Selecting memory byte 6..."));
+    MPU_DEBUG_PRINTLN(F("Selecting memory byte 6..."));
     setMemoryStartAddress(0x06);
-    DEBUG_PRINTLN(F("Checking hardware revision..."));
+    MPU_DEBUG_PRINTLN(F("Checking hardware revision..."));
     uint8_t hwRevision = readMemoryByte();
-    DEBUG_PRINT(F("Revision @ user[16][6] = "));
-    DEBUG_PRINTLNF(hwRevision, HEX);
-    DEBUG_PRINTLN(F("Resetting memory bank selection to 0..."));
+    MPU_DEBUG_PRINT(F("Revision @ user[16][6] = "));
+    MPU_DEBUG_PRINTLNF(hwRevision, HEX);
+    MPU_DEBUG_PRINTLN(F("Resetting memory bank selection to 0..."));
     setMemoryBank(0, false, false);
 
     // check OTP bank valid
-    DEBUG_PRINTLN(F("Reading OTP bank valid flag..."));
+    MPU_DEBUG_PRINTLN(F("Reading OTP bank valid flag..."));
     uint8_t otpValid = getOTPBankValid();
-    DEBUG_PRINT(F("OTP bank is "));
-    DEBUG_PRINTLN(otpValid ? F("valid!") : F("invalid!"));
+    MPU_DEBUG_PRINT(F("OTP bank is "));
+    MPU_DEBUG_PRINTLN(otpValid ? F("valid!") : F("invalid!"));
 
     // get X/Y/Z gyro offsets
-    DEBUG_PRINTLN(F("Reading gyro offset values..."));
+    MPU_DEBUG_PRINTLN(F("Reading gyro offset values..."));
     int8_t xgOffset = getXGyroOffset();
     int8_t ygOffset = getYGyroOffset();
     int8_t zgOffset = getZGyroOffset();
-    DEBUG_PRINT(F("X gyro offset = "));
-    DEBUG_PRINTLN(xgOffset);
-    DEBUG_PRINT(F("Y gyro offset = "));
-    DEBUG_PRINTLN(ygOffset);
-    DEBUG_PRINT(F("Z gyro offset = "));
-    DEBUG_PRINTLN(zgOffset);
+    MPU_DEBUG_PRINT(F("X gyro offset = "));
+    MPU_DEBUG_PRINTLN(xgOffset);
+    MPU_DEBUG_PRINT(F("Y gyro offset = "));
+    MPU_DEBUG_PRINTLN(ygOffset);
+    MPU_DEBUG_PRINT(F("Z gyro offset = "));
+    MPU_DEBUG_PRINTLN(zgOffset);
 
- DEBUG_PRINTLN(F("Setting slave 0 address to 0x7F..."));
+ MPU_DEBUG_PRINTLN(F("Setting slave 0 address to 0x7F..."));
         setSlaveAddress(0, 0x7F);
-        DEBUG_PRINTLN(F("Disabling I2C Master mode..."));
+        MPU_DEBUG_PRINTLN(F("Disabling I2C Master mode..."));
         setI2CMasterModeEnabled(false);
-        DEBUG_PRINTLN(F("Setting slave 0 address to 0x68 (self)..."));
+        MPU_DEBUG_PRINTLN(F("Setting slave 0 address to 0x68 (self)..."));
         setSlaveAddress(0, 0x68);
-        DEBUG_PRINTLN(F("Resetting I2C Master control..."));
+        MPU_DEBUG_PRINTLN(F("Resetting I2C Master control..."));
         resetI2CMaster();
         delay(20);
     
     
     I2Cdev::readByte(devAddr, MPU9150_RA_USER_CTRL, buffer); // ?
     
-    DEBUG_PRINTLN(F("Enabling interrupt latch, clear on any read, AUX bypass enabled"));
+    MPU_DEBUG_PRINTLN(F("Enabling interrupt latch, clear on any read, AUX bypass enabled"));
     I2Cdev::writeByte(devAddr, MPU9150_RA_INT_PIN_CFG, 0x32);
 
     // enable MPU AUX I2C bypass mode
-    //DEBUG_PRINTLN(F("Enabling AUX I2C bypass mode..."));
+    //MPU_DEBUG_PRINTLN(F("Enabling AUX I2C bypass mode..."));
     //setI2CBypassEnabled(true);
 
-    DEBUG_PRINTLN(F("Setting magnetometer mode to power-down..."));
+    MPU_DEBUG_PRINTLN(F("Setting magnetometer mode to power-down..."));
     //mag -> setMode(0);
     I2Cdev::writeByte(0x0E, 0x0A, 0x00);
 
-    DEBUG_PRINTLN(F("Setting magnetometer mode to fuse access..."));
+    MPU_DEBUG_PRINTLN(F("Setting magnetometer mode to fuse access..."));
     //mag -> setMode(0x0F);
     I2Cdev::writeByte(0x0E, 0x0A, 0x0F);
 
-    DEBUG_PRINTLN(F("Reading mag magnetometer factory calibration..."));
+    MPU_DEBUG_PRINTLN(F("Reading mag magnetometer factory calibration..."));
     int8_t asax, asay, asaz;
     //mag -> getAdjustment(&asax, &asay, &asaz);
     I2Cdev::readBytes(0x0E, 0x10, 3, buffer);
     asax = (int8_t)buffer[0];
     asay = (int8_t)buffer[1];
     asaz = (int8_t)buffer[2];
-    DEBUG_PRINT(F("Adjustment X/Y/Z = "));
-    DEBUG_PRINT(asax);
-    DEBUG_PRINT(F(" / "));
-    DEBUG_PRINT(asay);
-    DEBUG_PRINT(F(" / "));
-    DEBUG_PRINTLN(asaz);
+    MPU_DEBUG_PRINT(F("Adjustment X/Y/Z = "));
+    MPU_DEBUG_PRINT(asax);
+    MPU_DEBUG_PRINT(F(" / "));
+    MPU_DEBUG_PRINT(asay);
+    MPU_DEBUG_PRINT(F(" / "));
+    MPU_DEBUG_PRINTLN(asaz);
 
-    DEBUG_PRINTLN(F("Setting magnetometer mode to power-down..."));
+    MPU_DEBUG_PRINTLN(F("Setting magnetometer mode to power-down..."));
     //mag -> setMode(0);
     I2Cdev::writeByte(0x0E, 0x0A, 0x00);
 
     // load DMP code into memory banks
-    DEBUG_PRINT(F("Writing DMP code to MPU memory banks ("));
-    DEBUG_PRINT(MPU9150_DMP_CODE_SIZE);
-    DEBUG_PRINTLN(F(" bytes)"));
+    MPU_DEBUG_PRINT(F("Writing DMP code to MPU memory banks ("));
+    MPU_DEBUG_PRINT(MPU9150_DMP_CODE_SIZE);
+    MPU_DEBUG_PRINTLN(F(" bytes)"));
     if (writeProgMemoryBlock(dmpMemory2, MPU9150_DMP_CODE_SIZE)) {
-        DEBUG_PRINTLN(F("Success! DMP code written and verified."));
+        MPU_DEBUG_PRINTLN(F("Success! DMP code written and verified."));
 
-        DEBUG_PRINTLN(F("Configuring DMP and related settings..."));
+        MPU_DEBUG_PRINTLN(F("Configuring DMP and related settings..."));
 
         // write DMP configuration
-        DEBUG_PRINT(F("Writing DMP configuration to MPU memory banks ("));
-        DEBUG_PRINT(MPU9150_DMP_CONFIG_SIZE);
-        DEBUG_PRINTLN(F(" bytes in config def)"));
+        MPU_DEBUG_PRINT(F("Writing DMP configuration to MPU memory banks ("));
+        MPU_DEBUG_PRINT(MPU9150_DMP_CONFIG_SIZE);
+        MPU_DEBUG_PRINTLN(F(" bytes in config def)"));
         if (writeProgDMPConfigurationSet(dmpConfig2, MPU9150_DMP_CONFIG_SIZE)) {
-            DEBUG_PRINTLN(F("Success! DMP configuration written and verified."));
+            MPU_DEBUG_PRINTLN(F("Success! DMP configuration written and verified."));
 
-            DEBUG_PRINTLN(F("Setting DMP and FIFO_OFLOW interrupts enabled..."));
+            MPU_DEBUG_PRINTLN(F("Setting DMP and FIFO_OFLOW interrupts enabled..."));
             setIntEnabled(0x12);
 
-            DEBUG_PRINTLN(F("Setting sample rate to 200Hz..."));
+            MPU_DEBUG_PRINTLN(F("Setting sample rate to 200Hz..."));
             setRate(4); // 1khz / (1 + 4) = 200 Hz
 
-            DEBUG_PRINTLN(F("Setting clock source to Z Gyro..."));
+            MPU_DEBUG_PRINTLN(F("Setting clock source to Z Gyro..."));
             setClockSource(MPU9150_CLOCK_PLL_ZGYRO);
 
-            DEBUG_PRINTLN(F("Setting DLPF bandwidth to 42Hz..."));
+            MPU_DEBUG_PRINTLN(F("Setting DLPF bandwidth to 42Hz..."));
             setDLPFMode(MPU9150_DLPF_BW_42);
 
-            DEBUG_PRINTLN(F("Setting external frame sync to TEMP_OUT_L[0]..."));
+            MPU_DEBUG_PRINTLN(F("Setting external frame sync to TEMP_OUT_L[0]..."));
             setExternalFrameSync(MPU9150_EXT_SYNC_TEMP_OUT_L);
 
-            DEBUG_PRINTLN(F("Setting gyro sensitivity to +/- 2000 deg/sec..."));
+            MPU_DEBUG_PRINTLN(F("Setting gyro sensitivity to +/- 2000 deg/sec..."));
             setFullScaleGyroRange(MPU9150_GYRO_FS_2000);
 
-            DEBUG_PRINTLN(F("Setting DMP configuration bytes (function unknown)..."));
+            MPU_DEBUG_PRINTLN(F("Setting DMP configuration bytes (function unknown)..."));
             setDMPConfig1(0x03);
             setDMPConfig2(0x00);
 
-            DEBUG_PRINTLN(F("Clearing OTP Bank flag..."));
+            MPU_DEBUG_PRINTLN(F("Clearing OTP Bank flag..."));
             setOTPBankValid(false);
 
-            DEBUG_PRINTLN(F("Setting X/Y/Z gyro offsets to previous values..."));
+            MPU_DEBUG_PRINTLN(F("Setting X/Y/Z gyro offsets to previous values..."));
             setXGyroOffsetTC(xgOffset);
             setYGyroOffsetTC(ygOffset);
             setZGyroOffsetTC(zgOffset);
 
-            DEBUG_PRINTLN(F("Setting X/Y/Z gyro user offsets to zero..."));
+            MPU_DEBUG_PRINTLN(F("Setting X/Y/Z gyro user offsets to zero..."));
             setXGyroOffset(0);
             setYGyroOffset(0);
             setZGyroOffset(0);
 
-            DEBUG_PRINTLN(F("Writing final memory update 1/19 (function unknown)..."));
+            MPU_DEBUG_PRINTLN(F("Writing final memory update 1/19 (function unknown)..."));
             uint8_t dmpUpdate[16], j;
             uint16_t pos = 0;
             for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
 
-            DEBUG_PRINTLN(F("Writing final memory update 2/19 (function unknown)..."));
+            MPU_DEBUG_PRINTLN(F("Writing final memory update 2/19 (function unknown)..."));
             for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
 
-            DEBUG_PRINTLN(F("Resetting FIFO..."));
+            MPU_DEBUG_PRINTLN(F("Resetting FIFO..."));
             resetFIFO();
 
-            DEBUG_PRINTLN(F("Reading FIFO count..."));
+            MPU_DEBUG_PRINTLN(F("Reading FIFO count..."));
             uint8_t fifoCount = getFIFOCount();
 
-            DEBUG_PRINT(F("Current FIFO count="));
-            DEBUG_PRINTLN(fifoCount);
+            MPU_DEBUG_PRINT(F("Current FIFO count="));
+            MPU_DEBUG_PRINTLN(fifoCount);
             uint8_t fifoBuffer[128];
             //getFIFOBytes(fifoBuffer, fifoCount);
 
-            DEBUG_PRINTLN(F("Writing final memory update 3/19 (function unknown)..."));
+            MPU_DEBUG_PRINTLN(F("Writing final memory update 3/19 (function unknown)..."));
             for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
 
-            DEBUG_PRINTLN(F("Writing final memory update 4/19 (function unknown)..."));
+            MPU_DEBUG_PRINTLN(F("Writing final memory update 4/19 (function unknown)..."));
             for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
 
-            DEBUG_PRINTLN(F("Disabling all standby flags..."));
+            MPU_DEBUG_PRINTLN(F("Disabling all standby flags..."));
             I2Cdev::writeByte(0x68, MPU9150_RA_PWR_MGMT_2, 0x00);
 
-            DEBUG_PRINTLN(F("Setting accelerometer sensitivity to +/- 2g..."));
+            MPU_DEBUG_PRINTLN(F("Setting accelerometer sensitivity to +/- 2g..."));
             I2Cdev::writeByte(0x68, MPU9150_RA_ACCEL_CONFIG, 0x00);
 
-            DEBUG_PRINTLN(F("Setting motion detection threshold to 2..."));
+            MPU_DEBUG_PRINTLN(F("Setting motion detection threshold to 2..."));
             setMotionDetectionThreshold(2);
 
-            DEBUG_PRINTLN(F("Setting zero-motion detection threshold to 156..."));
+            MPU_DEBUG_PRINTLN(F("Setting zero-motion detection threshold to 156..."));
             setZeroMotionDetectionThreshold(156);
 
-            DEBUG_PRINTLN(F("Setting motion detection duration to 80..."));
+            MPU_DEBUG_PRINTLN(F("Setting motion detection duration to 80..."));
             setMotionDetectionDuration(80);
 
-            DEBUG_PRINTLN(F("Setting zero-motion detection duration to 0..."));
+            MPU_DEBUG_PRINTLN(F("Setting zero-motion detection duration to 0..."));
             setZeroMotionDetectionDuration(0);
 
-            DEBUG_PRINTLN(F("Setting AK8975 to single measurement mode..."));
+            MPU_DEBUG_PRINTLN(F("Setting AK8975 to single measurement mode..."));
             //mag -> setMode(1);
             I2Cdev::writeByte(0x0E, 0x0A, 0x01);
 
             // setup AK8975 (0x0E) as Slave 0 in read mode
-            DEBUG_PRINTLN(F("Setting up AK8975 read slave 0..."));
+            MPU_DEBUG_PRINTLN(F("Setting up AK8975 read slave 0..."));
             I2Cdev::writeByte(0x68, MPU9150_RA_I2C_SLV0_ADDR, 0x8E);
             I2Cdev::writeByte(0x68, MPU9150_RA_I2C_SLV0_REG,  0x01);
             I2Cdev::writeByte(0x68, MPU9150_RA_I2C_SLV0_CTRL, 0xDA);
 
             // setup AK8975 (0x0E) as Slave 2 in write mode
-            DEBUG_PRINTLN(F("Setting up AK8975 write slave 2..."));
+            MPU_DEBUG_PRINTLN(F("Setting up AK8975 write slave 2..."));
             I2Cdev::writeByte(0x68, MPU9150_RA_I2C_SLV2_ADDR, 0x0E);
             I2Cdev::writeByte(0x68, MPU9150_RA_I2C_SLV2_REG,  0x0A);
             I2Cdev::writeByte(0x68, MPU9150_RA_I2C_SLV2_CTRL, 0x81);
             I2Cdev::writeByte(0x68, MPU9150_RA_I2C_SLV2_DO,   0x01);
 
             // setup I2C timing/delay control
-            DEBUG_PRINTLN(F("Setting up slave access delay..."));
+            MPU_DEBUG_PRINTLN(F("Setting up slave access delay..."));
             I2Cdev::writeByte(0x68, MPU9150_RA_I2C_SLV4_CTRL, 0x18);
             I2Cdev::writeByte(0x68, MPU9150_RA_I2C_MST_DELAY_CTRL, 0x05);
 
             // enable interrupts
-            DEBUG_PRINTLN(F("Enabling default interrupt behavior/no bypass..."));
+            MPU_DEBUG_PRINTLN(F("Enabling default interrupt behavior/no bypass..."));
             I2Cdev::writeByte(0x68, MPU9150_RA_INT_PIN_CFG, 0x00);
 
             // enable I2C master mode and reset DMP/FIFO
-            // DEBUG_PRINTLN(F("Enabling I2C master mode..."));
+            // MPU_DEBUG_PRINTLN(F("Enabling I2C master mode..."));
             // I2Cdev::writeByte(0x68, MPU9150_RA_USER_CTRL, 0x20);
-            // DEBUG_PRINTLN(F("Resetting FIFO..."));
+            // MPU_DEBUG_PRINTLN(F("Resetting FIFO..."));
             // I2Cdev::writeByte(0x68, MPU9150_RA_USER_CTRL, 0x24);
-            // DEBUG_PRINTLN(F("Rewriting I2C master mode enabled because...I don't know"));
+            // MPU_DEBUG_PRINTLN(F("Rewriting I2C master mode enabled because...I don't know"));
             // I2Cdev::writeByte(0x68, MPU9150_RA_USER_CTRL, 0x20);
-            // DEBUG_PRINTLN(F("Enabling and resetting DMP/FIFO..."));
+            // MPU_DEBUG_PRINTLN(F("Enabling and resetting DMP/FIFO..."));
             // I2Cdev::writeByte(0x68, MPU9150_RA_USER_CTRL, 0xE8);
                   // setup weird slave stuff (?)
        
-            DEBUG_PRINTLN(F("Writing final memory update 5/19 (function unknown)..."));
+            MPU_DEBUG_PRINTLN(F("Writing final memory update 5/19 (function unknown)..."));
             for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
-            DEBUG_PRINTLN(F("Writing final memory update 6/19 (function unknown)..."));
+            MPU_DEBUG_PRINTLN(F("Writing final memory update 6/19 (function unknown)..."));
             for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
-            DEBUG_PRINTLN(F("Writing final memory update 7/19 (function unknown)..."));
+            MPU_DEBUG_PRINTLN(F("Writing final memory update 7/19 (function unknown)..."));
             for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
-            DEBUG_PRINTLN(F("Writing final memory update 8/19 (function unknown)..."));
+            MPU_DEBUG_PRINTLN(F("Writing final memory update 8/19 (function unknown)..."));
             for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
-            DEBUG_PRINTLN(F("Writing final memory update 9/19 (function unknown)..."));
+            MPU_DEBUG_PRINTLN(F("Writing final memory update 9/19 (function unknown)..."));
             for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
-            DEBUG_PRINTLN(F("Writing final memory update 10/19 (function unknown)..."));
+            MPU_DEBUG_PRINTLN(F("Writing final memory update 10/19 (function unknown)..."));
             for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
-            DEBUG_PRINTLN(F("Writing final memory update 11/19 (function unknown)..."));
+            MPU_DEBUG_PRINTLN(F("Writing final memory update 11/19 (function unknown)..."));
             for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
             
-            DEBUG_PRINTLN(F("Reading final memory update 12/19 (function unknown)..."));
+            MPU_DEBUG_PRINTLN(F("Reading final memory update 12/19 (function unknown)..."));
             for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             readMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
             #ifdef DEBUG
-                DEBUG_PRINT(F("Read bytes: "));
+                MPU_DEBUG_PRINT(F("Read bytes: "));
                 for (j = 0; j < 4; j++) {
-                    DEBUG_PRINTF(dmpUpdate[3 + j], HEX);
-                    DEBUG_PRINT(" ");
+                    MPU_DEBUG_PRINTF(dmpUpdate[3 + j], HEX);
+                    MPU_DEBUG_PRINT(" ");
                 }
-                DEBUG_PRINTLN("");
+                MPU_DEBUG_PRINTLN("");
             #endif
 
-            DEBUG_PRINTLN(F("Writing final memory update 13/19 (function unknown)..."));
+            MPU_DEBUG_PRINTLN(F("Writing final memory update 13/19 (function unknown)..."));
             for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
-            DEBUG_PRINTLN(F("Writing final memory update 14/19 (function unknown)..."));
+            MPU_DEBUG_PRINTLN(F("Writing final memory update 14/19 (function unknown)..."));
             for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
-            DEBUG_PRINTLN(F("Writing final memory update 15/19 (function unknown)..."));
+            MPU_DEBUG_PRINTLN(F("Writing final memory update 15/19 (function unknown)..."));
             for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
-            DEBUG_PRINTLN(F("Writing final memory update 16/19 (function unknown)..."));
+            MPU_DEBUG_PRINTLN(F("Writing final memory update 16/19 (function unknown)..."));
             for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
-            DEBUG_PRINTLN(F("Writing final memory update 17/19 (function unknown)..."));
+            MPU_DEBUG_PRINTLN(F("Writing final memory update 17/19 (function unknown)..."));
             for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
 
-            DEBUG_PRINTLN(F("Waiting for FIRO count >= 46..."));
+            MPU_DEBUG_PRINTLN(F("Waiting for FIRO count >= 46..."));
             while ((fifoCount = getFIFOCount()) < 46);
-            DEBUG_PRINTLN(F("Reading FIFO..."));
+            MPU_DEBUG_PRINTLN(F("Reading FIFO..."));
             getFIFOBytes(fifoBuffer, (fifoCount < 128) ? fifoCount : 128); // safeguard only 128 bytes
-            DEBUG_PRINTLN(F("Reading interrupt status..."));
+            MPU_DEBUG_PRINTLN(F("Reading interrupt status..."));
             getIntStatus();
 
-            DEBUG_PRINTLN(F("Writing final memory update 18/19 (function unknown)..."));
+            MPU_DEBUG_PRINTLN(F("Writing final memory update 18/19 (function unknown)..."));
             for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
 
-            DEBUG_PRINTLN(F("Waiting for FIRO count >= 48..."));
+            MPU_DEBUG_PRINTLN(F("Waiting for FIRO count >= 48..."));
             while ((fifoCount = getFIFOCount()) < 48);
-            DEBUG_PRINTLN(F("Reading FIFO..."));
+            MPU_DEBUG_PRINTLN(F("Reading FIFO..."));
             getFIFOBytes(fifoBuffer, (fifoCount < 128) ? fifoCount : 128); // safeguard only 128 bytes
-            DEBUG_PRINTLN(F("Reading interrupt status..."));
+            MPU_DEBUG_PRINTLN(F("Reading interrupt status..."));
             getIntStatus();
-            DEBUG_PRINTLN(F("Waiting for FIRO count >= 48..."));
+            MPU_DEBUG_PRINTLN(F("Waiting for FIRO count >= 48..."));
             while ((fifoCount = getFIFOCount()) < 48);
-            DEBUG_PRINTLN(F("Reading FIFO..."));
+            MPU_DEBUG_PRINTLN(F("Reading FIFO..."));
             getFIFOBytes(fifoBuffer, (fifoCount < 128) ? fifoCount : 128); // safeguard only 128 bytes
-            DEBUG_PRINTLN(F("Reading interrupt status..."));
+            MPU_DEBUG_PRINTLN(F("Reading interrupt status..."));
             getIntStatus();
 
-            DEBUG_PRINTLN(F("Writing final memory update 19/19 (function unknown)..."));
+            MPU_DEBUG_PRINTLN(F("Writing final memory update 19/19 (function unknown)..."));
             for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
 
-            DEBUG_PRINTLN(F("Disabling DMP (you turn it on later)..."));
+            MPU_DEBUG_PRINTLN(F("Disabling DMP (you turn it on later)..."));
             setDMPEnabled(false);
 
-            DEBUG_PRINTLN(F("Setting up internal 48-byte (default) DMP packet buffer..."));
+            MPU_DEBUG_PRINTLN(F("Setting up internal 48-byte (default) DMP packet buffer..."));
             dmpPacketSize = 48;
             /*if ((dmpPacketBuffer = (uint8_t *)malloc(42)) == 0) {
                 return 3; // TODO: proper error code for no memory
             }*/
 
-            DEBUG_PRINTLN(F("Resetting FIFO and clearing INT status one last time..."));
+            MPU_DEBUG_PRINTLN(F("Resetting FIFO and clearing INT status one last time..."));
             // resetFIFO();
             getIntStatus();
         } else {
-            DEBUG_PRINTLN(F("ERROR! DMP configuration verification failed."));
+            MPU_DEBUG_PRINTLN(F("ERROR! DMP configuration verification failed."));
             return 2; // configuration block loading failed
         }
     } else {
-        DEBUG_PRINTLN(F("ERROR! DMP code verification failed."));
+        MPU_DEBUG_PRINTLN(F("ERROR! DMP code verification failed."));
         return 1; // main binary block loading failed
     }
     return 0; // success
