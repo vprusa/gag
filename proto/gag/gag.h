@@ -222,12 +222,12 @@ void CharCallbacks::onWrite(BLECharacteristic *pCharacteristic) {
 #endif
 
 enum Sensor {
-    SENSOR_PIN_TU = 0,
+    SENSOR_PIN_TU = 0, //5,//0,
     SENSOR_PIN_SU = 1,
     SENSOR_PIN_FU = 2,
     SENSOR_PIN_MU = 3,
     SENSOR_PIN_EU = 4,
-    SENSOR_PIN_HG = 5, // hand palm
+    SENSOR_PIN_HG = 5, //0, //5, // hand palm
     SENSOR_PIN_HP = 6, // hand palm MPU6050
     SENSOR_PIN_NF = -1,
 };
@@ -1082,18 +1082,19 @@ void loadMPU9150Data(MPU6050_MPU9150 *mpu) {
 
 
      // Print everything in one line
-    Serial.print("Accel: X="); Serial.print(ax);
-    Serial.print(" Y="); Serial.print(ay);
-    Serial.print(" Z="); Serial.print(az);
+    // Serial.print("Accel: X="); Serial.print(ax);
+    // Serial.print(" Y="); Serial.print(ay);
+    // Serial.print(" Z="); Serial.print(az);
     
-    Serial.print(" | Gyro: X="); Serial.print(gx);
-    Serial.print(" Y="); Serial.print(gy);
-    Serial.print(" Z="); Serial.print(gz);
-    Serial.print(" ");
-    
+    // Serial.print(" | Gyro: X="); Serial.print(gx);
+    // Serial.print(" Y="); Serial.print(gy);
+    // Serial.print(" Z="); Serial.print(gz);
+    // Serial.print(" ");
     // Serial.print(" | Mag: X="); Serial.print(mx);
     // Serial.print(" Y="); Serial.print(my);
     // Serial.print(" Z="); Serial.print(mz);
+    // Serial.print(" ");
+
    gx -= -148;
    gy -= 84;
    gz -= -150; 
@@ -1161,11 +1162,11 @@ void loadMPU9150Data(MPU6050_MPU9150 *mpu) {
     // q.z = q_est[3];
 
     // Print quaternion values
-    Serial.print("Quaternion: ");
-    Serial.print(q.w, 6); Serial.print(", ");
-    Serial.print(q.x, 6); Serial.print(", ");
-    Serial.print(q.y, 6); Serial.print(", ");
-    Serial.println(q.z, 6);
+    // Serial.print("Quaternion: ");
+    // Serial.print(q.w, 6); Serial.print(", ");
+    // Serial.print(q.x, 6); Serial.print(", ");
+    // Serial.print(q.y, 6); Serial.print(", ");
+    // Serial.println(q.z, 6);
 
      storeQuaternionInFIFO();
 
@@ -1191,11 +1192,11 @@ void loadMPU60500Data(MPU6050_MPU9150 *mpu) {
         storeQuaternionInFIFO();
 
     // // Print quaternion values
-    Serial.print("Quaternion: ");
-    Serial.print(q.w, 6); Serial.print(", ");
-    Serial.print(q.x, 6); Serial.print(", ");
-    Serial.print(q.y, 6); Serial.print(", ");
-    Serial.println(q.z, 6);
+    // Serial.print("Quaternion: ");
+    // Serial.print(q.w, 6); Serial.print(", ");
+    // Serial.print(q.x, 6); Serial.print(", ");
+    // Serial.print(q.y, 6); Serial.print(", ");
+    // Serial.println(q.z, 6);
 
 }
 

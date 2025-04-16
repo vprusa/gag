@@ -63,7 +63,7 @@
 #define CMD_RESTART_WITH_CALIBRATION_AND_SEND 's'
 #define CMD_RESTART 'r'
 #define CMD_READ_SLAVE 'i'
-#define CMD_DONT_READ_SLAVE 'I' 
+#define CMD_DONT_READ_SLAVE 'I'
 #define CMD_GET_CURRENT_OFFSET 'o'
 #define CMD_SET_OFFSET 'O'
 
