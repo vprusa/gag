@@ -417,11 +417,11 @@ void calibrateGyro(MPU6050_MPU9150 *mpu, int numSamples = 10) {
         gx_sum += gx;
         gy_sum += gy;
         gz_sum += gz;
-        ax_sum += gx;
-        ay_sum += gy;
-        az_sum += gz;
+        ax_sum += ax;
+        ay_sum += ay;
+        az_sum += az;
         delay(100); // Small delay to allow data sampling
-
+    Serial.print("\n");
     Serial.print("Gyro Offsets: ");
     Serial.print("gx_offset: "); Serial.print(gx);
     Serial.print("  gy_offset: "); Serial.print(gy);
@@ -437,15 +437,18 @@ void calibrateGyro(MPU6050_MPU9150 *mpu, int numSamples = 10) {
     gy_offset3 = gy_sum / numSamples;
     gz_offset3 = gz_sum / numSamples;
 
-    ax_offset3 = gx_sum / numSamples;
-    ay_offset3 = gy_sum / numSamples;
-    az_offset3 = gz_sum / numSamples;
+    ax_offset3 = ax_sum / numSamples;
+    ay_offset3 = ay_sum / numSamples;
+    az_offset3 = az_sum / numSamples;
 
     // Print calculated offsets
     Serial.print("Gyro Offsets: ");
-    Serial.print("gx_offset: "); Serial.print(gx_offset);
-    Serial.print("  gy_offset: "); Serial.print(gy_offset);
-    Serial.print("  gz_offset: "); Serial.println(gz_offset);
+    Serial.print("gx_offset: "); Serial.print(gx_offset3);
+    Serial.print("  gy_offset: "); Serial.print(gy_offset3);
+    Serial.print("  gz_offset: "); Serial.print(gz_offset3);
+    Serial.print("  ax_offset: "); Serial.print(ax_offset3);
+    Serial.print("  ay_offset: "); Serial.print(ay_offset3);
+    Serial.print("  az_offset: "); Serial.println(az_offset3);
 
     offsets_calculated = true; // Mark that calibration is complete
 }
@@ -626,7 +629,7 @@ uint8_t initMPUAndDMP(uint8_t attempt, uint8_t i) {
     if(selectedSensor == HP) {
         // measureOffsets(&mpu, i, 10);
         //  if (!offsets_calculated) {
-        // calibrateGyro(&mpu); // Ensure offsets are calculated before using
+        calibrateGyro(&mpu); // Ensure offsets are calculated before using
         // }
 
     }
@@ -1104,6 +1107,15 @@ void loadMPU9150Data(MPU6050_MPU9150 *mpu) {
   //  ay -= 200;
   //  az -= 1400; 
 
+
+  //  ax -= 172;
+  //  ay -= 4056;
+  //  az -= -15393; 
+
+     ax -= 712;
+     ay -= 1878;
+     az -= -232; 
+   
     // Update quaternion from gyro data
     updateQuaternion(gx, gy, gz);
     correctDriftWithAccel(ax, ay, az);
