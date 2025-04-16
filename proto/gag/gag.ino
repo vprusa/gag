@@ -145,27 +145,6 @@ void loop() {
     // setOrRotateSelectedGyro(HG);
     // loadHGData(HG);
     // enableSingleMPU(currentlySellectedSensor);
-
-
-    //return;
-    // if programming failed, don't try to do anything
-    //if (!dmpReady)
-    //   return;
-
-    // wait for MPU interrupt or extra packet(s) available
-    // while (/*!mpuInterrupt &&*/ fifoCount < packetSize)
-    //{
-    // other program behavior stuff here
-    // .
-    // .
-    // .
-    // if you are really paranoid you can frequently test in between other
-    // stuff to see if mpuInterrupt is true, and if so, "break;" from the
-    // while() loop to immediately process the MPU data
-    // .
-    // .
-    // .
-    // }
     
     handSwitchPrev = timeNow;
     timePrev = timeNow; // the previous time is stored before the actual time read
@@ -176,18 +155,10 @@ void loop() {
   //if(elapsedTime > 10){
     remainingTimeBudget = ui.update();
     if (elapsedTime - remainingTimeBudget > 0) {
-        //  remainingTimeBudget = ui.update();
-        // You can do some work here
-        // Don't do stuff if you are below your
-        // time budget.
         // Serial.println("Remaining time budget:");
         //Serial.println(remainingTimeBudget);
-        //delay(remainingTimeBudget);
-
     }
 
-  //return;
-  //}
 #endif
 
 #ifdef MASTER_HAND

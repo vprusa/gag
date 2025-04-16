@@ -875,6 +875,7 @@ uint8_t MPU6050_MPU9150::dmpInitialize() {
 
             MPU_DEBUG_PRINTLN(F("Setting sample rate to 200Hz..."));
             setRate(4); // 1khz / (1 + 4) = 200 Hz
+            // setRate(9); // 1khz / (1 + 4) = 200 Hz
 
             MPU_DEBUG_PRINTLN(F("Setting external frame sync to TEMP_OUT_L[0]..."));
             setExternalFrameSync(MPU6050_MPU9150_EXT_SYNC_TEMP_OUT_L);
@@ -884,6 +885,8 @@ uint8_t MPU6050_MPU9150::dmpInitialize() {
 
             MPU_DEBUG_PRINTLN(F("Setting gyro sensitivity to +/- 2000 deg/sec..."));
             setFullScaleGyroRange(MPU6050_MPU9150_GYRO_FS_2000);
+            // setFullScaleGyroRange(MPU6050_MPU9150_GYRO_FS_500);
+            // setFullScaleAccelRange(MPU6050_MPU9150_ACCEL_FS_2);
 
             MPU_DEBUG_PRINTLN(F("Setting DMP programm start address"));
             //write start address MSB into register

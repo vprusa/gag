@@ -156,10 +156,10 @@
 #ifdef MASTER_HAND
 // values for ESP32 400KHz I2C
 // comparing to nano MPU6050 needs to be reset more often
-// #define MAX_TIME_TO_RESET 15
-// #define MIN_TIME_TO_RESET 5
-#define MAX_TIME_TO_RESET 10
-#define MIN_TIME_TO_RESET 2
+#define MAX_TIME_TO_RESET 15
+#define MIN_TIME_TO_RESET 5
+// #define MAX_TIME_TO_RESET 10
+// #define MIN_TIME_TO_RESET 2
 #define MAX_FIFO_USAGE_FOR_RESET 100
 #define MIN_FIFO_USAGE_FOR_RESET 50
 #else

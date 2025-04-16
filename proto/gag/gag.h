@@ -172,12 +172,6 @@ void CharCallbacks::onWrite(BLECharacteristic *pCharacteristic) {
     if(rxValue.length() > 0) {
         const char * rxStr = rxValue.c_str(); 
         GAG_DEBUG_PRINTLN(rxStr);
-        // TODO check if already in use?
-        // cmdPacket[1] = rxStr[1]; // cmd
-        // cmdPacket[2] = rxStr[2]; // type 
-        // cmdPacket[3] = rxStr[3]; // specification
-        // cmdPacket[4] = rxStr[4]; // value1
-        // cmdPacket[5] = rxStr[5]; // value2
 
         GAG_DEBUG_PRINT("SerialBT.serialBufferWriteIndex ");
         GAG_DEBUG_PRINTLN(SerialBT.serialBufferWriteIndex);
@@ -197,12 +191,6 @@ void CharCallbacks::onWrite(BLECharacteristic *pCharacteristic) {
 
         if(++SerialBT.serialBufferWriteIndex >= BT_SERIAL_BUFFER_SIZE){
             SerialBT.serialBufferWriteIndex=0;}
-
-
-        //if(SerialBT.serialBufferWriteIndex == SerialBT.serialBufferReadIndex) {
-            // if(++SerialBT.serialBufferWriteIndex >= BT_SERIAL_BUFFER_SIZE){
-                // SerialBT.serialBufferWriteIndex=0;}
-        //}
 
         GAG_DEBUG_PRINTLN("Buffer: ");
         for(char i =0; i<BT_SERIAL_BUFFER_SIZE; i++ ) {
@@ -470,10 +458,12 @@ void calibrateGyro(MPU6050_MPU9150 *mpu, int numSamples = 20) {
 }
 void rotateQuaternionZ180(Quaternion &quat);
 void loadHGData(int selectedSensor);
-Quaternion q = {1.0f, 0.0f, 0.0f, 0.0f};  // Identity quaternion
+// Quaternion q = {1.0f, 0.0f, 0.0f, 0.0f};  // Identity quaternion
+// Quaternion q;
+Quaternion q = {0.0f, 0.0f, 0.0f, 1.0f};  // Identity quaternion
 
 void setupSensors(){
-    q = Quaternion(1.0f, 0.0f, 0.0f, 0.0f); // Identity quaternion
+    // q = Quaternion(1.0f, 0.0f, 0.0f, 0.0f); // Identity quaternion
 
     // Rotate by 90 degrees around Z-axis once at initialization
     // rotateQuaternionZ180(q);
@@ -509,51 +499,6 @@ void setupSensors(){
          if(i == HG) {
            loadHGData(HG);
          }
-
-//            while(1) {
-//                Serial.println(" !!!!! ");
-//     Serial.println("Quaternion: ");
-//           //  gyros[selectedSensor].mpu->dmpGetGyroSensor()
-//            MPU6050_MPU9150 mpu = *gyros[selectedSensor].mpu;
-//             fifoCount = mpu.getFIFOCount();
-//             uint8_t *fifoBuffer = gyros[selectedSensor].fifoBuffer; // FIFO storage buffer
-//             int packetSize = packetSizeS; 
-// mpu.setFIFOEnabled(true);
-//    GAG_DEBUG_PRINTLN(F("Waiting for FIRO count >= 46..."));
-//             while ((fifoCount = mpu.getFIFOCount()) < 46);
-//             GAG_DEBUG_PRINTLN(F("Reading FIFO..."));
-//             // getFIFOBytes(fifoBuffer, (fifoCount < 128) ? fifoCount : 128); // safeguard only 128 bytes
-//             // DEBUG_PRINTLN(F("Reading interrupt status..."));
-//             // getIntStatus();
-
-//             if (fifoCount >= packetSize && fifoCount <= 1024 && fifoCount != 0 ) {
-//                 // wait for correct available data length, should be a VERY short wait
-//                 while (fifoCount >= packetSize) {
-//                     mpu.getFIFOBytes(fifoBuffer, packetSize);
-//                     fifoCount -= packetSize;
-//                 }
-//                 Quaternion *newQ = new Quaternion();
-//                 uint8_t res = mpu.dmpGetQuaternion(newQ,fifoBuffer);
-//                 // GAG_DEBUG_PRINT("res: ");
-//                 // GAG_DEBUG_PRINTLN(res);
-//                 //  fmod(2.*acos(A.dot(B)),2.*PI);
-//                 newQ->normalize();
-//                 // GAG_DEBUG_PRINTLN("DBL: ");
-
-//     // Print quaternion values
-//     Serial.println(" !!!!! ");
-//     Serial.println("Quaternion: ");
-//     Serial.print(newQ->w, 6); Serial.print(", ");
-//     Serial.print(newQ->x, 6); Serial.print(", ");
-//     Serial.print(newQ->y, 6); Serial.print(", ");
-//     Serial.println(newQ->z, 6);
-//                 gyros[selectedSensor].q = newQ;
-//                 //mpu.resetFIFO();
-//                 gyros[selectedSensor].hasDataReady=true;
-//             }
-//         }
-//         }
-
         
         MASTER_SERIAL_NAME.println(F("\n\n"));
     }
@@ -567,20 +512,6 @@ void loadHGData(int selectedSensor) {
             fifoCount = mpu.getFIFOCount();
             uint8_t *fifoBuffer = gyros[selectedSensor].fifoBuffer; // FIFO storage buffer
             int packetSize = packetSizeS; 
-            if (fifoCount == 0) {
-                          GAG_DEBUG_PRINTLN(F("Reseting FIFO..."));
-// mpu.setFIFOEnabled(false);
-// mpu.setFIFOEnabled(true);
-    // mpu.initialize();
-// mpu.dmpInitialize();
-            }
-
-            GAG_DEBUG_PRINTLN(F("Waiting for FIRO count >= 46..."));
-            // while ((fifoCount = mpu.getFIFOCount()) < 42);
-            GAG_DEBUG_PRINTLN(F("Reading FIFO..."));
-            // getFIFOBytes(fifoBuffer, (fifoCount < 128) ? fifoCount : 128); // safeguard only 128 bytes
-            // DEBUG_PRINTLN(F("Reading interrupt status..."));
-            // getIntStatus();
 
             if (fifoCount >= packetSize && fifoCount <= 1024 && fifoCount != 0 ) {
                 // wait for correct available data length, should be a VERY short wait
@@ -590,11 +521,7 @@ void loadHGData(int selectedSensor) {
                 }
                 Quaternion *newQ = new Quaternion();
                 uint8_t res = mpu.dmpGetQuaternion(newQ,fifoBuffer);
-                // GAG_DEBUG_PRINT("res: ");
-                // GAG_DEBUG_PRINTLN(res);
-                //  fmod(2.*acos(A.dot(B)),2.*PI);
                 newQ->normalize();
-                // GAG_DEBUG_PRINTLN("DBL: ");
 
     // // Print quaternion values
     // Serial.println(" !!!!! ");
@@ -608,7 +535,6 @@ void loadHGData(int selectedSensor) {
                 gyros[selectedSensor].hasDataReady=true;
             }
 }
-// void calibrateQuaternionOffset(MPU6050_MPU9150 *mpu);
 
 /**
  * It has to happen in 2 loops because of the need to avoid having multiple uncertain choices
@@ -668,7 +594,7 @@ uint8_t initMPUAndDMP(uint8_t attempt, uint8_t i) {
     if(selectedSensor == HP) {
         // measureOffsets(&mpu, i, 10);
         //  if (!offsets_calculated) {
-        calibrateGyro(&mpu); // Ensure offsets are calculated before using
+        // calibrateGyro(&mpu); // Ensure offsets are calculated before using
         // }
 
     }
@@ -780,133 +706,6 @@ void sendDataRequest(int selectedSensor) {
 }
 #endif
 
-// void getMPU9150Data(MPU6050_MPU9150 * mpu) {
-//     int16_t ax, ay, az;
-//     int16_t gx, gy, gz;
-//     int16_t mx, my, mz;
-    
-//     uint16_t qI[4];
-
-//     mpu->getMotion9(&ax, &ay, &az, &gx, &gy, &gz,&mx, &my, &mz);
-//     // Note: Some magic is used here that divides and mupltiplies floats from uint16_t ...
-//     // It is done to avoid unnecessary variables when dealing with (re)intereting 
-//     // uint16_t to floating point (S, M, E) calculating stuff with minimal loss of precision
-//     // and interpreting it back to uint16_t
-//     // TODO use bit shifts, etc.
-//     // 8192 16384 32768 65536
-
-//     #define offsetDown 16384
-//     float Gxyz_prev[3];
-//     Gxyz_prev[0] = Gxyz[0];
-//     Gxyz_prev[1] = Gxyz[1];
-//     Gxyz_prev[2] = Gxyz[2];
-
-//     Gxyz[0] += (((float) gx / (offsetDown)) * 2);
-//     Gxyz[1] += (((float) gy / (offsetDown)) * 2);
-//     Gxyz[2] += (((float) gz / (offsetDown)) * 2);
-   
-//     // Gxyz[0] -= -0.020630f;
-//     // Gxyz[1] -= 0.014893f;
-//     // Gxyz[2] -= -0.0185f;
-    
-//     // TODO static diff
-//     float Gxyz_diff[3];
-//     Gxyz_diff[0] = Gxyz[0] - Gxyz_prev[0];
-//     Gxyz_diff[1] = Gxyz[1] - Gxyz_prev[1];
-//     Gxyz_diff[2] = Gxyz[2] - Gxyz_prev[2];
-
-//     // MPU9150_DEBUG_PRINT(F(" Gxyz_diff x: "));    
-//     // MPU9150_DEBUG_PRINTF(Gxyz_diff[0], 6);    
-//     // MPU9150_DEBUG_PRINT(F(" y: "));    
-//     // MPU9150_DEBUG_PRINTF(Gxyz_diff[1], 6);    
-//     // MPU9150_DEBUG_PRINT(F(" z: "));    
-//     // MPU9150_DEBUG_PRINTF(Gxyz_diff[2], 6); 
-   
-//     /*
-//     if(abs(Gxyz_diff[0]) < 0.03f) {
-//         Gxyz[0] = Gxyz_prev[0];
-//     }else{
-//         Gxyz[0] -= -0.020630f;
-//     }
-//     if(abs(Gxyz_diff[1]) < 0.03f) {
-//         Gxyz[1] = Gxyz_prev[1];
-//     }else{
-//         Gxyz[1] -= 0.014893f;
-//     }
-//     if(abs(Gxyz_diff[2]) < 0.03f) {
-//         Gxyz[2] = Gxyz_prev[2];
-//     }else{
-//         Gxyz[2] -= -0.0185f;
-//     }
-//     */
-
-//     // MPU9150_DEBUG_PRINT(F(" Gxyz x: "));    
-//     // MPU9150_DEBUG_PRINTF(Gxyz[0], 6);    
-//     // MPU9150_DEBUG_PRINT(F(" y: "));    
-//     // MPU9150_DEBUG_PRINTF(Gxyz[1], 6);    
-//     // MPU9150_DEBUG_PRINT(F(" z: "));    
-//     // MPU9150_DEBUG_PRINTF(Gxyz[2], 6); 
-//     #define offsetDownQ 16
-
-//     float yaw = Gxyz[2] / offsetDownQ;
-//     float pitch = Gxyz[1] / offsetDownQ;
-//     float roll = Gxyz[0] / offsetDownQ;
-
-//     // MPU9150_DEBUG_PRINT(F(" ypr y: "));    
-//     // MPU9150_DEBUG_PRINTF(yaw, 6);    
-//     // MPU9150_DEBUG_PRINT(F(" p: "));    
-//     // MPU9150_DEBUG_PRINTF(pitch, 6);    
-//     // MPU9150_DEBUG_PRINT(F(" r: "));    
-//     // MPU9150_DEBUG_PRINTF(roll, 6);    
-
-//     #define partition 0.5
-//     float cy = cos(yaw * partition );
-//     float sy = sin(yaw * partition );
-//     float cp = cos(pitch * partition );
-//     float sp = sin(pitch * partition );
-//     float cr = cos(roll * partition );
-//     float sr = sin(roll * partition );
-
-//     //#define offsetUp 1024
-//     // how to make this faster...?
-//     // https://www.qtcentre.org/threads/60473-How-to-convert-float-to-uint32
-//     #define offsetUp 2048
-//     qI[0] = (uint16_t)((cy * cp * cr + sy * sp * sr) * offsetUp);
-//     qI[1] = (uint16_t)((cy * cp * sr - sy * sp * cr) * offsetUp);
-//     qI[2] = (uint16_t)((sy * cp * sr + cy * sp * cr) * offsetUp);
-//     qI[3] = (uint16_t)((sy * cp * cr - cy * sp * sr) * offsetUp);
-
-//     // MPU9150_DEBUG_PRINT(F(" qI w: "));    
-//     // MPU9150_DEBUG_PRINT(qI[0]);    
-//     // MPU9150_DEBUG_PRINT(F(" x: "));    
-//     // MPU9150_DEBUG_PRINT(qI[1]);    
-//     // MPU9150_DEBUG_PRINT(F(" y: "));    
-//     // MPU9150_DEBUG_PRINT(qI[2]);    
-//     // MPU9150_DEBUG_PRINT(F(" z: "));    
-//     // MPU9150_DEBUG_PRINTLN(qI[3]);    
-
-//     uint8_t *fifoBuffer = gyros[selectedSensor].fifoBuffer; // FIFO storage buffer*/
-
-//     fifoBuffer[1] = qI[0] & 0xFF;
-//     fifoBuffer[0] = qI[0]>> 8;
-    
-//     fifoBuffer[5] = qI[1] & 0xFF;
-//     fifoBuffer[4] = qI[1]>> 8;
-    
-//     fifoBuffer[9] = qI[2] & 0xFF;
-//     fifoBuffer[8] = qI[2] >> 8;
-
-//     fifoBuffer[13] = qI[3] & 0xFF;
-//     fifoBuffer[12] = qI[3] >> 8;
-// }
-
-// struct Quaternion {
-//     float w, x, y, z;
-// };
-// #define GYRO_SCALE 131.0f  // 1 LSB = 1/131 deg/s
-// #define DEG_TO_RAD 0.0174533f  // (π / 180)
-// #define DEG_TO_RAD 0.0174532925199f  // (π / 180)
-
 
 float dt = 0.5;  // Adjust based on actual loop rate
 uint16_t qI[4];   // Integer quaternion for FIFO storage
@@ -971,15 +770,7 @@ void updateQuaternion(int16_t gx, int16_t gy, int16_t gz) {
 
     
     // Convert gyro readings from degrees/s to radians/s
-    // float gyroScale = 131.0;  // Scale factor for ±250°/s
     float gyroScale = 131.0;  // Scale factor for ±250°/s
-    // float gx_r = (gx / gyroScale) * (3.14159265359f / 180.0f);
-    // float gy_r = (gy / gyroScale) * (3.14159265359f / 180.0f);
-    // float gz_r = (gz / gyroScale) * (3.14159265359f / 180.0f);
-    // unsigned long currentTime = micros();  // Current time in microseconds
-    // unsigned long currentTime = micros();  // Current time in microseconds
-    // float dt = (currentTime - lastTime) / 1e6;  // Convert to seconds
-    // float dt = (currentTime - lastTime) / 1e6;  // Convert to seconds
     unsigned long currentTime = millis();
     float dt = (currentTime - lastTime) / 1000.0f;  // Convert ms to seconds
     // Serial.println(dt);
@@ -988,11 +779,6 @@ void updateQuaternion(int16_t gx, int16_t gy, int16_t gz) {
     const float gyro_scale = 131.0f;  // ±250°/s scale factor
     const float deg_to_rad = 3.14159265359f / 180.0f;
     
-    // Convert gyro data to radians per second
-    // float gx_r = (gx / gyro_scale) * deg_to_rad;
-    // float gy_r = (gy / gyro_scale) * deg_to_rad;
-    // float gz_r = (gz / gyro_scale) * deg_to_rad;
-
     // Fix sensor rotation by rotating raw gyro values around Z-axis by -90°
     int16_t new_gx = gy;  // Rotated -90°: gx' = -gy
     int16_t new_gy = -gx;   // Rotated -90°: gy' = gx
@@ -1002,7 +788,6 @@ void updateQuaternion(int16_t gx, int16_t gy, int16_t gz) {
     float gx_r = (new_gx / gyro_scale) * deg_to_rad;
     float gy_r = (new_gy / gyro_scale) * deg_to_rad;
     float gz_r = (new_gz / gyro_scale) * deg_to_rad;
-
 
     // Compute quaternion derivative
     Quaternion qDot;
@@ -1016,13 +801,6 @@ void updateQuaternion(int16_t gx, int16_t gy, int16_t gz) {
     q.x += qDot.x * dt;
     q.y += qDot.y * dt;
     q.z += qDot.z * dt;
-
-    // Normalize the quaternion
-    // float norm = sqrt(q.w * q.w + q.x * q.x + q.y * q.y + q.z * q.z);
-    // q.w /= norm;
-    // q.x /= norm;
-    // q.y /= norm;
-    // q.z /= norm;
     q.normalize();
 }
 
@@ -1080,7 +858,6 @@ void rotateQuaternionZ90(Quaternion &quat) {
 }
 
 
-// Rotate quaternion by 180 degrees around Z-axis
 void rotateQuaternionZ180(Quaternion &quat) {
     Quaternion rotation;
     rotation.w = 0.0f;
@@ -1127,10 +904,7 @@ void loadMPU9150Data(MPU6050_MPU9150 *mpu) {
     updateQuaternion(gx, gy, gz);
     correctDriftWithAccel(ax, ay, az);
     correctRotationWithMag(mx, my, mz);
-    // rotateQuaternionZ90(q);
-    // rotateQuaternionZ180(q);
    storeQuaternionInFIFO();
-  // rotateQuaternionZ180(q);
 
     // Print quaternion values
     // Serial.print("Quaternion: ");
@@ -1138,7 +912,6 @@ void loadMPU9150Data(MPU6050_MPU9150 *mpu) {
     // Serial.print(q.x, 6); Serial.print(", ");
     // Serial.print(q.y, 6); Serial.print(", ");
     // Serial.println(q.z, 6);
-    
 }
 
 
@@ -1150,7 +923,6 @@ void loadMPU60500Data(MPU6050_MPU9150 *mpu) {
   mpu->getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
 
   // Update quaternion from gyro data
-  // updateQuaternion(gx, gy, gz);
   updateQuaternion(gx, gy, gz);
   correctDriftWithAccel(ax, ay, az);
 
@@ -1170,37 +942,11 @@ bool loadDataFromFIFO(bool forceLoad) {
     if (selectedSensor == HG) {
       forceLoad = true;
             MPU6050_MPU9150 mpu = *gyros[selectedSensor].mpu;
-//  if(!gyros[selectedSensor].hasDataReady || forceLoad) {
-//             // getMPU9150Data(gyros[selectedSensor].mpu);
-//             loadMPU60500Data(gyros[selectedSensor].mpu);
-//             // loadMPU9150Data2(gyros[selectedSensor].mpu);
-//             gyros[selectedSensor].hasDataReady=true;
-//      }
-
-//             gyros[selectedSensor].alreadySentData=false;
-//             return true;
-      // mpu.dmpInitialize3();
-// mpu.resetFIFO();
-// mpu.setFIFOEnabled(true);
-// mpu.setDMPEnabled(true);
-// mpu.resetDMP();
-// Serial.print("Interrupt status: ");
-// Serial.println(mpu.getIntStatus(), HEX);
 
             fifoCount = mpu.getFIFOCount();
             uint8_t *fifoBuffer = gyros[selectedSensor].fifoBuffer; // FIFO storage buffer
             int packetSize = packetSizeS; 
             // mpu.setFIFOEnabled(true);
-  //  DEBUG_PRINTLN(F("Waiting for FIRO count >= 46..."));
-   
-            // while ((fifoCount = mpu.getFIFOCount()) < 46);
-            // DEBUG_PRINTLN(F("Reading FIFO..."));
-            // getFIFOBytes(fifoBuffer, (fifoCount < 128) ? fifoCount : 128); // safeguard only 128 bytes
-            // DEBUG_PRINTLN(F("Reading interrupt status..."));
-            // getIntStatus();
-
-            // if (fifoCount >= packetSize && fifoCount <= 1024 && fifoCount != 0 ) {
-                // wait for correct available data length, should be a VERY short wait
                 while (fifoCount >= packetSize) {
                     mpu.getFIFOBytes(fifoBuffer, packetSize);
                     fifoCount -= packetSize;
@@ -1534,17 +1280,7 @@ void execCommand(/*const byte * ch */) {
     }
     #ifdef MEASURE_OFFSETS
     if(cmdPacket[1] == CMD_RESTART_WITH_CALIBRATION_AND_SEND) {
-/*
-this is just a note for better code readability ... 
-on the other hand substituting comments for readable code seems like a bad practice.. 
-TODO own strutc for packet?   
-uint8_t dataPacket[PACKET_LENGTH] = {'$', 0x99, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-#ifdef SEND_ACC
-0, 0, 0, 0, 0, 0,
-#endif
-0x00, 0x00, '\r', '\n'};
-#else
-*/
+
         dataPacket[3] = 'g';
         dataPacket[4] = 'g';
         dataPacket[5] = gx_offset & 0xFF;
