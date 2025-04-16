@@ -139,6 +139,14 @@ void setup() {
 // ===                    MAIN PROGRAM LOOP                     ===
 // ================================================================
 void loop() {
+
+    int currentlySellectedSensor = selectedSensor;
+    // enableSingleMPU(HG);
+    // setOrRotateSelectedGyro(HG);
+    // loadHGData(HG);
+    // enableSingleMPU(currentlySellectedSensor);
+
+
     //return;
     // if programming failed, don't try to do anything
     //if (!dmpReady)
@@ -211,9 +219,10 @@ void loop() {
 
     gyros[selectedSensor].alreadySentData = false;
     loadDataAndSendPacket();
-    int currentlySellectedSensor = selectedSensor;
-    setOrRotateSelectedGyro(-1);
+
+    setOrRotateSelectedGyro(-1); 
     loadDataFromFIFO(true);
+    
 #endif
 
 #ifdef SLAVE_HAND
