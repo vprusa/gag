@@ -97,9 +97,13 @@ void setup() {
 #endif
 
     for (int i = FIRST_SENSOR; i <= LAST_SENSOR; i++) {
-        int sensorToEnable = selectSingleMPU(i);
-        pinMode(sensorToEnable, OUTPUT);
+      int sensorToEnable = selectSingleMPU(i);
+      pinMode(sensorToEnable, OUTPUT);
+      digitalWrite(sensorToEnable, HIGH);
     }
+    pinMode(SENSOR_PIN_HP_COMPENSATION, OUTPUT);
+    digitalWrite(SENSOR_PIN_HP_COMPENSATION, HIGH);
+
 #ifdef MASTER_HAND
     Wire.begin();
     //TWBR = 24; // 400kHz I2C clock (200kHz if CPU is 8MHz)

@@ -48,7 +48,9 @@
 #define MPU6050_FIFO_PACKET_SIZE 42
 #define MPU9150_FIFO_PACKET_SIZE 48
 // TODO fix..
-#define FIFO_SIZE 48
+#define FIFO_SIZE_MPU6050 48
+#define FIFO_SIZE_MPU9250 128
+// #define FIFO_SIZE_MPU9250 640
 
 
 #ifndef ESP32_RIGHT
@@ -77,11 +79,13 @@
 #endif
 #ifdef ESP32_RIGHT
 
-#define SENSORS_COUNT 7
+// #define SENSORS_COUNT 7
+#define SENSORS_COUNT 6
 // SENSORs <0,5>
 #define FIRST_SENSOR 0
 // or set LAST_SENSOR to 5
-#define LAST_SENSOR 6
+// #define LAST_SENSOR 6
+#define LAST_SENSOR 5
 // time for internal interrupt to trigger in loop - working up to 50 ms but freezes may occure - so reset MPU's FIFO more ften (20ms each?)
 #define SWITCH_SENSORS_MS 0
 

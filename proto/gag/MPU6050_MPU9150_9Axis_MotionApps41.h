@@ -167,7 +167,7 @@ THE SOFTWARE.
     #define MPU_DEBUG_PRINTLNF(x, y)
 #endif
 
-#define MPU9150_DEBUG
+// #define MPU9150_DEBUG
 #ifdef MPU9150_DEBUG
     #define MPU9150_MPU_DEBUG_PRINT(x) Serial.print(x)
     #define MPU9150_MPU_DEBUG_PRINTF(x, y) Serial.print(x, y)
@@ -456,7 +456,7 @@ const unsigned char dmpUpdatesMPU6050[MPU6050_DMP_UPDATES_SIZE] PROGMEM = {
     0x00,   0x60,   0x04,   0x00, 0x40, 0x00, 0x00
 };
 
-
+#define MPU_DEBUG
 #ifdef MPU_DEBUG
     #define MPU_DEBUG_PRINT(x) Serial.print(x)
     #define MPU_DEBUG_PRINTF(x, y) Serial.print(x, y)
@@ -886,7 +886,7 @@ uint8_t MPU6050_MPU9150::dmpInitialize() {
             MPU_DEBUG_PRINTLN(F("Setting gyro sensitivity to +/- 2000 deg/sec..."));
             setFullScaleGyroRange(MPU6050_MPU9150_GYRO_FS_2000);
             // setFullScaleGyroRange(MPU6050_MPU9150_GYRO_FS_500);
-            // setFullScaleAccelRange(MPU6050_MPU9150_ACCEL_FS_2);
+            // setFullScaleAccelRange(MPU6050_MPU9150_ACCEL_FS_2);T-R-INDEX-U-D
 
             MPU_DEBUG_PRINTLN(F("Setting DMP programm start address"));
             //write start address MSB into register
@@ -975,6 +975,7 @@ uint8_t MPU6050_MPU9150::dmpInitialize() {
                 for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates[pos]);
                 writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
 
+                // setFIFOEnabled(true);
                 MPU_DEBUG_PRINTLN(F("Waiting for FIFO count > 2..."));
                 while ((fifoCount = getFIFOCount()) < 3);
 
@@ -1842,7 +1843,10 @@ uint8_t MPU6050_MPU9150::dmpInitialize2() {
 
             MPU_DEBUG_PRINT(F("Current FIFO count="));
             MPU_DEBUG_PRINTLN(fifoCount);
-            uint8_t fifoBuffer[128];
+            // uint8_t fifoBuffer[128];
+            // int fifoBifferSize = 640;
+            int fifoBifferSize = 128;
+            uint8_t fifoBuffer[fifoBifferSize];
             //getFIFOBytes(fifoBuffer, fifoCount);
 
             MPU_DEBUG_PRINTLN(F("Writing final memory update 3/19 (function unknown)..."));
@@ -1961,7 +1965,7 @@ uint8_t MPU6050_MPU9150::dmpInitialize2() {
             MPU_DEBUG_PRINTLN(F("Waiting for FIRO count >= 46..."));
             while ((fifoCount = getFIFOCount()) < 46);
             MPU_DEBUG_PRINTLN(F("Reading FIFO..."));
-            getFIFOBytes(fifoBuffer, (fifoCount < 128) ? fifoCount : 128); // safeguard only 128 bytes
+            getFIFOBytes(fifoBuffer, (fifoCount < fifoBifferSize) ? fifoCount : fifoBifferSize); // safeguard only 128 bytes
             MPU_DEBUG_PRINTLN(F("Reading interrupt status..."));
             getIntStatus();
 
@@ -1972,13 +1976,13 @@ uint8_t MPU6050_MPU9150::dmpInitialize2() {
             MPU_DEBUG_PRINTLN(F("Waiting for FIRO count >= 48..."));
             while ((fifoCount = getFIFOCount()) < 48);
             MPU_DEBUG_PRINTLN(F("Reading FIFO..."));
-            getFIFOBytes(fifoBuffer, (fifoCount < 128) ? fifoCount : 128); // safeguard only 128 bytes
+            getFIFOBytes(fifoBuffer, (fifoCount < fifoBifferSize) ? fifoCount : fifoBifferSize); // safeguard only 128 bytes
             MPU_DEBUG_PRINTLN(F("Reading interrupt status..."));
             getIntStatus();
             MPU_DEBUG_PRINTLN(F("Waiting for FIRO count >= 48..."));
             while ((fifoCount = getFIFOCount()) < 48);
             MPU_DEBUG_PRINTLN(F("Reading FIFO..."));
-            getFIFOBytes(fifoBuffer, (fifoCount < 128) ? fifoCount : 128); // safeguard only 128 bytes
+            getFIFOBytes(fifoBuffer, (fifoCount < fifoBifferSize) ? fifoCount : fifoBifferSize); // safeguard only 128 bytes
             MPU_DEBUG_PRINTLN(F("Reading interrupt status..."));
             getIntStatus();
 
@@ -1986,8 +1990,8 @@ uint8_t MPU6050_MPU9150::dmpInitialize2() {
             for (j = 0; j < 4 || j < dmpUpdate[2] + 3; j++, pos++) dmpUpdate[j] = pgm_read_byte(&dmpUpdates2[pos]);
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
 
-            MPU_DEBUG_PRINTLN(F("Disabling DMP (you turn it on later)..."));
-            setDMPEnabled(false);
+            // MPU_DEBUG_PRINTLN(F("Disabling DMP (you turn it on later)..."));
+            // setDMPEnabled(false);
 
             MPU_DEBUG_PRINTLN(F("Setting up internal 48-byte (default) DMP packet buffer..."));
             dmpPacketSize = 48;
