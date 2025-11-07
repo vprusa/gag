@@ -7,9 +7,15 @@
 #define SET_OFFSETS 1
 // #define SEND_DATA_ALSO_OVER_SERIAL 1
 
+
 #ifdef ESP32_RIGHT
 #define MASTER_HAND
-// #define USE_DISPLAY 1
+#define USE_DISPLAY 1
+
+#define USE_DISPLAY 1
+// #define USE_VISUALIZATION 1
+
+
 #define MASTER_BT_SERIAL
 #define USE_BT_GATT_SERIAL
 #else

@@ -19,15 +19,13 @@
 #include "definitions.h"
 #include "gag.h"
 #include "Wire.h"
-// #include <WiFi.h>
-// #include "esp_wifi.h"  // Required for WiFi power management functions
 
 #ifdef ESP32_RIGHT
 #include "esp_pm.h"
 #endif
 
 #ifdef USE_DISPLAY
-    extern SSD1306Wire display;
+    extern SSD1306wire display;
     extern OLEDDisplayUi ui;
     extern int remainingTimeBudget;
 #endif
@@ -46,26 +44,9 @@
 extern bool useSlaveHand = false;
 #endif
 void setup() {
-  // #ifdef SLAVE_HAND
-  // Serial.begin(57600);
-  // Serial.println("SetupSlaveHand");
-  // Serial.flush();
-  // Serial.end();
-  // #endif
    #ifdef ESP32_RIGHT
    esp_sleep_enable_timer_wakeup(0);  // Prevent sleep mode
    esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT); // Ensure only BLE is active
-  //  esp_pm_config_esp32_t pm_config = {
-  //     .max_freq_mhz = 240,  // Max CPU frequency
-  //     .min_freq_mhz = 80,   // Min CPU frequency
-  //     .light_sleep_enable = false
-  //   };
-  //  esp_pm_configure(&pm_config);
-  // esp_wifi_set_ps(WIFI_PS_NONE);
-  // setCpuFrequencyMhz(240);  // Set max CPU frequency
-  // WiFi.disconnect(true);
-  // WiFi.mode(WIFI_OFF);
-  // btStop();  // Stops Bluetooth Classic, leaving BLE active
     #endif
     
     #ifdef GAG_DEBUG 
@@ -106,11 +87,7 @@ void setup() {
 
 #ifdef MASTER_HAND
     Wire.begin();
-    //TWBR = 24; // 400kHz I2C clock (200kHz if CPU is 8MHz)
-    //Wire.begin(21 , 22, 200000);
-    //Wire.setTimeOut(2);
-    //Fastwire::setup(400, true);
-    //Wire.begin();
+   
     Wire.setClock(100000);
 #else
     // join I2C bus (I2Cdev library doesn't do this automatically)
@@ -145,24 +122,14 @@ void setup() {
 void loop() {
 
     int currentlySellectedSensor = selectedSensor;
-    // enableSingleMPU(HG);
-    // setOrRotateSelectedGyro(HG);
-    // loadHGData(HG);
-    // enableSingleMPU(currentlySellectedSensor);
-    
+  
     handSwitchPrev = timeNow;
     timePrev = timeNow; // the previous time is stored before the actual time read
     timeNow = millis(); // actual time read
     elapsedTime = (timeNow - timePrev);
  
 #ifdef USE_DISPLAY
-  //if(elapsedTime > 10){
     remainingTimeBudget = ui.update();
-    if (elapsedTime - remainingTimeBudget > 0) {
-        // Serial.println("Remaining time budget:");
-        //Serial.println(remainingTimeBudget);
-    }
-
 #endif
 
 #ifdef MASTER_HAND

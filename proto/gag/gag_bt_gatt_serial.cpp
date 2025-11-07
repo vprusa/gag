@@ -76,11 +76,6 @@ bool BluetoothSerial::begin(std::string localName,
    
     pServer = BLEDevice::createServer();
     
-    //pServer->updateConnParams(esp_ble_conn_update_params_t *params);
-    //esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT);
-    // pServer->getAdvertising()->setMinPreferred(0x06);  // Minimum preferred connection interval
-    // pServer->getAdvertising()->setMinPreferred(0x12);  // Maximum preferred connection interval
-
     esp_ble_conn_update_params_t conn_params = {0};
 
     conn_params.min_int = 0x10;  // 20ms (recommended: 0x10 to 0x30)
@@ -111,12 +106,6 @@ bool BluetoothSerial::begin(std::string localName,
                                     BLECharacteristic::PROPERTY_NOTIFY);
                     
     ble2902 = new BLE2902();
-    //ble2902->setIndications(true);
-    //ble2902->setNotifications(true);
-    //pTxCharacteristic->setWriteNoResponseProperty(true);
-    //pTxCharacteristic->setNotifyProperty(true);
-    //pTxCharacteristic->setIndicateProperty(true);
-    //pTxCharacteristic->setAccessPermissions();
     pTxCharacteristic->addDescriptor(ble2902);
 
     GAG_BT_DEBUG_PRINTLN("pRxCharacteristic");
@@ -149,16 +138,8 @@ int BluetoothSerial::peek(void) {
 }
 
 int BluetoothSerial::read(void) {
-    //GAG_BT_DEBUG_PRINTLN("read");
     int8_t c = serialBuffer[serialBufferReadIndex][serialBufferReadCharIndex];
     if(c!=-1){
-        // GAG_BT_DEBUG_PRINT((char)c);
-        // GAG_BT_DEBUG_PRINT(" ");
-        // GAG_BT_DEBUG_PRINT(c);
-        // GAG_BT_DEBUG_PRINT(" ");
-        // GAG_BT_DEBUG_PRINT(serialBufferReadIndex);
-        // GAG_BT_DEBUG_PRINT(" ");
-        // GAG_BT_DEBUG_PRINTLN(serialBufferReadCharIndex);
         
         if(++serialBufferReadCharIndex>=CMD_PACKET_LENGTH){
             for(char i =0; i<CMD_PACKET_LENGTH; i++) {
@@ -171,17 +152,6 @@ int BluetoothSerial::read(void) {
     return c;
 }
 
-/*
-char* BluetoothSerial::read(uint8_t len) {
-    //GAG_BT_DEBUG_PRINTLN("read");
-    if(len == CMD_PACKET_LENGTH){
-        char * ch = serialBuffer[serialBufferReadIndex];
-        if(serialBufferReadIndex++>BT_SERIAL_BUFFER_SIZE){serialBufferReadIndex = 0;}
-        return ch;
-    }
-    return c;
-}
-*/
 
 size_t BluetoothSerial::write(uint8_t c) {
     return write(&c, 1);
@@ -189,39 +159,10 @@ size_t BluetoothSerial::write(uint8_t c) {
 
 size_t BluetoothSerial::write(const uint8_t *buffer, size_t size) {
     char * ch =   const_cast<char*>(reinterpret_cast<const char*>(buffer));
-    // GAG_BT_DEBUG_PRINT("BluetoothSerial:write(const uint8_t *buffer, size_t size) ");
-    // GAG_BT_DEBUG_PRINTLN(size);
     if (deviceConnected) {
-        // GAG_BT_DEBUG_PRINTLN(ch);
-
-        //pTxCharacteristic->setValue(const_cast<uint8_t*>(buffer), size);
-        //pTxCharacteristic->setValue(const_cast<uint8_t*>(buffer), size);
-        //pTxCharacteristic->setValue(const_cast<char*>(reinterpret_cast<const char*>(buffer)), size);
-        //pTxCharacteristic->indicate();
-        //pTxCharacteristic->setValue(dynamic_cast<uint8_t*>(buffer), size);
-        //pTxCharacteristic->setValue(const_cast<uint8_t*>(buffer), size);
-        //pTxCharacteristic->notify(true);
-        //pTxCharacteristic->getDescriptorByUUID(CHARACTERISTIC_UUID_TX)->setValue(value);
-        // pTxCharacteristic->getDescriptorByUUID(CHARACTERISTIC_UUID_TX)->setValue(const_cast<uint8_t*>(buffer), size);
-
-        // BLEService* s = (BLEService*) 
-        // pTxCharacteristic->setWriteNoResponseProperty(true);
-
-        //pTxCharacteristic->setNotifyProperty(true);
-        //pTxCharacteristic->setValue(const_cast<uint8_t*>(buffer), size);
-        // pTxCharacteristic->getDescriptorByUUID(BLEUUID((uint16_t) 0x2902))->setValue(const_cast<uint8_t*>(buffer), size);
         pTxCharacteristic->setValue(const_cast<uint8_t*>(buffer), size);
-        // std::string value((char*) buffer, size);
-        // pTxCharacteristic->setValue(value);
-        //ble2902->setValue(value);
-        
-        //->getCharacteristic(CHARACTERISTIC_UUID_TX)->setValue(const_cast<uint8_t*>(buffer), size);
-        //pTxCharacteristic->setValue((char*) buffer, size);
-        // pTxCharacteristic->notify(true);
-        //pTxCharacteristic->notify(false);
+
         pTxCharacteristic->notify();
-        // pTxCharacteristic->notify(true);
-        //delay(1);
     }
     return 0;
 }
@@ -253,7 +194,6 @@ size_t BluetoothSerial::println(unsigned char b, int base) {
 }
 
 size_t BluetoothSerial::println(const char* buffer) {
-    //GAG_BT_DEBUG_PRINTLN("println(const char*");
     GAG_BT_DEBUG_PRINTLN(buffer);
 }
 
@@ -265,9 +205,6 @@ size_t BluetoothSerial::print(const __FlashStringHelper *ifsh) {
 size_t BluetoothSerial::println(const __FlashStringHelper *ifsh) {
     GAG_BT_DEBUG_PRINTLN("println(const __FlashStringHelper *ifsh)");
     GAG_BT_DEBUG_PRINTLN(ifsh);
-    //size_t n = print(ifsh);
-    //n += println();
-    //return n;
 }
 
 void BluetoothSerial::flush() {

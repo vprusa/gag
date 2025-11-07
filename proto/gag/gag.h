@@ -185,9 +185,7 @@ void CharCallbacks::onWrite(BLECharacteristic *pCharacteristic) {
                 SerialBT.serialBuffer[SerialBT.serialBufferWriteIndex][i] = 0;
             }
         }
-        // GAG_DEBUG_PRINTLN(SerialBT.serialBuffer[SerialBT.serialBufferWriteIndex]);
         GAG_DEBUG_PRINTLN(SerialBT.serialBuffer[SerialBT.serialBufferWriteIndex][0]);
-        // GAG_DEBUG_PRINTLN(SerialBT.serialBuffer[SerialBT.serialBufferWriteIndex][0]);
 
         if(++SerialBT.serialBufferWriteIndex >= BT_SERIAL_BUFFER_SIZE){
             SerialBT.serialBufferWriteIndex=0;}
@@ -200,11 +198,6 @@ void CharCallbacks::onWrite(BLECharacteristic *pCharacteristic) {
             }
             GAG_DEBUG_PRINTLN("");
         }
-        //execCommand();
-        // for (int i = 0; i < rxValue.length(); i++) {
-            // SLAVE_SERIAL_NAME.print(rxValue[i]);
-            // GAG_DEBUG_PRINT(reinterpret_cast<uint8_t>([i]));
-        // }
     }
 };
 #endif
@@ -261,75 +254,20 @@ float Mxyz[3];
     // ax ay az gx gy gz
     int16_t sensorsOffsets[7][6] = {
         // T
-        // {-2772,479,2063,119,-49,120},
         {-2772,479,2063,119,-49,120},
         // I
-        // {-3678,1461,1496,46,-43,-3},
         {-3678,1461,1496,46,-43,-3},
         // M
-        // {507,1346,1743,20,26,-19},
         {507,1346,1743,20,26,-19},
         // L
-        //{-1397,525,919,-1295,2057,-509},
-        //{-1397,525,919,-3000,2057,-509},
-        //{-1448, 453, 1111, -1379,1980,-514},
-        //{-4140,444,1180,-1208,1774,-1000}, // 469
-        // {1578,356,1180,-1630,1975, -200}, // 469
-        //{-1584, 495, 1004, -1326, 2093, -495},
-        // !!! One sensors's axis is broken... TODO replace sensor ...
-        // Sensor readings with offsets:	-190	195	16692	-5	5	-1
-        //Your offsets:	-1680	1199	1546	24	-11	0
-        // {199, -379, 1234, -168, -264, -637},
-
-        // Sensor readings with offsets:	-744	1000	12955	0	0	49
-        // Your offsets:	199	-379	1234	-168	-264	-637
-        // {-1680, 1199, 1546, -24, 11, -0},
-        // Sensor readings with offsets:	-520	-384	16725	-5	5	1
-        // Your offsets:	-3208	-1979	1487	47	-22	0
-
         {-3208, -1979, 1487, 47, -22, 0},
         // R
-        //        {-1611, 466, 1081, -1468, 2020, -497},
-        //  {-1650,1000,-500,0,0,0}, // 469
-        //{19440,-13312,2176,280,-144,5144}, // 469
-        //{0,0,0,0,0,0},
         {-1802,1287,1493,35,-19,6},
 
         // WG unknown        
-        // {-107, -183, 539, -13, -72, -588},
-        // Sensor readings with offsets:	287	701	17104	-22	10	5
-// Your offsets:	1680	1653	1113	62	-23	-1
-        // {1680,1653, 1113, 62, -23, -1},
-// Sensor readings with offsets:	280	741	17068	-22	10	5
-// Your offsets:	1659	1620	1108	62	-23	-1
         {1659, 1620, 1108, 62, -23, -1},
-        // Sensor readings with offsets:	319	721	17083	-21	10	5
-// Your offsets:	1652	1614	1110	62	-23	-1
-
-
 
         // W
-        //{0,0,0,0,0,0}};
-        // {500,500,500,0,0,0}};
-        //{0,0,0,0,0,0}
-        //{ -158, -471, 1159, -181, -719, -926}
-        //{-27, -423, 1154, -227, -504, -1113}
-        // {-366, -1411, 4095, -1225, -2542, -3466}
-        // {-127, -263, 1133, -511, -429, -1933}
-        // {-107, -183, 539, -13, -72, -588}
-        // {-123, -224, 707, -70, -85, -1441}
-        // Sensor readings with offsets:	679	67	10904	-33	3	1
-// Your offsets:	-104	-6	849	8	0	-32
-        // {-104,-6,849,8,0,-32}
-
-// Sensor readings with offsets:	771	483	12423	-33	4	1
-// Your offsets:	-130	-53	808	60	-2	0
-        // {-130, -53, 808, 60, -2, 0}
-
-
-        // Your offsets:	-123	-224	707	-70	-85	-1441
-        // Sensor readings with offsets:	960	448	11182	-4	2	0
-// Your offsets:	-147	-84	737	41	-3	-4
         {-147, -84, 737, 41, -3, -4}
 
     };
@@ -464,10 +402,8 @@ void calibrateGyro(MPU6050_MPU9150 *mpu, int numSamples = 500, int magCalibratio
 
     // Gyro and Accelerometer calibration
     for (int i = 0; i < numSamples; i++) {
-        // mpu->getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
         mpu->getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
 
-        // if ((gx == 0 && gy == 0 && gz == 0) || (gx == -1 && gy == -1 && gz == -1)) {
         if ((gx == 0 || gy == 0 || gz == 0 || gx == -1 || gy == -1 || gz == -1 || ax == -1 || ay == -1 || az == -1 || ax == 0 || ay == 0 || az == 0)) {
           continue;
         }
@@ -559,12 +495,9 @@ void calibrateGyro(MPU6050_MPU9150 *mpu, int numSamples = 500, int magCalibratio
 
 void rotateQuaternionZ180(Quaternion &quat);
 void loadHGData(int selectedSensor);
-// Quaternion q = {1.0f, 0.0f, 0.0f, 0.0f};  // Identity quaternion
-// Quaternion q;
 Quaternion q = {0.0f, 0.0f, 0.0f, 1.0f};  // Identity quaternion
 
 void setupSensors() {
-    // q = Quaternion(1.0f, 0.0f, 0.0f, 0.0f); // Identity quaternion
 
     // Rotate by 90 degrees around Z-axis once at initialization
     // rotateQuaternionZ180(q);
@@ -603,10 +536,6 @@ void setupSensors() {
         if(i == HG) {
           loadHGData(HG);
         }
-        if (i == HP) {
-          // mpu.setDMPEnabled(true);
-          // mpu.setFIFOEnabled(true);
-        }
          
         MASTER_SERIAL_NAME.println(F("\n\n"));
     }
@@ -631,15 +560,7 @@ void loadHGData(int selectedSensor) {
                 uint8_t res = mpu.dmpGetQuaternion(newQ,fifoBuffer);
                 newQ->normalize();
 
-    // // Print quaternion values
-    // Serial.println(" !!!!! ");
-    // Serial.println("Quaternion: ");
-    // Serial.print(newQ->w, 6); Serial.print(", ");
-    // Serial.print(newQ->x, 6); Serial.print(", ");
-    // Serial.print(newQ->y, 6); Serial.print(", ");
-    // Serial.println(newQ->z, 6);
                 gyros[selectedSensor].q = newQ;
-                //mpu.resetFIFO();
                 gyros[selectedSensor].hasDataReady=true;
             }
 }
@@ -699,25 +620,8 @@ uint8_t initMPUAndDMP(uint8_t attempt, uint8_t i) {
     // supply your own gyro offsets here for each mpu, scaled for min sensitivity
     // lets ignore this considering we want realtive values anyway
     
-    #ifdef MEASURE_OFFSETS
-    // TODO fix measuring offsets for HP
-    // if(!calibrationDone && i != HP) {
-    // if(!calibrationDone && i == 3) {
-    // if(selectedSensor == HP || selectedSensor == HG) {
-    if(selectedSensor == HP) {
-        // measureOffsets(&mpu, i, 10);
-        //  if (!offsets_calculated) {
-        // calibrateGyro(&mpu); // Ensure offsets are calculated before using
-        // calibrateMagnetometer(&mpu);
-        // }
-
-    }
-    #endif
     #ifdef SET_OFFSETS
     if(selectedSensor == HP){
-        // mpu.setXAccelOffset(sensorsOffsets[i][0], MPU9150_RA_XA_OFFS_H);
-        // mpu.setYAccelOffset(sensorsOffsets[i][1], MPU9150_RA_YA_OFFS_H);
-        // mpu.setZAccelOffset(sensorsOffsets[i][2], MPU9150_RA_ZA_OFFS_H);
         mpu.setXAccelOffset(sensorsOffsets[i][0], MPU9150_RA_XA_OFFS_H);
         mpu.setYAccelOffset(sensorsOffsets[i][1], MPU9150_RA_YA_OFFS_H);
         mpu.setZAccelOffset(sensorsOffsets[i][2], MPU9150_RA_ZA_OFFS_H);
@@ -749,62 +653,6 @@ uint8_t initMPUAndDMP(uint8_t attempt, uint8_t i) {
         // calibrateQuaternionOffset(&mpu);
     }else{
         MASTER_SERIAL_NAME.print(packetSizeS);
-    }
-    if(selectedSensor == HG) {
-
-      // Serial.println("\n\n\n\nHG\n\n\n\n");
-
-
-      // forceLoad = true;
-      // MPU6050_MPU9150* mpu = gyros[selectedSensor].mpu;
-
-//  Serial.println("FIFO Overflow detected, resetting FIFO...");
-    // mpu.resetFIFO();
-    // delay(2);
-
-//     mpu->setFIFOEnabled(true); // re-enable FIFO explicitly
-//     // mpu.setDMPEnabled(true); 
-
-//       uint8_t intStatus = mpu->getIntStatus();
-//       Serial.print("Interrupt Status: ");
-//       Serial.println(intStatus, HEX);
-
-//       fifoCount = mpu->getFIFOCount();
-//       Serial.print("FIFO Count: ");
-//       Serial.println(fifoCount);
-
-// bool fifo_enabled = mpu->getFIFOEnabled();
-// Serial.print("FIFO "); Serial.println(fifo_enabled ? "enabled" : "disabled");
-
-//       fifoCount = mpu->getFIFOCount();
-//       uint8_t *fifoBuffer = gyros[selectedSensor].fifoBuffer; // FIFO storage buffer
-//       int packetSize = packetSizeS; 
-//       // mpu.setFIFOEnabled(true);
-//       // while (fifoCount >= packetSize) {
-//       //     mpu->getFIFOBytes(fifoBuffer, packetSize);
-//       //     fifoCount -= packetSize;
-//       // }
-
-//       Quaternion *newQ = new Quaternion();
-//       uint8_t res = mpu->dmpGetQuaternion(newQ,fifoBuffer);
-//       newQ->normalize();
-//       // GAG_DEBUG_PRINTLN("DBL: ");
-
-//       // Print quaternion values
-//       Serial.println(" !!!!! ");
-//       Serial.println("Quaternion: ");
-//       Serial.print(newQ->w, 6); Serial.print(", ");
-//       Serial.print(newQ->x, 6); Serial.print(", ");
-//       Serial.print(newQ->y, 6); Serial.print(", ");
-//       Serial.println(newQ->z, 6);
-
-//       gyros[selectedSensor].q = newQ;
-//       //mpu.resetFIFO();
-//       gyros[selectedSensor].hasDataReady=true;
-//       // }
-    
-
-
     }
     MASTER_SERIAL_NAME.println(F(""));
 
@@ -840,16 +688,7 @@ void automaticFifoReset() {
                 gyros[selectedNow].lastResetTime = now;
             }
         }
-        // idk, offsets registeres do not work ...
-        /*
-        if(i == HP && now - lastTime > 1000){
-            MPU6050_MPU9150 mpu = *gyros[selectedSensor].mpu;
-            // mpu.setXGyroOffset(35);
-            // mpu.setYGyroOffset(-35);
-            // mpu.setZGyroOffset(40); // 12?
-            
-            lastTime=now;
-        }*/
+       
     }
     setOrRotateSelectedGyro(currentlySellectedSensor);
 }
@@ -1047,21 +886,13 @@ void loadMPU9150Data(MPU6050_MPU9150 *mpu) {
       int16_t ax, ay, az, gx, gy, gz, mx, my, mz;
 
  // Get sensor data
-    mpu->getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
+     mpu->getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
 
 
-    //  ax -= 712;
-    //  ay -= 1878;
-    //  az -= -232; 
-    // ax -= 1935;
-    // ay -= 1372;
-    // az -= -320; 
 
-// this
-   gx -= -148;
-   gy -= 84;
-   gz -= -150; 
-   // -147, -84, 737
+    gx -= -148;
+    gy -= 84;
+    gz -= -150; 
 
     ax -= 266;
     ay -= -1104;
@@ -1071,34 +902,12 @@ void loadMPU9150Data(MPU6050_MPU9150 *mpu) {
     my -= 650;
     mz -= 0; 
 
-// gx -= -151.00; gy -= 18.00; gz -= 1.00; ax -= 3.00; ay -= -115.00; az -= -386.00; mx -= 8191.00; my -= 5173.00; mz -= 3691.00;
-
-    // gx -= 0.00; gy -= 2.00; gz -= 0.00; 
-    // ax -= 6178.00; ay -= 4411.00; az -= 13528.00;
-
-    // gx -= -252.00; gy -= 30.00; gz -= 3.00; ax -= 6767.00; ay -= 4449.00; az -= 13533.00; mx -= 7854.00; my -= 8191.00; mz -= 7113.00;
-    // gx -= 0.00; gy -= 0.00; gz -= 0.00; 
-      //  gx -= -148;
-  //  gy -= 84;
-  //  gz -= -150; 
-    // ax -= 9091.00; ay -= 6375.00; az -= 17856.00; mx -= 16383.00; my -= 5176.00; mz -= 7589.00;
-
-    // gx -= 0.00; gy -= 0.00; gz -= 0.00; 
-    // ax -= 8360.00; ay -= 6035.00; az -= 16256.00; mx -= 511.00; my -= 8191.00; mz -= -388.00;
-
-   
     // Update quaternion from gyro data
     updateQuaternion(gx, gy, gz);
     correctDriftWithAccel(ax, ay, az);
     correctRotationWithMag(mx, my, mz);
     storeQuaternionInFIFO();
 
-    // Print quaternion values
-    // Serial.print("Quaternion: ");
-    // Serial.print(q.w, 6); Serial.print(", ");
-    // Serial.print(q.x, 6); Serial.print(", ");
-    // Serial.print(q.y, 6); Serial.print(", ");
-    // Serial.println(q.z, 6);
 }
 
 
@@ -1115,65 +924,9 @@ void loadMPU60500Data(MPU6050_MPU9150 *mpu) {
 
   storeQuaternionInFIFO();
 
-  // // Print quaternion values
-  // Serial.print("Quaternion: ");
-  // Serial.print(q.w, 6); Serial.print(", ");
-  // Serial.print(q.x, 6); Serial.print(", ");
-  // Serial.print(q.y, 6); Serial.print(", ");
-  // Serial.println(q.z, 6);
 }
 
 bool loadDataFromFIFO(bool forceLoad) {
-    if (selectedSensor == HG) {
-//       forceLoad = true;
-//       MPU6050_MPU9150* mpu = gyros[selectedSensor].mpu;
-
-// //  Serial.println("FIFO Overflow detected, resetting FIFO...");
-//       // mpu->resetFIFO();
-//       // delay(2);
-
-//       // mpu->setFIFOEnabled(true); 
-//       // mpu.setDMPEnabled(true); 
-
-//       uint8_t intStatus = mpu->getIntStatus();
-//       Serial.print("Interrupt Status: ");
-//       Serial.println(intStatus, HEX);
-
-//       fifoCount = mpu->getFIFOCount();
-//       Serial.print("FIFO Count: ");
-//       Serial.println(fifoCount);
-
-//       bool fifo_enabled = mpu->getFIFOEnabled();
-//       Serial.print("FIFO "); Serial.println(fifo_enabled ? "enabled" : "disabled");
-
-//       fifoCount = mpu->getFIFOCount();
-//       uint8_t *fifoBuffer = gyros[selectedSensor].fifoBuffer; // FIFO storage buffer
-//       int packetSize = packetSizeS; 
-//       // mpu.setFIFOEnabled(true);
-//       // while (fifoCount >= packetSize) {
-//       //     mpu->getFIFOBytes(fifoBuffer, packetSize);
-//       //     fifoCount -= packetSize;
-//       // }
-
-//       Quaternion *newQ = new Quaternion();
-//       uint8_t res = mpu->dmpGetQuaternion(newQ,fifoBuffer);
-//       newQ->normalize();
-//       // GAG_DEBUG_PRINTLN("DBL: ");
-
-//       // Print quaternion values
-//       // Serial.println(" !!!!! ");
-//       // Serial.println("Quaternion: ");
-//       // Serial.print(newQ->w, 6); Serial.print(", ");
-//       // Serial.print(newQ->x, 6); Serial.print(", ");
-//       // Serial.print(newQ->y, 6); Serial.print(", ");
-//       // Serial.println(newQ->z, 6);
-
-//       gyros[selectedSensor].q = newQ;
-//       //mpu.resetFIFO();
-//       gyros[selectedSensor].hasDataReady=true;
-      // }
-    }
-    
     if(selectedSensor != HP) {
         MPU6050_MPU9150 * mpu = gyros[selectedSensor].mpu;
 
@@ -1192,31 +945,13 @@ bool loadDataFromFIFO(bool forceLoad) {
                 }
                 Quaternion sensorQ;
                 uint8_t res = mpu->dmpGetQuaternion(&sensorQ,fifoBuffer);
-                // GAG_DEBUG_PRINT("res: ");
-                // GAG_DEBUG_PRINTLN(res);
-                //  fmod(2.*acos(A.dot(B)),2.*PI);
                 sensorQ.normalize();
-                // GAG_DEBUG_PRINTLN("DBL: ");
-
-                // if(gyros[selectedSensor].debugDiff && gyros[selectedSensor].q != nullptr) {
-                // // if(gyros[selectedSensor].q != nullptr) {
-                //     double dbl = fmod(2.*acos(newQ->dot(gyros[selectedSensor].q)),2.*PI);
-                // }
-
-                // Print quaternion values
-                // Serial.print("Quaternion: ");
-                // Serial.print(newQ->w, 6); Serial.print(", ");
-                // Serial.print(newQ->x, 6); Serial.print(", ");
-                // Serial.print(newQ->y, 6); Serial.print(", ");
-                // Serial.println(newQ->z, 6);
                 if (selectedSensor == HG) {
-
 
                   Quaternion rotatedQ = Quaternion(sensorQ.w, -sensorQ.y, -sensorQ.x, sensorQ.z);
                   rotatedQ.normalize();
 
                   // Save rotated quaternion
-                  // gyros[selectedSensor].q = new Quaternion(rotatedQ);
                   gyros[selectedSensor].q = new Quaternion(rotatedQ);
                   q.w = gyros[selectedSensor].q->w;
                   q.x = gyros[selectedSensor].q->x;
@@ -1224,10 +959,7 @@ bool loadDataFromFIFO(bool forceLoad) {
                   q.z = gyros[selectedSensor].q->z;
                   storeQuaternionInFIFO();
 
-                  // Serial.print("HG rotated: ");
-                  // Serial.println(selectedSensor);
                 } else {
-                  // Serial.println("X");
                   gyros[selectedSensor].q = new Quaternion(sensorQ);
                 }
 
@@ -1238,28 +970,7 @@ bool loadDataFromFIFO(bool forceLoad) {
         }
     } else {
         forceLoad = true;
-        // Serial.println("HP");
-//         MPU6050_MPU9150 mpu = *gyros[selectedSensor].mpu;
-
-//         uint8_t intStatus = mpu.getIntStatus();
-//         mpu.setDMPEnabled(true);
-//         mpu.setFIFOEnabled(true);
-//         // mpu.setFIFOByte(gx, true);
-//       // mpu.setFIFOByte(gy, true);
-// // mpu.setFIFOByte(gz, true);
-
-//         delay(1);
-//         Serial.print("Interrupt Status: ");
-//         Serial.println(intStatus, HEX);
-
-// Serial.println(mpu.getFIFOEnabled() ? "FIFO enabled" : "FIFO disabled");
-
-
-//         fifoCount = mpu.getFIFOCount();
-//         Serial.print("FIFO Count: ");
-//         Serial.println(fifoCount);
-
-        // if(!gyros[selectedSensor].hasDataReady || forceLoad) {
+     
           loadMPU9150Data(gyros[selectedSensor].mpu);
           gyros[selectedSensor].hasDataReady=true;
           gyros[selectedSensor].alreadySentData=false;
@@ -1551,9 +1262,6 @@ void execCommand(/*const byte * ch */) {
         return;
     }
     #endif
-    
-    //MASTER_SERIAL_NAME.write(cmdPacket, CMD_PACKET_LENGTH);
-    //MASTER_SERIAL_NAME.write((byte)0x00);
 }
 
 #ifdef SLAVE_HAND
@@ -1651,20 +1359,8 @@ boolean masterHandCommandRequestHandler(
                 if(*ch == 'c') {
                     sendToSlave = true;
                 }
-                // GAG_DEBUG_PRINT("parsing cmdPacket1 ");
-                // GAG_DEBUG_PRINT((int) *readAlign);
-                // GAG_DEBUG_PRINT(" ");
-                // GAG_DEBUG_PRINT((int) *limit);
-                // GAG_DEBUG_PRINT(" ");
-                // GAG_DEBUG_PRINTLN((char)cmdPacket[*readAlign]);
                 (*readAlign)++;
                 (*limit) += CMD_PACKET_LENGTH+1;
-                // GAG_DEBUG_PRINT("parsing cmdPacket2 ");
-                // GAG_DEBUG_PRINT((int) *readAlign);
-                // GAG_DEBUG_PRINT(" ");
-                // GAG_DEBUG_PRINT((int) *limit);
-                // GAG_DEBUG_PRINT(" ");
-                // GAG_DEBUG_PRINTLN((char)cmdPacket[*readAlign]);
             } else {
                 *readAlign = 0;
             }
@@ -1681,35 +1377,18 @@ boolean masterHandCommandRequestHandler(
             if(sendToSlave) {
                 SLAVE_SERIAL_NAME.write(*ch);
             } else {
-                // GAG_DEBUG_PRINTLN("parsing cmdPacket");
                 *readAlign=0;
                 cmdPacket[0]=*ch;
-                // GAG_DEBUG_PRINT("Limit ");
-                // GAG_DEBUG_PRINTLN((int) *limit);
                 while((*limit) > 0) {
                     int chc = MASTER_SERIAL_NAME.read();
                     if (chc != -1) {
                         (*readAlign)++;
                         cmdPacket[*readAlign]=chc;
-                        // GAG_DEBUG_PRINT("parsing cmdPacket ");
-                        // GAG_DEBUG_PRINT((char)chc);
-                        // GAG_DEBUG_PRINT(" ");
-                        // GAG_DEBUG_PRINT((int) *readAlign);
-                        // GAG_DEBUG_PRINT(" ");
-                        // GAG_DEBUG_PRINT((int) *limit);
-                        // GAG_DEBUG_PRINT(" ");
-                        // GAG_DEBUG_PRINTLN((char)cmdPacket[*readAlign]);
-                        //if(chc == '\n' && *readAlign==(CMD_PACKET_LENGTH-1) && cmdPacket[CMD_PACKET_LENGTH-2] == '\r') {
-                        //if(chc == '\n' && *readAlign==(CMD_PACKET_LENGTH-1)) {
                         if(chc == '\n') {
                             execCommand();
                             (*readAlign) = 0;
                             (*limit) = 0;
                             return true;
-                        }
-                        if(*readAlign>CMD_PACKET_LENGTH){
-                            // GAG_DEBUG_PRINT("*readAlign>CMD_PACKET_LENGTH ");
-                            // *limit = -1;
                         }
                     }
                     (*limit)--;
@@ -1717,16 +1396,12 @@ boolean masterHandCommandRequestHandler(
                 return true;
             }
         }
-        // if(*readAlign == 255){
-            // return true;
-        // }
     }
     (*limit)--;
     return true;
 }
 
 void masterHandDataRequestHandler() {
-    //GAG_DEBUG_PRINTLN("slaveHandDataRequestHandler");
     // TODO save memory?
     uint8_t limit = REPEAT_MASTER_HAND_READ_LIMIT;
     uint8_t endOfPacketAlign = 0;

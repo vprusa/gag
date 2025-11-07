@@ -150,17 +150,13 @@ void measureOffsets(MPU6050_MPU9150 *mpuP, uint8_t i, int16_t limit){
         mpu.setYGyroOffset(0, MPU9150_RA_YG_OFFS_USRH);
         mpu.setZGyroOffset(0, MPU9150_RA_ZG_OFFS_USRH);
     } else {
-    mpu.setXAccelOffset(0);
-    mpu.setYAccelOffset(0);
-    mpu.setZAccelOffset(0);
-    mpu.setXGyroOffset(0);
-    mpu.setYGyroOffset(0);
-    mpu.setZGyroOffset(0);
-    
+        mpu.setXAccelOffset(0);
+        mpu.setYAccelOffset(0);
+        mpu.setZAccelOffset(0);
+        mpu.setXGyroOffset(0);
+        mpu.setYGyroOffset(0);
+        mpu.setZGyroOffset(0);
     }
-    //mpu.setXOffset(0);
-    //mpu.setYGyroOffset(0);
-    //mpu.setZGyroOffset(0);
     if (state==0){
         MASTER_SERIAL_NAME.println(F("\nReading sensors for first time..."));
         meansensors(mpuP);
@@ -216,29 +212,21 @@ void measureOffsets(MPU6050_MPU9150 *mpuP, uint8_t i, int16_t limit){
         sensorsOffsets[i][5] = gz_offset;
 
 
-if(mpu.isMPU9150) {
-        mpu.setXAccelOffset(sensorsOffsets[i][0], MPU9150_RA_XA_OFFS_H);
-        mpu.setYAccelOffset(sensorsOffsets[i][1], MPU9150_RA_YA_OFFS_H);
-        mpu.setZAccelOffset(sensorsOffsets[i][2], MPU9150_RA_ZA_OFFS_H);
-        mpu.setXGyroOffset(sensorsOffsets[i][3], MPU9150_RA_XG_OFFS_USRH);
-        mpu.setYGyroOffset(sensorsOffsets[i][4], MPU9150_RA_YG_OFFS_USRH);
-        mpu.setZGyroOffset(sensorsOffsets[i][5], MPU9150_RA_ZG_OFFS_USRH);
+        if(mpu.isMPU9150) {
+            mpu.setXAccelOffset(sensorsOffsets[i][0], MPU9150_RA_XA_OFFS_H);
+            mpu.setYAccelOffset(sensorsOffsets[i][1], MPU9150_RA_YA_OFFS_H);
+            mpu.setZAccelOffset(sensorsOffsets[i][2], MPU9150_RA_ZA_OFFS_H);
+            mpu.setXGyroOffset(sensorsOffsets[i][3], MPU9150_RA_XG_OFFS_USRH);
+            mpu.setYGyroOffset(sensorsOffsets[i][4], MPU9150_RA_YG_OFFS_USRH);
+            mpu.setZGyroOffset(sensorsOffsets[i][5], MPU9150_RA_ZG_OFFS_USRH);
         } else {        
-          mpu.setXAccelOffset(sensorsOffsets[i][0]);
-        mpu.setYAccelOffset(sensorsOffsets[i][1]);
-        mpu.setZAccelOffset(sensorsOffsets[i][2]);   
-        mpu.setXGyroOffset(sensorsOffsets[i][3]);
-        mpu.setYGyroOffset(sensorsOffsets[i][4]);
-        mpu.setZGyroOffset(sensorsOffsets[i][5]);
-}
-/*
-        mpu.setXGyroOffset(gx_offset);
-        mpu.setYGyroOffset(gy_offset);
-        mpu.setZGyroOffset(gz_offset);
-        mpu.setXAccelOffset(ax_offset);
-        mpu.setYAccelOffset(ay_offset);
-        mpu.setZAccelOffset(az_offset);
-        */
+            mpu.setXAccelOffset(sensorsOffsets[i][0]);
+            mpu.setYAccelOffset(sensorsOffsets[i][1]);
+            mpu.setZAccelOffset(sensorsOffsets[i][2]);   
+            mpu.setXGyroOffset(sensorsOffsets[i][3]);
+            mpu.setYGyroOffset(sensorsOffsets[i][4]);
+            mpu.setZGyroOffset(sensorsOffsets[i][5]);
+        }
     }
 }
 #endif
