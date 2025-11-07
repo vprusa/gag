@@ -1,5 +1,4 @@
 // #include "definitions.h"
-#define USE_VISUALIZATION 1 
 #ifdef USE_VISUALIZATION
 
 #include "gag_display.h"

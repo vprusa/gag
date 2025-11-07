@@ -63,7 +63,9 @@ void setup() {
     #endif
 
 #ifdef USE_VISUALIZATION
+    MASTER_SERIAL_NAME.println(F("Init vis"));
   viz_init();
+    MASTER_SERIAL_NAME.println(F("Init vis - done"));
   // Optional tweaks:
   // viz_set_deg_spacing(18.0f);     // tighter palm fan
   // viz_use_perspective(true);      // simple perspective (try off first on 1-bit OLED)
@@ -128,6 +130,7 @@ void setup() {
     calibrationDone = true;
     #endif
     timeNow = millis(); //Start counting time in milliseconds
+    MASTER_SERIAL_NAME.println(F("Setup - done"));
 }
 
 // ================================================================
@@ -193,22 +196,22 @@ void loop() {
 
 //   viz_draw_frame(q);
 // #endif
-#ifdef USE_VISUALIZATION
-  // --- build VizQuaternion array from RAW fifoBuffer bytes ---
 
-  // DMP quaternion appears as 4 x int16 in big-endian order at offsets:
-  // w: [0..1], x: [4..5], y: [8..9], z: [12..13]
-  auto quatFromFifo = [](const byte* fb) -> VizQuaternion {
-    // combine big-endian bytes into signed 16-bit
-    int16_t qw = (int16_t)((int16_t)fb[0] << 8 | fb[1]);
-    int16_t qx = (int16_t)((int16_t)fb[4] << 8 | fb[5]);
-    int16_t qy = (int16_t)((int16_t)fb[8] << 8 | fb[9]);
+
+#ifdef USE_VISUALIZATION
+  // Uncomment to enable detailed debug logs
+  #define VIZ_DEBUG 1
+
+  // Helper: extract quaternion from DMP FIFO bytes
+  auto quatFromFifo = [](const byte* fb, int idx) -> VizQuaternion {
+    // Combine big-endian bytes into signed 16-bit integers
+    int16_t qw = (int16_t)((int16_t)fb[0]  << 8 | fb[1]);
+    int16_t qx = (int16_t)((int16_t)fb[4]  << 8 | fb[5]);
+    int16_t qy = (int16_t)((int16_t)fb[8]  << 8 | fb[9]);
     int16_t qz = (int16_t)((int16_t)fb[12] << 8 | fb[13]);
 
-    // Convert to float. Many DMP builds use Q14 (~16384 == 1.0f).
-    // The exact scale doesn’t matter much since we normalize afterwards.
+    // Convert to float — DMP quaternions are typically Q14 (16384 = 1.0)
     const float S = 1.0f / 16384.0f;
-
     VizQuaternion qf{
       (float)qw * S,
       (float)qx * S,
@@ -216,23 +219,35 @@ void loop() {
       (float)qz * S
     };
 
-    // Normalize to unit quaternion (robust against scale drift)
+    // Normalize to unit quaternion
     float n = sqrtf(qf.w*qf.w + qf.x*qf.x + qf.y*qf.y + qf.z*qf.z);
     if (n > 1e-6f) {
       qf.w /= n; qf.x /= n; qf.y /= n; qf.z /= n;
     } else {
-      qf = {1.f, 0.f, 0.f, 0.f}; // fallback identity
+      qf = {1.f, 0.f, 0.f, 0.f};
     }
+
+  #ifdef VIZ_DEBUG
+    Serial.print(F("[VIZ] Sensor ")); Serial.print(idx);
+    Serial.print(F(" raw qw=")); Serial.print(qw);
+    Serial.print(F(" qx=")); Serial.print(qx);
+    Serial.print(F(" qy=")); Serial.print(qy);
+    Serial.print(F(" qz=")); Serial.print(qz);
+    Serial.print(F(" | norm q=("));
+    Serial.print(qf.w, 4); Serial.print(", ");
+    Serial.print(qf.x, 4); Serial.print(", ");
+    Serial.print(qf.y, 4); Serial.print(", ");
+    Serial.print(qf.z, 4); Serial.println(")");
+  #endif
+
     return qf;
   };
 
   VizQuaternion q[GAG_NUM_SENSORS];
 
   for (int i = 0; i < GAG_NUM_SENSORS; ++i) {
-    // Guard for sensors not yet initialized / no fresh FIFO
-    // If you track readiness (e.g., gyros[i].dmpReady or fifoCount), check it here.
     if (gyros[i].fifoBuffer) {
-      q[i] = quatFromFifo(gyros[i].fifoBuffer);
+      q[i] = quatFromFifo(gyros[i].fifoBuffer, i);
     } else {
       q[i] = {1.f, 0.f, 0.f, 0.f};
     }
