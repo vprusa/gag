@@ -12,8 +12,8 @@
 #define MASTER_HAND
 #define USE_DISPLAY 1
 
-#define USE_DISPLAY 1
-// #define USE_VISUALIZATION 1
+// #define USE_DISPLAY 1
+#define USE_VISUALIZATION 1
 
 
 #define MASTER_BT_SERIAL

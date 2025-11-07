@@ -24,11 +24,18 @@
 #include "esp_pm.h"
 #endif
 
-#ifdef USE_DISPLAY
-    extern SSD1306Wire display;
-    extern OLEDDisplayUi ui;
-    extern int remainingTimeBudget;
-#endif
+// #ifdef USE_DISPLAY
+//     extern SSD1306Wire display;
+//     extern OLEDDisplayUi ui;
+//     extern int remainingTimeBudget;
+// #endif
+
+#define USE_VISUALIZATION 1
+
+// #ifdef USE_VISUALIZATION
+#include "gag_display.h"
+// #endif
+// void viz_init();
 
 #ifdef MEASURE_OFFSETS
     //#include "gag_offsetting.h"
@@ -55,6 +62,13 @@ void setup() {
         Serial.begin(115200);
     #endif
 
+#ifdef USE_VISUALIZATION
+  viz_init();
+  // Optional tweaks:
+  // viz_set_deg_spacing(18.0f);     // tighter palm fan
+  // viz_use_perspective(true);      // simple perspective (try off first on 1-bit OLED)
+#endif
+
     #ifdef USE_BT_GATT_SERIAL
         sclbk = new ServerCallbacks();
         cclbk = new CharCallbacks();
@@ -73,9 +87,9 @@ void setup() {
     
     MASTER_SERIAL_NAME.println(F("USB up"));
     
-#ifdef USE_DISPLAY
-    displaySetup();
-#endif
+// #ifdef USE_DISPLAY
+//     displaySetup();
+// #endif
 
     for (int i = FIRST_SENSOR; i <= LAST_SENSOR; i++) {
       int sensorToEnable = selectSingleMPU(i);
@@ -128,9 +142,9 @@ void loop() {
     timeNow = millis(); // actual time read
     elapsedTime = (timeNow - timePrev);
  
-#ifdef USE_DISPLAY
-    remainingTimeBudget = ui.update();
-#endif
+// #ifdef USE_DISPLAY
+//     remainingTimeBudget = ui.update();
+// #endif
 
 #ifdef MASTER_HAND
     if(useSlaveHand) {
@@ -161,6 +175,73 @@ void loop() {
 
     gyros[selectedSensor].alreadySentData = false;
     loadDataAndSendPacket();
+
+// #ifdef USE_VISUALIZATION
+//   VizQuaternion q[GAG_NUM_SENSORS];
+
+//   // Fill from your existing data.
+//   // Example if you have: gyros[i].q: {w, x, y, z}
+//   for (int i = 0; i < GAG_NUM_SENSORS; ++i) {
+//     q[i].w = gyros[i].q.w;
+//     q[i].x = gyros[i].q.x;
+//     q[i].y = gyros[i].q.y;
+//     q[i].z = gyros[i].q.z;
+//   }
+
+//   // Safety for missing sensors: set identity for any not ready
+//   // e.g., if (!gyros[i].dmpReady) q[i] = {1,0,0,0};
+
+//   viz_draw_frame(q);
+// #endif
+#ifdef USE_VISUALIZATION
+  // --- build VizQuaternion array from RAW fifoBuffer bytes ---
+
+  // DMP quaternion appears as 4 x int16 in big-endian order at offsets:
+  // w: [0..1], x: [4..5], y: [8..9], z: [12..13]
+  auto quatFromFifo = [](const byte* fb) -> VizQuaternion {
+    // combine big-endian bytes into signed 16-bit
+    int16_t qw = (int16_t)((int16_t)fb[0] << 8 | fb[1]);
+    int16_t qx = (int16_t)((int16_t)fb[4] << 8 | fb[5]);
+    int16_t qy = (int16_t)((int16_t)fb[8] << 8 | fb[9]);
+    int16_t qz = (int16_t)((int16_t)fb[12] << 8 | fb[13]);
+
+    // Convert to float. Many DMP builds use Q14 (~16384 == 1.0f).
+    // The exact scale doesn’t matter much since we normalize afterwards.
+    const float S = 1.0f / 16384.0f;
+
+    VizQuaternion qf{
+      (float)qw * S,
+      (float)qx * S,
+      (float)qy * S,
+      (float)qz * S
+    };
+
+    // Normalize to unit quaternion (robust against scale drift)
+    float n = sqrtf(qf.w*qf.w + qf.x*qf.x + qf.y*qf.y + qf.z*qf.z);
+    if (n > 1e-6f) {
+      qf.w /= n; qf.x /= n; qf.y /= n; qf.z /= n;
+    } else {
+      qf = {1.f, 0.f, 0.f, 0.f}; // fallback identity
+    }
+    return qf;
+  };
+
+  VizQuaternion q[GAG_NUM_SENSORS];
+
+  for (int i = 0; i < GAG_NUM_SENSORS; ++i) {
+    // Guard for sensors not yet initialized / no fresh FIFO
+    // If you track readiness (e.g., gyros[i].dmpReady or fifoCount), check it here.
+    if (gyros[i].fifoBuffer) {
+      q[i] = quatFromFifo(gyros[i].fifoBuffer);
+    } else {
+      q[i] = {1.f, 0.f, 0.f, 0.f};
+    }
+  }
+
+  viz_draw_frame(q);
+#endif
+
+
 
     setOrRotateSelectedGyro(-1); 
     loadDataFromFIFO(true);

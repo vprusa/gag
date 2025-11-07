@@ -1,81 +1,50 @@
-// /*
-// */
-
-// #ifndef _GAG_DISPLAY_H_
-// #define _GAG_DISPLAY_H_
+#pragma once
 
 // #include "definitions.h"
-// #ifdef USE_DISPLAY
+#define USE_VISUALIZATION 1 
+#ifdef USE_VISUALIZATION
 
-// #include "Wire.h"
-// // #include <TimeLib.h>
-// // #include "SSD1306Wire.h" // legacy include: `#include "SSD1306.h"`
-// // #include "SSD1306Wire.h" // legacy include: `#include "SSD1306.h"`
-// // #include <SSD1306.h>
-// #include <SSD1306Wire.h>
+#include <Arduino.h>
+#include <Wire.h>
+#include "SSD1306Wire.h"  // ThingPulse: https://github.com/ThingPulse/esp8266-oled-ssd1306
 
-// #include "OLEDDisplayUi.h"
+// ----- Pins / address (keep consistent with your wiring) -----
+#ifndef GAG_OLED_ADDR
+#define GAG_OLED_ADDR 0x3C
+#endif
 
-// const unsigned char activeSymbol[] PROGMEM = {
-//     B00000000,
-//     B00000000,
-//     B00011000,
-//     B00100100,
-//     B01000010,
-//     B01000010,
-//     B00100100,
-//     B00011000
-// };
+#ifndef GAG_OLED_SDA
+#define GAG_OLED_SDA 18
+#endif
 
-// const unsigned char inactiveSymbol[] PROGMEM = {
-//     B00000000,
-//     B00000000,
-//     B00000000,
-//     B00000000,
-//     B00011000,
-//     B00011000,
-//     B00000000,
-//     B00000000
-// };
+#ifndef GAG_OLED_SCL
+#define GAG_OLED_SCL 19
+#endif
 
-// void displaySetup();
+// Sensor indices should match your existing enum/order: TU, SU, FU, MU, EU, HG
+#ifndef GAG_NUM_SENSORS
+#define GAG_NUM_SENSORS 6
+#endif
+#ifndef GAG_WRIST_INDEX
+#define GAG_WRIST_INDEX 5  // HG
+#endif
 
-// // --- Visualization API ---
-// #ifdef USE_VISUALIZATION
-// // Draws a simple wireframe hand skeleton on the SSD1306.
-// // Quaternions are in [w,x,y,z]. fingerQuats has 5 entries in order TU..EU.
-// // Call this directly OR let the UI call visualizationFrame for you.
-// void displayDrawVisualization(const float wristQuat[4],
-//                               const float fingerQuats[5][4]);
+// Public API: light-weight and easy to integrate with your existing quaternions.
+struct VizQuaternion {
+  float w, x, y, z;
+};
 
-// // Optional: an OLEDDisplayUi frame you can register with the UI.
-// void visualizationFrame(OLEDDisplay *display,
-//                         OLEDDisplayUiState* state,
-//                         int16_t x, int16_t y);
-// #endif
+// Initialize display and visualization state.
+// Call once from setup() if USE_VISUALIZATION is defined.
+void viz_init();
 
+// Draw one frame of the skeleton.
+// Provide 6 quaternions (order must match your sensors; index 5 = wrist/HG).
+// If you don’t have all sensors yet, pass identity (1,0,0,0) for missing ones.
+void viz_draw_frame(const VizQuaternion q[GAG_NUM_SENSORS]);
 
-// #endif
-// #endif
+// Optional: tweak look/feel at runtime
+void viz_set_deg_spacing(float degrees);   // fan spacing between palm rays (default ~20°)
+void viz_use_perspective(bool enable);     // enable simple perspective (default false)
 
-#pragma once
-#include "definitions.h"
-
-#ifdef USE_DISPLAY
-  #include "SSD1306Wire.h"
-  #include "OLEDDisplayUi.h"
-
-  // Initialize the OLED + UI
-  void displaySetup();
-
-  // Run one UI tick (call from loop)
-  void displayUpdate();
-
-  #ifdef USE_VISUALIZATION
-  // Draw wireframe hand directly (optional; the UI frame uses this internally)
-  // Quaternions are [w,x,y,z]; finger order: TU, SU, FU, MU, EU
-  void displayDrawVisualization(const float wristQuat[4],
-                                const float fingerQuats[5][4]);
-  #endif
-#endif  // USE_DISPLAY
-
+#endif // USE_VISUALIZATION
