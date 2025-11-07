@@ -32,7 +32,7 @@ THE SOFTWARE.
 #ifndef _HELPER_3DMATH_H_
 #define _HELPER_3DMATH_H_
 
-#define min(a,b) ((a)<(b)?(a):(b))
+// #define min(a,b) ((a)<(b)?(a):(b))
 
 class Quaternion {
     public:

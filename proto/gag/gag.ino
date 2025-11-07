@@ -25,7 +25,7 @@
 #endif
 
 #ifdef USE_DISPLAY
-    extern SSD1306wire display;
+    extern SSD1306Wire display;
     extern OLEDDisplayUi ui;
     extern int remainingTimeBudget;
 #endif
