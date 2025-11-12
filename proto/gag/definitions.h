@@ -16,8 +16,8 @@
 #define USE_VISUALIZATION 1
 
 
-#define MASTER_BT_SERIAL
-#define USE_BT_GATT_SERIAL
+// #define MASTER_BT_SERIAL
+// #define USE_BT_GATT_SERIAL
 #else
 #define SLAVE_HAND
 #endif

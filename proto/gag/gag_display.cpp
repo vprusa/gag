@@ -1,10 +1,18 @@
-// #include "definitions.h"
+#define USE_VISUALIZATION 1
 #ifdef USE_VISUALIZATION
 
 #include "gag_display.h"
 #include <math.h>
 
-// ---------- Display ----------
+// ================== Debug controls ==================
+// Comment out to silence all debug prints from this module
+#define VIZ_DEBUG 1
+// Throttle debug output to at most once per this many milliseconds
+#ifndef VIZ_DEBUG_INTERVAL_MS
+#define VIZ_DEBUG_INTERVAL_MS 200
+#endif
+// ====================================================
+
 static SSD1306Wire display(GAG_OLED_ADDR, GAG_OLED_SDA, GAG_OLED_SCL);
 
 // ---------- Tunables ----------
@@ -21,11 +29,14 @@ static int   kScreenH = 64;
 static float kScale   = 1.0f;  // pixels per model unit
 static float kZ0      = 60.0f; // perspective offset (bigger => weaker perspective)
 
+// Debug timing
+#ifdef VIZ_DEBUG
+static uint32_t g_lastDebugMs = 0;
+#endif
+
 // ---------- Small math helpers ----------
 struct V3 { float x, y, z; };
 struct Q  { float w, x, y, z; };
-
-static inline Q q_conj(const Q& q) { return Q{ q.w, -q.x, -q.y, -q.z }; }
 
 static inline V3 q_rotate(const Q& q, const V3& v) {
   // Optimized quaternion * vector rotation: v' = v + 2*cross(q.xyz, cross(q.xyz, v) + q.w*v)
@@ -61,20 +72,22 @@ static inline bool project(const V3& p, int& x, int& y) {
   }
   x = (int)(kScreenW * 0.5f + kScale * u + 0.5f);
   y = (int)(kScreenH * 0.5f - kScale * v + 0.5f);
-  // Cull outside a generous boundary to avoid draw overflows
   return (x > -10 && x < kScreenW + 10 && y > -10 && y < kScreenH + 10);
 }
 
 static inline void drawLineSafe(int x0, int y0, int x1, int y1) {
-  // Thin lines can be hard to see on fast motion; we could double-stroke if needed.
   display.drawLine(x0, y0, x1, y1);
 }
 
 // ---------- Public API ----------
-void viz_init() {
+// void viz_init() {
+void viz_init(void) {
+  // Serial.println(F("[VIZ] init"));
+  Serial.println("[VIZ] init");
+  delay(100);
   display.init();
-  // Optional: flip if your panel is mounted upside-down
-  // display.flipScreenVertically();
+  // display.flipScreenVertically(); // Uncomment if your panel is flipped
+  Serial.println(F("[VIZ] done"));
 
   // Infer screen size from driver (defaults are 128x64 on SSD1306)
   kScreenW = display.getWidth();
@@ -82,26 +95,53 @@ void viz_init() {
 
   // Compute a conservative scale so palm+finger fits with margins
   float totalLen = (kPalmLen + kFingerLen);
-  // Leave some margin; fit to min dimension
   kScale = (0.8f * (float)min(kScreenW, kScreenH)) / (2.0f * totalLen);
   if (kScale < 0.5f) kScale = 0.5f;  // reasonable lower bound
 
+  Serial.println(F("[VIZ] clear"));
+
   display.clear();
+  Serial.println(F("[VIZ] font"));
   display.setFont(ArialMT_Plain_10);
+  Serial.println(F("[VIZ] string"));
   display.drawString(0, 0, "GAG viz ready");
+  Serial.println(F("[VIZ] display"));
   display.display();
+
+  #ifdef VIZ_DEBUG
+    Serial.println(F("[VIZ] init"));
+    Serial.print(F("[VIZ] OLED addr=0x")); Serial.println(GAG_OLED_ADDR, HEX);
+    Serial.print(F("[VIZ] SDA=")); Serial.print(GAG_OLED_SDA);
+    Serial.print(F(" SCL=")); Serial.println(GAG_OLED_SCL);
+    Serial.print(F("[VIZ] Screen ")); Serial.print(kScreenW); Serial.print('x'); Serial.println(kScreenH);
+    Serial.print(F("[VIZ] Scale ")); Serial.print(kScale, 3);
+    Serial.print(F(" PalmLen ")); Serial.print(kPalmLen);
+    Serial.print(F(" FingerLen ")); Serial.println(kFingerLen);
+    Serial.print(F("[VIZ] Palm spacing ")); Serial.print(kPalmDegSpacing);
+    Serial.print(F(" deg | Perspective ")); Serial.println(kUsePerspective ? F("ON") : F("OFF"));
+  #endif
 }
 
-void viz_set_deg_spacing(float degrees) { kPalmDegSpacing = degrees; }
-void viz_use_perspective(bool enable)   { kUsePerspective  = enable; }
+void viz_set_deg_spacing(float degrees) {
+  kPalmDegSpacing = degrees;
+  #ifdef VIZ_DEBUG
+    Serial.print(F("[VIZ] set spacing ")); Serial.print(degrees); Serial.println(F(" deg"));
+  #endif
+}
+
+void viz_use_perspective(bool enable) {
+  kUsePerspective = enable;
+  #ifdef VIZ_DEBUG
+    Serial.print(F("[VIZ] perspective ")); Serial.println(enable ? F("ON") : F("OFF"));
+  #endif
+}
 
 // Expect sensors in order [0..4]=fingers, [5]=wrist(HG)
 void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
-  // Convert to internal Q
+  // Convert to internal Q and normalize
   Q q[GAG_NUM_SENSORS];
   for (int i = 0; i < GAG_NUM_SENSORS; ++i) {
     q[i] = Q{ q_in[i].w, q_in[i].x, q_in[i].y, q_in[i].z };
-    // Basic normalization guard (IMU outputs are usually close already)
     float n = q[i].w*q[i].w + q[i].x*q[i].x + q[i].y*q[i].y + q[i].z*q[i].z;
     if (n > 0.00001f) {
       float inv = 1.0f / sqrtf(n);
@@ -113,9 +153,9 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
 
   const Q& qWrist = q[GAG_WRIST_INDEX];
 
-  // Model: wrist at origin (0,0,0). Base palm ray points along +X in local frame.
-  const V3 basePalmDir = V3{ 1.0f, 0.0f, 0.0f };   // local +X
-  const V3 baseFingDir = V3{ 1.0f, 0.0f, 0.0f };   // local +X
+  // Model: wrist at origin (0,0,0). Base palm & finger ray points along +X in local frame.
+  const V3 basePalmDir = V3{ 1.0f, 0.0f, 0.0f };
+  const V3 baseFingDir = V3{ 1.0f, 0.0f, 0.0f };
 
   display.clear();
 
@@ -131,6 +171,20 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
     }
   }
 
+  // Debug throttling
+  #ifdef VIZ_DEBUG
+    bool doLog = false;
+    uint32_t now = millis();
+    if (now - g_lastDebugMs >= VIZ_DEBUG_INTERVAL_MS) {
+      g_lastDebugMs = now;
+      doLog = true;
+      Serial.print(F("[VIZ] frame t=")); Serial.print(now);
+      Serial.print(F("ms scale=")); Serial.print(kScale, 3);
+      Serial.print(F(" spacing=")); Serial.print(kPalmDegSpacing, 1);
+      Serial.print(F(" persp=")); Serial.println(kUsePerspective ? F("1") : F("0"));
+    }
+  #endif
+
   // Fan the palm rays around Z by ±2*spacing (five rays total)
   // Map indices [0..4] to angles [-2,-1,0,1,2]*spacing
   for (int i = 0; i < 5; ++i) {
@@ -145,7 +199,7 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
     V3 P0 = V3{0,0,0};
     V3 P1 = V3{ palmWorld.x * kPalmLen, palmWorld.y * kPalmLen, palmWorld.z * kPalmLen };
 
-    // Finger orientation: by default use the finger sensor's absolute quaternion
+    // Finger orientation: interpreted as absolute orientation in world
     const Q& qFinger = q[i];
     V3 fingWorld = q_rotate(qFinger, baseFingDir);
 
@@ -157,16 +211,28 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
 
     // Project & draw
     int x0,y0,x1,y1,xf,yf;
-    if (project(P0, x0, y0) && project(P1, x1, y1)) {
-      drawLineSafe(x0, y0, x1, y1);     // wrist -> knuckle (palm ray)
-    }
-    if (project(P1, x1, y1) && project(F1, xf, yf)) {
-      drawLineSafe(x1, y1, xf, yf);     // knuckle -> fingertip (finger ray)
-    }
-  }
+    bool okP0 = project(P0, x0, y0);
+    bool okP1 = project(P1, x1, y1);
+    bool okF1 = project(F1, xf, yf);
 
-  // Optional: a tiny HUD (centered dot already shows origin)
-  // display.drawString(0, 0, ""); // keep clean for max FPS
+    if (okP0 && okP1) drawLineSafe(x0, y0, x1, y1); // wrist -> knuckle
+    if (okP1 && okF1) drawLineSafe(x1, y1, xf, yf); // knuckle -> fingertip
+
+    #ifdef VIZ_DEBUG
+      if (doLog) {
+        Serial.print(F("  [ray ")); Serial.print(i); Serial.print(F("] deg=")); Serial.print(deg, 1);
+        Serial.print(F(" P1=(")); Serial.print(P1.x, 2); Serial.print(',');
+        Serial.print(P1.y, 2); Serial.print(','); Serial.print(P1.z, 2); Serial.print(')');
+        Serial.print(F(" F1=(")); Serial.print(F1.x, 2); Serial.print(',');
+        Serial.print(F1.y, 2); Serial.print(','); Serial.print(F1.z, 2); Serial.print(')');
+        Serial.print(F(" | scr P0=(")); Serial.print(x0); Serial.print(','); Serial.print(y0); Serial.print(')');
+        Serial.print(F(" P1=(")); Serial.print(okP1 ? x1 : -1); Serial.print(',');
+        Serial.print(okP1 ? y1 : -1); Serial.print(')');
+        Serial.print(F(" F1=(")); Serial.print(okF1 ? xf : -1); Serial.print(',');
+        Serial.print(okF1 ? yf : -1); Serial.println(')');
+      }
+    #endif
+  }
 
   display.display();
 }

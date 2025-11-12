@@ -50,12 +50,12 @@
     #define SLAVE_SERIAL_NAME Serial2
     #define SLAVE_SERIAL_BAUD 57600
 
-#else
-    // 115200 57600
-    #ifdef MASTER_HAND
-        #define MASTER_SERIAL_NAME Serial2
-        #define MASTER_SERIAL_BAUD 115200
-    #endif
+// #else
+//     // 115200 57600
+//     #ifdef MASTER_HAND
+//         #define MASTER_SERIAL_NAME Serial2
+//         #define MASTER_SERIAL_BAUD 115200
+//     #endif
 #endif
 
 #ifdef SLAVE_HAND
@@ -523,13 +523,16 @@ void setupSensors() {
 
         int selectorOffsettedPin = selectSingleMPU(i);
 
-        MASTER_SERIAL_NAME.print(F("selectedSensor: "));
-        MASTER_SERIAL_NAME.print((int)selectedSensor);
-        MASTER_SERIAL_NAME.println(F(""));
-
-        MASTER_SERIAL_NAME.print(F("Enabled on pin: "));
-        MASTER_SERIAL_NAME.print(selectorOffsettedPin);
-        MASTER_SERIAL_NAME.println(F(""));
+        Serial.print(F("selectedSensor: "));
+        Serial.println((int)selectedSensor);
+        // MASTER_SERIAL_NAME.println(F(""));
+        // MASTER_SERIAL_NAME.println(""));
+        Serial.print(F("Enabled on pin: "));
+        Serial.print(selectorOffsettedPin);
+        
+        // MASTER_SERIAL_NAME.print(F("Enabled on pin: "));
+        // MASTER_SERIAL_NAME.print(selectorOffsettedPin);
+        // MASTER_SERIAL_NAME.println(F(""));
         
         initMPUAndDMP(1, i);
 

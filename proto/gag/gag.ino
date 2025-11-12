@@ -30,11 +30,13 @@
 //     extern int remainingTimeBudget;
 // #endif
 
-#define USE_VISUALIZATION 1
+// #define USE_VISUALIZATION 1
+#define USE_VISUALIZATION 1 
 
-// #ifdef USE_VISUALIZATION
+#ifdef USE_VISUALIZATION
+// #include "gag_display.cpp"
 #include "gag_display.h"
-// #endif
+#endif
 // void viz_init();
 
 #ifdef MEASURE_OFFSETS
@@ -51,9 +53,11 @@
 extern bool useSlaveHand = false;
 #endif
 void setup() {
-   #ifdef ESP32_RIGHT
-   esp_sleep_enable_timer_wakeup(0);  // Prevent sleep mode
-   esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT); // Ensure only BLE is active
+    // #ifdef ESP32_RIGHT
+    #ifdef USE_BT_GATT_SERIAL
+    esp_sleep_enable_timer_wakeup(0);  // Prevent sleep mode
+    esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT); // Ensure only BLE is active
+    // #endif
     #endif
     
     #ifdef GAG_DEBUG 
@@ -62,14 +66,17 @@ void setup() {
         Serial.begin(115200);
     #endif
 
-#ifdef USE_VISUALIZATION
-    MASTER_SERIAL_NAME.println(F("Init vis"));
-  viz_init();
-    MASTER_SERIAL_NAME.println(F("Init vis - done"));
-  // Optional tweaks:
-  // viz_set_deg_spacing(18.0f);     // tighter palm fan
-  // viz_use_perspective(true);      // simple perspective (try off first on 1-bit OLED)
-#endif
+    #ifdef USE_VISUALIZATION
+        // MASTER_SERIAL_NAME.println(F("Init vis2"));
+        // MASTER_SERIAL_NAME.println(F("Init vis3"));
+        // viz_init();
+        // if (viz_init == nullptr) Serial.println("viz_init pointer is NULL!?");
+        viz_init();
+        // MASTER_SERIAL_NAME.println(F("Init vis - done"));
+        // Optional tweaks:
+        // viz_set_deg_spacing(18.0f);     // tighter palm fan
+        // viz_use_perspective(true);      // simple perspective (try off first on 1-bit OLED)
+    #endif
 
     #ifdef USE_BT_GATT_SERIAL
         sclbk = new ServerCallbacks();
@@ -87,7 +94,7 @@ void setup() {
         ; // wait for Leonardo enumeration, others continue immediately
     #endif
     
-    MASTER_SERIAL_NAME.println(F("USB up"));
+    // MASTER_SERIAL_NAME.println(F("USB up"));
     
 // #ifdef USE_DISPLAY
 //     displaySetup();
