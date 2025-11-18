@@ -259,20 +259,160 @@ void viz_use_perspective(bool enable) {
 //   display.display();
 // }
 
-// Expect sensors in order [0..4]=fingers, [5]=wrist(HG)
-void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
-  // --- Local helpers (no globals required here) ---
-  auto qMul = [](const Q& a, const Q& b) -> Q {
-    return Q{
-      a.w*b.w - a.x*b.x - a.y*b.y - a.z*b.z,
-      a.w*b.x + a.x*b.w + a.y*b.z - a.z*b.y,
-      a.w*b.y - a.x*b.z + a.y*b.w + a.z*b.x,
-      a.w*b.z + a.x*b.y - a.y*b.x + a.z*b.w
-    };
-  };
-  auto qConj = [](const Q& q) -> Q { return Q{ q.w, -q.x, -q.y, -q.z }; };
 
-  // Convert to internal Q and normalize
+// // Expect sensors in order [0..4]=fingers, [5]=wrist(HG)
+// void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
+//   // --- Small local helpers (no globals needed) ---
+//   auto qMul  = [](const Q& a, const Q& b) -> Q {
+//     return Q{
+//       a.w*b.w - a.x*b.x - a.y*b.y - a.z*b.z,
+//       a.w*b.x + a.x*b.w + a.y*b.z - a.z*b.y,
+//       a.w*b.y - a.x*b.z + a.y*b.w + a.z*b.x,
+//       a.w*b.z + a.x*b.y - a.y*b.x + a.z*b.w
+//     };
+//   };
+//   auto qConj = [](const Q& q) -> Q { return Q{ q.w, -q.x, -q.y, -q.z }; };
+
+//   // Convert to internal Q and normalize
+//   Q q[GAG_NUM_SENSORS];
+//   for (int i = 0; i < GAG_NUM_SENSORS; ++i) {
+//     q[i] = Q{ q_in[i].w, q_in[i].x, q_in[i].y, q_in[i].z };
+//     float n = q[i].w*q[i].w + q[i].x*q[i].x + q[i].y*q[i].y + q[i].z*q[i].z;
+//     if (n > 0.00001f) {
+//       float inv = 1.0f / sqrtf(n);
+//       q[i].w *= inv; q[i].x *= inv; q[i].y *= inv; q[i].z *= inv;
+//     } else {
+//       q[i] = Q{1,0,0,0};
+//     }
+//   }
+
+//   const Q& qWrist = q[GAG_WRIST_INDEX];
+
+//   // ----- Fixed finger mount offset: +90° about Z in the WRIST frame -----
+//   const float half90 = 0.5f * deg2rad(90.0f);
+//   const float s90    = sinf(half90), c90 = cosf(half90);
+//   const Q kC        = Q{ c90, 0.0f, 0.0f,  s90 }; // +90° Z
+//   const Q kC_inv    = Q{ c90, 0.0f, 0.0f, -s90 }; //  -90° Z (to remove offset)
+
+//   // ----- 180° rotation about Y (vertical) to apply to FINGERS only -----
+//   // World-axis Y flip:
+//   const Q kRY180 = Q{ 0.0f, 0.0f, 1.0f, 0.0f };
+
+//   // Model: wrist at origin; base directions in local frame
+//   const V3 basePalmDir = V3{ 1.0f, 0.0f, 0.0f };
+//   const V3 baseFingDir = V3{ 1.0f, 0.0f, 0.0f };
+
+//   display.clear();
+
+//   // Tiny cross at wrist origin
+//   {
+//     int cx, cy;
+//     if (project(V3{0,0,0}, cx, cy)) {
+//       display.setPixel(cx, cy);
+//       if (cx+1 < kScreenW) display.setPixel(cx+1, cy);
+//       if (cy+1 < kScreenH) display.setPixel(cx, cy+1);
+//       if (cx-1 >= 0)        display.setPixel(cx-1, cy);
+//       if (cy-1 >= 0)        display.setPixel(cx, cy-1);
+//     }
+//   }
+
+//   // Debug throttling
+//   #ifdef VIZ_DEBUG
+//     bool doLog = false;
+//     uint32_t now = millis();
+//     if (now - g_lastDebugMs >= VIZ_DEBUG_INTERVAL_MS) {
+//       g_lastDebugMs = now;
+//       doLog = true;
+//       Serial.print(F("[VIZ] frame t=")); Serial.print(now);
+//       Serial.print(F("ms scale=")); Serial.print(kScale, 3);
+//       Serial.print(F(" spacing=")); Serial.print(kPalmDegSpacing, 1);
+//       Serial.print(F(" persp=")); Serial.println(kUsePerspective ? F("1") : F("0"));
+//     }
+//   #endif
+
+//   // Fan the palm rays around Z by ±2*spacing (five rays total)
+//   for (int i = 0; i < 5; ++i) {
+//     float k = (float)(i - 2); // -2..+2
+//     float deg = k * kPalmDegSpacing;
+
+//     // Palm direction
+//     V3 palmLocal = rotZ_apply(deg, basePalmDir);
+//     V3 palmWorld = q_rotate(qWrist, palmLocal);
+
+//     // Segment endpoints for palm
+//     V3 P0 = V3{0,0,0};
+//     V3 P1 = V3{ palmWorld.x * kPalmLen, palmWorld.y * kPalmLen, palmWorld.z * kPalmLen };
+
+//     // --------- Finger orientation pipeline ----------
+//     // qRel       = inv(qWrist) * qFinger           (finger in wrist frame)
+//     // qRelCorr   = kC_inv * qRel                   (remove +90° Z mount offset)
+//     // qWorldF    = qWrist * qRelCorr               (back to world)
+//     // qWorldF    = kRY180 * qWorldF                (flip fingers 180° about WORLD Y)  <-- (Option A, default)
+//     Q qRel     = qMul(qConj(qWrist), q[i]);
+//     Q qRelCorr = qMul(kC_inv, qRel);
+//     Q qWorldF  = qMul(qWrist, qRelCorr);
+
+//     // Apply 180° Y to fingers ONLY, in WORLD coordinates:
+//     qWorldF = qMul(kRY180, qWorldF);
+
+//     // ---- If you instead want the 180° to be in the WRIST (local) frame, use this line instead and remove the previous one:
+//     // qWorldF = qMul(qWrist, qMul(kRY180, qRelCorr)); // (Option B: local Y in wrist frame)
+
+//     // Direction to fingertip
+//     V3 fingWorld = q_rotate(qWorldF, baseFingDir);
+
+//     V3 F1 = V3{
+//       P1.x + fingWorld.x * kFingerLen,
+//       P1.y + fingWorld.y * kFingerLen,
+//       P1.z + fingWorld.z * kFingerLen
+//     };
+
+//     // Project & draw
+//     int x0,y0,x1,y1,xf,yf;
+//     bool okP0 = project(P0, x0, y0);
+//     bool okP1 = project(P1, x1, y1);
+//     bool okF1 = project(F1, xf, yf);
+
+//     if (okP0 && okP1) drawLineSafe(x0, y0, x1, y1); // wrist -> knuckle
+//     if (okP1 && okF1) drawLineSafe(x1, y1, xf, yf); // knuckle -> fingertip
+
+//     #ifdef VIZ_DEBUG
+//       if (doLog) {
+//         Serial.print(F("  [ray ")); Serial.print(i); Serial.print(F("] deg=")); Serial.print(deg, 1);
+//         Serial.print(F(" P1=(")); Serial.print(P1.x, 2); Serial.print(',');
+//         Serial.print(P1.y, 2); Serial.print(','); Serial.print(P1.z, 2); Serial.print(')');
+//         Serial.print(F(" F1=(")); Serial.print(F1.x, 2); Serial.print(',');
+//         Serial.print(F1.y, 2); Serial.print(','); Serial.print(F1.z, 2); Serial.print(')');
+//         Serial.println();
+//       }
+//     #endif
+//   }
+
+//   display.display();
+// }
+
+
+// ---- Finger offset controls (degrees) ----
+// Apply to all fingers. Typical values: 0, ±90, ±180
+static float gFingerOffDegX = 0.0f;
+static float gFingerOffDegY = 0.0f;
+static float gFingerOffDegZ = 0.0f;
+
+// When true (default), offsets are applied in the wrist frame (recommended).
+// If false, offsets are applied in the finger sensor's local frame.
+static bool  gFingerOffsetsInWristFrame = true;
+
+void viz_set_finger_offsets(float offX, float offY, float offZ) {
+  gFingerOffDegX = offX; gFingerOffDegY = offY; gFingerOffDegZ = offZ;
+}
+
+void viz_finger_offsets_use_wrist_frame(bool enable) {
+  gFingerOffsetsInWristFrame = enable;
+}
+
+
+void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
+  // ---------- Convert to internal Q and normalize ----------
   Q q[GAG_NUM_SENSORS];
   for (int i = 0; i < GAG_NUM_SENSORS; ++i) {
     q[i] = Q{ q_in[i].w, q_in[i].x, q_in[i].y, q_in[i].z };
@@ -287,31 +427,37 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
 
   const Q& qWrist = q[GAG_WRIST_INDEX];
 
-  // ---------- Fixed finger mount offset wrt wrist ----------
-  // Each finger sensor is mounted +90° about Z relative to the wrist axes.
-  // We remove that by pre-multiplying the wrist-relative rotation by C^-1 (i.e., -90° about Z).
-  {
-    // Nothing to compute here yet; just keeping the scope clear.
-  }
-  // const float half = 0.5f * deg2rad(90.0f);
-  const float half = 0.5f * deg2rad(180.0f);
-  const float s90  = sinf(half);       // sin(45°)
-  const float c90  = cosf(half);       // cos(45°)
-  // const Q kFingerMountZ      = Q{ c90, 0.0f, 0.0f,  s90 }; // +90° about Z (C)
-  // const Q kFingerMountZ_Inv  = Q{ c90, 0.0f, 0.0f, -s90 }; //  -90° about Z (C^-1)
-  // const Q kFingerMountZ      = Q{ 0.0f, 0.0f, 0.0f, 0.0f }; // +90° about Z (C)
-  // const Q kFingerMountZ_Inv  = Q{ 0.0f, 0.0f, 0.0f, 0.0f }; //  -90° about Z (C^-1)
-  const Q kFingerMountZ      = Q{ 0.0f, 0.0f, 0.0f, s90 }; // +90° about Z (C)
-  const Q kFingerMountZ_Inv  = Q{ 0.0f, 0.0f, 0.0f, -s90 }; //  -90° about Z (C^-1)
-  // If your observed correction is the wrong way, swap to: const Q kFingerMountZ_Inv = kFingerMountZ;
+  // ---------- Local quaternion helpers ----------
+  struct QM {
+    static inline Q mul(const Q& a, const Q& b) {
+      return Q{
+        a.w*b.w - a.x*b.x - a.y*b.y - a.z*b.z,
+        a.w*b.x + a.x*b.w + a.y*b.z - a.z*b.y,
+        a.w*b.y - a.x*b.z + a.y*b.w + a.z*b.x,
+        a.w*b.z + a.x*b.y - a.y*b.x + a.z*b.w
+      };
+    }
+    static inline Q conj(const Q& q) { return Q{ q.w, -q.x, -q.y, -q.z }; }
+    static inline Q fromAxisAngle(const V3& axis, float degrees) {
+      float half = 0.5f * deg2rad(degrees);
+      float s = sinf(half), c = cosf(half);
+      float n = sqrtf(axis.x*axis.x + axis.y*axis.y + axis.z*axis.z);
+      if (n < 1e-6f) return Q{1,0,0,0};
+      return Q{ c, (axis.x/n)*s, (axis.y/n)*s, (axis.z/n)*s };
+    }
+  };
 
-  // Model: wrist at origin (0,0,0). Base directions in local frame.
-  const V3 basePalmDir = V3{ 1.0f, 0.0f, 0.0f };
-  const V3 baseFingDir = V3{ 1.0f, 0.0f, 0.0f };
+  // ---------- Precompute the finger offset quaternion (X then Y then Z) ----------
+  // Apply X, then Y, then Z to the vector  =>  qOffset = Rz * Ry * Rx
+  const Q qOffX = QM::fromAxisAngle(V3{1,0,0}, gFingerOffDegX);
+  const Q qOffY = QM::fromAxisAngle(V3{0,1,0}, gFingerOffDegY);
+  const Q qOffZ = QM::fromAxisAngle(V3{0,0,1}, gFingerOffDegZ);
+  const Q qOffset = QM::mul(QM::mul(qOffZ, qOffY), qOffX);
 
+  // ---------- Drawing prep ----------
   display.clear();
 
-  // Draw a tiny cross at the wrist origin for reference
+  // Wrist origin cross
   {
     int cx, cy;
     if (project(V3{0,0,0}, cx, cy)) {
@@ -328,38 +474,52 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
     bool doLog = false;
     uint32_t now = millis();
     if (now - g_lastDebugMs >= VIZ_DEBUG_INTERVAL_MS) {
-      g_lastDebugMs = now;
-      doLog = true;
+      g_lastDebugMs = now; doLog = true;
       Serial.print(F("[VIZ] frame t=")); Serial.print(now);
-      Serial.print(F("ms scale=")); Serial.print(kScale, 3);
+      Serial.print(F(" scale=")); Serial.print(kScale, 3);
       Serial.print(F(" spacing=")); Serial.print(kPalmDegSpacing, 1);
       Serial.print(F(" persp=")); Serial.println(kUsePerspective ? F("1") : F("0"));
+      Serial.print(F(" fingerOff (x,y,z)=("));
+      Serial.print(gFingerOffDegX,0); Serial.print(',');
+      Serial.print(gFingerOffDegY,0); Serial.print(',');
+      Serial.print(gFingerOffDegZ,0); Serial.println(')');
     }
   #endif
 
-  // Fan the palm rays around Z by ±2*spacing (five rays total)
+  // Base directions in local frame
+  const V3 basePalmDir = V3{ 1.0f, 0.0f, 0.0f };
+  const V3 baseFingDir = V3{ 1.0f, 0.0f, 0.0f };
+
+  // ---------- Five palm rays ----------
   for (int i = 0; i < 5; ++i) {
-    float k = (float)(i - 2); // -2..+2
-    float deg = k * kPalmDegSpacing;
+    float k = (float)(i - 2);           // -2..+2
+    float deg = k * kPalmDegSpacing;    // fan around Z
 
-    // Local palm dir rotated around Z for the fan, then by wrist to world
-    V3 palmLocal  = rotZ_apply(deg, basePalmDir);
-    V3 palmWorld  = q_rotate(qWrist, palmLocal);
+    // Palm ray in world
+    V3 palmLocal = rotZ_apply(deg, basePalmDir);
+    V3 palmWorld = q_rotate(qWrist, palmLocal);
 
-    // Palm segment endpoints
+    // Wrist -> knuckle segment
     V3 P0 = V3{0,0,0};
     V3 P1 = V3{ palmWorld.x * kPalmLen, palmWorld.y * kPalmLen, palmWorld.z * kPalmLen };
 
-    // ----- Finger orientation corrected for the 90° Z mount offset -----
-    // qRel = inv(qWrist) * qFinger   (finger relative to wrist)
-    // qRelCorr = C^-1 * qRel         (remove constant +90° Z offset)
-    // qWorldFinger = qWrist * qRelCorr
-    Q qRel      = qMul(qConj(qWrist), q[i]);
-    Q qRelCorr  = qMul(kFingerMountZ_Inv, qRel);
-    Q qWorldF   = qMul(qWrist, qRelCorr);
+    // ---------- Finger orientation with configurable offsets ----------
+    // Get raw finger orientation
+    const Q& qFingerRaw = q[i];
 
-    V3 fingWorld = q_rotate(qWorldF, baseFingDir);
+    // Relative finger orientation to wrist
+    Q qRel = QM::mul(QM::conj(qWrist), qFingerRaw);
 
+    // Apply offsets either in wrist frame (pre-multiply) or sensor-local frame (post-multiply)
+    Q qRelCorr = gFingerOffsetsInWristFrame
+                 ? QM::mul(qOffset, qRel)   // offsets in wrist frame
+                 : QM::mul(qRel, qOffset);  // offsets in sensor-local frame
+
+    // Back to world
+    Q qFingerWorld = QM::mul(qWrist, qRelCorr);
+
+    // Fingertip direction & endpoint
+    V3 fingWorld = q_rotate(qFingerWorld, baseFingDir);
     V3 F1 = V3{
       P1.x + fingWorld.x * kFingerLen,
       P1.y + fingWorld.y * kFingerLen,
@@ -377,11 +537,12 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
 
     #ifdef VIZ_DEBUG
       if (doLog) {
-        Serial.print(F("  [ray ")); Serial.print(i); Serial.print(F("] deg=")); Serial.print(deg, 1);
-        Serial.print(F(" P1=(")); Serial.print(P1.x, 2); Serial.print(',');
-        Serial.print(P1.y, 2); Serial.print(','); Serial.print(P1.z, 2); Serial.print(')');
-        Serial.print(F(" F1=(")); Serial.print(F1.x, 2); Serial.print(',');
-        Serial.print(F1.y, 2); Serial.print(','); Serial.print(F1.z, 2); Serial.print(')');
+        Serial.print(F("  [ray ")); Serial.print(i);
+        Serial.print(F("] deg=")); Serial.print(deg,1);
+        Serial.print(F(" P1=(")); Serial.print(P1.x,2); Serial.print(',');
+        Serial.print(P1.y,2); Serial.print(','); Serial.print(P1.z,2); Serial.print(')');
+        Serial.print(F(" F1=(")); Serial.print(F1.x,2); Serial.print(',');
+        Serial.print(F1.y,2); Serial.print(','); Serial.print(F1.z,2); Serial.print(')');
         Serial.println();
       }
     #endif
@@ -389,6 +550,7 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
 
   display.display();
 }
+
 
 
 #endif // USE_VISUALIZATION
