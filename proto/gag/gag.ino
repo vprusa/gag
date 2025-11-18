@@ -62,7 +62,8 @@ void setup() {
     
     #ifdef GAG_DEBUG 
         Serial.begin(115200);
-    #elif SEND_DATA_ALSO_OVER_SERIAL 
+    #elif 
+     
         Serial.begin(115200);
     #endif
 
@@ -207,7 +208,7 @@ void loop() {
 
 #ifdef USE_VISUALIZATION
   // Uncomment to enable detailed debug logs
-  #define VIZ_DEBUG 1
+//   #define VIZ_DEBUG 1
 
   // Helper: extract quaternion from DMP FIFO bytes
   auto quatFromFifo = [](const byte* fb, int idx) -> VizQuaternion {
