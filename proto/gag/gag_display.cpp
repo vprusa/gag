@@ -1,18 +1,17 @@
-#define USE_VISUALIZATION 1
-#ifdef USE_VISUALIZATION
+// #ifdef USE_VISUALIZATION
 
 #include "gag_display.h"
 #include <math.h>
 
 // ================== Debug controls ==================
-// Comment out to silence all debug prints from this module
+// Uncomment to enable serial debug prints
 // #define VIZ_DEBUG 1
-// Throttle debug output to at most once per this many milliseconds
 #ifndef VIZ_DEBUG_INTERVAL_MS
 #define VIZ_DEBUG_INTERVAL_MS 200
 #endif
 // ====================================================
 
+// ---------- OLED driver ----------
 static SSD1306Wire display(GAG_OLED_ADDR, GAG_OLED_SDA, GAG_OLED_SCL);
 
 // ---------- Tunables ----------
@@ -34,9 +33,44 @@ static float kZ0      = 60.0f; // perspective offset (bigger => weaker perspecti
 static uint32_t g_lastDebugMs = 0;
 #endif
 
+// ---------- Compile-time mounting correction (Euler degrees, Z·Y·X order) ----------
+// Override these in your build flags or before including the header if needed.
+// Example for 90° clockwise (right-handed) finger sensors around +Z: set Z to -90.
+#ifndef GAG_FINGER_MOUNT_CORR_EULER_DEG_X
+#define GAG_FINGER_MOUNT_CORR_EULER_DEG_X 0.0f
+#endif
+#ifndef GAG_FINGER_MOUNT_CORR_EULER_DEG_Y
+#define GAG_FINGER_MOUNT_CORR_EULER_DEG_Y 0.0f
+#endif
+#ifndef GAG_FINGER_MOUNT_CORR_EULER_DEG_Z
+#define GAG_FINGER_MOUNT_CORR_EULER_DEG_Z 0.0f // set to -90.0f for your case if needed
+#endif
+
+#ifndef GAG_WRIST_MOUNT_CORR_EULER_DEG_X
+#define GAG_WRIST_MOUNT_CORR_EULER_DEG_X 0.0f
+#endif
+#ifndef GAG_WRIST_MOUNT_CORR_EULER_DEG_Y
+#define GAG_WRIST_MOUNT_CORR_EULER_DEG_Y 0.0f
+#endif
+#ifndef GAG_WRIST_MOUNT_CORR_EULER_DEG_Z
+#define GAG_WRIST_MOUNT_CORR_EULER_DEG_Z 0.0f
+#endif
+
 // ---------- Small math helpers ----------
 struct V3 { float x, y, z; };
 struct Q  { float w, x, y, z; };
+
+static inline float deg2rad(float d) { return d * 0.017453292519943295f; } // pi/180
+
+static inline Q q_mul(const Q& a, const Q& b) {
+  // Hamilton product; rotation 'a' applied after 'b' (q_total = a*b)
+  return Q{
+    a.w*b.w - a.x*b.x - a.y*b.y - a.z*b.z,
+    a.w*b.x + a.x*b.w + a.y*b.z - a.z*b.y,
+    a.w*b.y - a.x*b.z + a.y*b.w + a.z*b.x,
+    a.w*b.z + a.x*b.y - a.y*b.x + a.z*b.w
+  };
+}
 
 static inline V3 q_rotate(const Q& q, const V3& v) {
   // Optimized quaternion * vector rotation: v' = v + 2*cross(q.xyz, cross(q.xyz, v) + q.w*v)
@@ -51,7 +85,22 @@ static inline V3 q_rotate(const Q& q, const V3& v) {
   };
 }
 
-static inline float deg2rad(float d) { return d * 0.017453292519943295f; } // pi/180
+static inline Q q_from_axis_angle(const V3& axis, float degrees) {
+  float half = 0.5f * deg2rad(degrees);
+  float s = sinf(half), c = cosf(half);
+  float n = sqrtf(axis.x*axis.x + axis.y*axis.y + axis.z*axis.z);
+  if (n < 1e-6f) return Q{1,0,0,0};
+  float nx = axis.x / n, ny = axis.y / n, nz = axis.z / n;
+  return Q{ c, nx*s, ny*s, nz*s };
+}
+
+// Compose Z·Y·X Euler degrees into one quaternion (apply X, then Y, then Z)
+static inline Q q_euler_zyx_deg(float z_deg, float y_deg, float x_deg) {
+  Q qx = q_from_axis_angle(V3{1,0,0}, x_deg);
+  Q qy = q_from_axis_angle(V3{0,1,0}, y_deg);
+  Q qz = q_from_axis_angle(V3{0,0,1}, z_deg);
+  return q_mul(qz, q_mul(qy, qx));
+}
 
 static inline V3 rotZ_apply(float deg, const V3& v) {
   float r = deg2rad(deg);
@@ -59,12 +108,7 @@ static inline V3 rotZ_apply(float deg, const V3& v) {
   return V3{ c * v.x - s * v.y, s * v.x + c * v.y, v.z };
 }
 
-static inline bool project(const V3& p_in, int& x, int& y) {
-  // Rotate WORLD by 180° about the vertical (Y) axis
-  // Quaternion for 180° about +Y: cos(pi/2)=0, sin(pi/2)=1  ->  {w=0, x=0, y=1, z=0}
-  const Q kWorldYaw180 = Q{0.0f, 0.0f, 1.0f, 0.0f};
-  V3 p = q_rotate(kWorldYaw180, p_in);
-
+static inline bool project(const V3& p, int& x, int& y) {
   float u, v;
   if (kUsePerspective) {
     float denom = (p.z + kZ0);
@@ -80,20 +124,20 @@ static inline bool project(const V3& p_in, int& x, int& y) {
   return (x > -10 && x < kScreenW + 10 && y > -10 && y < kScreenH + 10);
 }
 
-
 static inline void drawLineSafe(int x0, int y0, int x1, int y1) {
   display.drawLine(x0, y0, x1, y1);
 }
 
+// ---------- Mounting corrections (default identity; set from macros in init) ----------
+static Q gFingerMountCorr = Q{1,0,0,0};
+static Q gWristMountCorr  = Q{1,0,0,0};
+
 // ---------- Public API ----------
-// void viz_init() {
-void viz_init(void) {
-  // Serial.println(F("[VIZ] init"));
+void viz_init() {
   Serial.println("[VIZ] init");
   delay(100);
   display.init();
   // display.flipScreenVertically(); // Uncomment if your panel is flipped
-  Serial.println(F("[VIZ] done"));
 
   // Infer screen size from driver (defaults are 128x64 on SSD1306)
   kScreenW = display.getWidth();
@@ -104,15 +148,22 @@ void viz_init(void) {
   kScale = (0.8f * (float)min(kScreenW, kScreenH)) / (2.0f * totalLen);
   if (kScale < 0.5f) kScale = 0.5f;  // reasonable lower bound
 
-  Serial.println(F("[VIZ] clear"));
-
   display.clear();
-  Serial.println(F("[VIZ] font"));
   display.setFont(ArialMT_Plain_10);
-  Serial.println(F("[VIZ] string"));
   display.drawString(0, 0, "GAG viz ready");
-  Serial.println(F("[VIZ] display"));
   display.display();
+
+  // Initialize mounting corrections from compile-time Euler degrees
+  gFingerMountCorr = q_euler_zyx_deg(
+    GAG_FINGER_MOUNT_CORR_EULER_DEG_Z,
+    GAG_FINGER_MOUNT_CORR_EULER_DEG_Y,
+    GAG_FINGER_MOUNT_CORR_EULER_DEG_X
+  );
+  gWristMountCorr  = q_euler_zyx_deg(
+    GAG_WRIST_MOUNT_CORR_EULER_DEG_Z,
+    GAG_WRIST_MOUNT_CORR_EULER_DEG_Y,
+    GAG_WRIST_MOUNT_CORR_EULER_DEG_X
+  );
 
   #ifdef VIZ_DEBUG
     Serial.println(F("[VIZ] init"));
@@ -142,74 +193,9 @@ void viz_use_perspective(bool enable) {
   #endif
 }
 
-// ---- Finger offset controls (degrees) ----
-// Apply to all fingers. Typical values: 0, ±90, ±180
-static float gFingerOffDegX = 0.0f;
-static float gFingerOffDegY = 0.0f;
-static float gFingerOffDegZ = 0.0f;
-
-// When true (default), offsets are applied in the wrist frame (recommended).
-// If false, offsets are applied in the finger sensor's local frame.
-static bool  gFingerOffsetsInWristFrame = true;
-
-void viz_set_finger_offsets(float offX, float offY, float offZ) {
-  gFingerOffDegX = offX; gFingerOffDegY = offY; gFingerOffDegZ = offZ;
-}
-
-void viz_finger_offsets_use_wrist_frame(bool enable) {
-  gFingerOffsetsInWristFrame = enable;
-}
-
-
-static inline Q q_mul(const Q& a, const Q& b) {
-  // Hamilton product; rotation 'a' applied after 'b' (q_total = a*b)
-  return Q{
-    a.w*b.w - a.x*b.x - a.y*b.y - a.z*b.z,
-    a.w*b.x + a.x*b.w + a.y*b.z - a.z*b.y,
-    a.w*b.y - a.x*b.z + a.y*b.w + a.z*b.x,
-    a.w*b.z + a.x*b.y - a.y*b.x + a.z*b.w
-  };
-}
-
-static inline Q q_from_axis_angle(const V3& axis, float degrees) {
-  float half = 0.5f * deg2rad(degrees);
-  float s = sinf(half), c = cosf(half);
-  float n = sqrtf(axis.x*axis.x + axis.y*axis.y + axis.z*axis.z);
-  if (n < 1e-6f) return Q{1,0,0,0};
-  float nx = axis.x / n, ny = axis.y / n, nz = axis.z / n;
-  return Q{ c, nx*s, ny*s, nz*s };
-}
-
-// Convenience: compose Z·Y·X Euler degrees into one quaternion
-static inline Q q_euler_zyx_deg(float z_deg, float y_deg, float x_deg) {
-  Q qx = q_from_axis_angle(V3{1,0,0}, x_deg);
-  Q qy = q_from_axis_angle(V3{0,1,0}, y_deg);
-  Q qz = q_from_axis_angle(V3{0,0,1}, z_deg);
-  return q_mul(qz, q_mul(qy, qx)); // apply X, then Y, then Z
-}
-
-
-// Mounting corrections (identity by default)
-static Q gFingerMountCorr = Q{1,0,0,0};
-static Q gWristMountCorr  = Q{1,0,0,0};
-
-// Set as Euler (degrees). Use multiples of 90° if that’s your case.
-void viz_set_finger_mount_correction_deg(float x_deg, float y_deg, float z_deg) {
-  gFingerMountCorr = q_euler_zyx_deg(z_deg, y_deg, x_deg);
-}
-void viz_set_wrist_mount_correction_deg(float x_deg, float y_deg, float z_deg) {
-  gWristMountCorr = q_euler_zyx_deg(z_deg, y_deg, x_deg);
-}
-
-// Or set directly with a quaternion if you already have one
-void viz_set_finger_mount_correction_q(const Q& qcorr) { gFingerMountCorr = qcorr; }
-void viz_set_wrist_mount_correction_q (const Q& qcorr) { gWristMountCorr  = qcorr; }
-// void viz_set_wrist_mount_correction_q (const Q& qcorr) { gWristMountCorr  = qcorr; }
-
-
 // Expect sensors in order [0..4]=fingers, [5]=wrist(HG)
 void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
-  // Convert to internal Q and normalize each incoming quaternion
+  // -------- Convert to internal Q and normalize --------
   Q q[GAG_NUM_SENSORS];
   for (int i = 0; i < GAG_NUM_SENSORS; ++i) {
     q[i] = Q{ q_in[i].w, q_in[i].x, q_in[i].y, q_in[i].z };
@@ -222,20 +208,22 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
     }
   }
 
-  // --- Apply mounting corrections ---
-  // Local (sensor-frame) correction: post-multiply measured quaternion by the correction
-  const Q qWrist = q_mul(q[GAG_WRIST_INDEX], gWristMountCorr);
+  // -------- Apply mounting corrections (local sensor frame) --------
+  // q_adj = q_measured * q_mountCorr
+  Q qCorr[GAG_NUM_SENSORS];
+  for (int i = 0; i < GAG_NUM_SENSORS; ++i) {
+    if (i == GAG_WRIST_INDEX) {
+      qCorr[i] = q_mul(q[i], gWristMountCorr);
+    } else {
+      qCorr[i] = q_mul(q[i], gFingerMountCorr);
+    }
+  }
 
-  // Model: wrist at origin (0,0,0). Base palm & finger ray points along +X in local frame.
+  // Model: wrist at origin (0,0,0). Base palm & finger ray points along +X.
   const V3 basePalmDir = V3{ 1.0f, 0.0f, 0.0f };
   const V3 baseFingDir = V3{ 1.0f, 0.0f, 0.0f };
 
   display.clear();
-
-  // viz_set_finger_mount_correction_deg(180.0f, 90.0f, 0.0f); // or +90.0f if sign is flipped
-  // viz_set_wrist_mount_correction_deg(180, 0, 0);
-  viz_set_finger_mount_correction_deg(0.0f, 0.0f, 0.0f); // or +90.0f if sign is flipped
-  viz_set_wrist_mount_correction_deg(180, 180, 180);
 
   // Draw a tiny cross at the wrist origin for reference
   {
@@ -244,12 +232,12 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
       display.setPixel(cx, cy);
       if (cx+1 < kScreenW) display.setPixel(cx+1, cy);
       if (cy+1 < kScreenH) display.setPixel(cx, cy+1);
-      if (cx-1 >= 0)       display.setPixel(cx-1, cy);
-      if (cy-1 >= 0)       display.setPixel(cx, cy-1);
+      if (cx-1 >= 0)        display.setPixel(cx-1, cy);
+      if (cy-1 >= 0)        display.setPixel(cx, cy-1);
     }
   }
 
-  // Debug throttling
+  // -------- Debug throttling --------
   #ifdef VIZ_DEBUG
     bool doLog = false;
     uint32_t now = millis();
@@ -263,23 +251,22 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
     }
   #endif
 
+  // ================= Skeleton (palm + fingers) =================
   // Fan the palm rays around Z by ±2*spacing (five rays total)
-  // Map indices [0..4] to angles [-2,-1,0,1,2]*spacing
   for (int i = 0; i < 5; ++i) {
     float k = (float)(i - 2); // -2..+2
     float deg = k * kPalmDegSpacing;
 
-    // Local palm direction rotated around Z for the fan, then rotate by corrected wrist orientation to world
+    // Local palm direction rotated around Z for the fan, then by corrected wrist to world
     V3 palmLocal  = rotZ_apply(deg, basePalmDir);
-    V3 palmWorld  = q_rotate(qWrist, palmLocal);
+    V3 palmWorld  = q_rotate(qCorr[GAG_WRIST_INDEX], palmLocal);
 
     // Palm segment endpoints
     V3 P0 = V3{0,0,0};
     V3 P1 = V3{ palmWorld.x * kPalmLen, palmWorld.y * kPalmLen, palmWorld.z * kPalmLen };
 
-    // Finger orientation: apply per-finger mounting correction in finger sensor's local frame
-    const Q qFingerAdj = q_mul(q[i], gFingerMountCorr);
-    V3 fingWorld = q_rotate(qFingerAdj, baseFingDir);
+    // Finger orientation: absolute, corrected
+    V3 fingWorld = q_rotate(qCorr[i], baseFingDir);
 
     V3 F1 = V3{
       P1.x + fingWorld.x * kFingerLen,
@@ -312,13 +299,76 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
     #endif
   }
 
+  // ================= 3D wire cubes for each sensor =================
+  // Layout region: to the RIGHT of screen center, arranged 2 rows × 3 columns.
+  {
+    const int cols = 3, rows = 2;
+    const int leftPx   = (kScreenW / 2) + 1;                 // start just right of center
+    const int rightW   = max(0, kScreenW - leftPx - 1);      // available width on right
+    const int totalH   = max(0, kScreenH - 2);               // small vertical margins
+
+    if (rightW > 6 && totalH > 6) {
+      const int cellW = rightW / cols;
+      const int cellH = totalH / rows;
+      const int topPx = 1;
+
+      // Cube size: ~40% of the smaller cell dimension (in pixels), >=3px half-extent
+      const int minCell = min(cellW, cellH);
+      const float halfPx = (float)max(3, (minCell * 8) / 20); // 0.4 * min(cellW,cellH)
+
+      // For screen → world mapping at a fixed z
+      const float cxScr = (float)kScreenW * 0.5f;
+      const float cyScr = (float)kScreenH * 0.5f;
+      const float zWorld = 0.0f;                         // cubes lie in z=0 plane
+      const float denom  = kUsePerspective ? (zWorld + kZ0) : 1.0f;
+
+      // 12 cube edges (indices into 8-vertex list)
+      static const uint8_t edges[12][2] = {
+        {0,1},{1,2},{2,3},{3,0},  // bottom
+        {4,5},{5,6},{6,7},{7,4},  // top
+        {0,4},{1,5},{2,6},{3,7}   // uprights
+      };
+
+      for (int s = 0; s < GAG_NUM_SENSORS; ++s) {
+        const int r = s / cols;                    // row: 0..1
+        const int c = s % cols;                    // col: 0..2
+        const int cxPx = leftPx + c*cellW + cellW/2;
+        const int cyPx = topPx  + r*cellH + cellH/2;
+
+        // Convert cell-center screen position to world at zWorld
+        const float u = ((float)cxPx - cxScr) / kScale;
+        const float v = (cyScr - (float)cyPx) / kScale; // note screen Y flips
+        const V3 center = V3{ u * denom, v * denom, zWorld };
+
+        // Convert half-size in pixels to world units (respect perspective)
+        const float h = (halfPx / kScale) * denom;
+
+        // Local cube vertices centered at origin
+        V3 vLocal[8] = {
+          V3{-h,-h,-h}, V3{ h,-h,-h}, V3{ h, h,-h}, V3{-h, h,-h},
+          V3{-h,-h, h}, V3{ h,-h, h}, V3{ h, h, h}, V3{-h, h, h}
+        };
+
+        // Rotate by corrected sensor orientation, then translate to world center
+        V3 vWorld[8];
+        for (int vi = 0; vi < 8; ++vi) {
+          V3 rloc = q_rotate(qCorr[s], vLocal[vi]);
+          vWorld[vi] = V3{ center.x + rloc.x, center.y + rloc.y, center.z + rloc.z };
+        }
+
+        // Project and draw edges
+        for (int e = 0; e < 12; ++e) {
+          int a = edges[e][0], b = edges[e][1];
+          int x0,y0,x1,y1;
+          bool okA = project(vWorld[a], x0, y0);
+          bool okB = project(vWorld[b], x1, y1);
+          if (okA && okB) drawLineSafe(x0, y0, x1, y1);
+        }
+      }
+    }
+  }
+
   display.display();
 }
 
-
-// void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
-
-
-
-
-#endif // USE_VISUALIZATION
+// #endif // USE_VISUALIZATION

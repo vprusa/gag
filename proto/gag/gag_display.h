@@ -37,7 +37,7 @@ struct VizQuaternion {
 // Initialize display and visualization state.
 // Call once from setup() if USE_VISUALIZATION is defined.
 void viz_init();
-void viz_init(void);
+// void viz_init(void);
 
 // Draw one frame of the skeleton.
 // Provide 6 quaternions (order must match your sensors; index 5 = wrist/HG).
