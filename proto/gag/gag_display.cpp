@@ -34,8 +34,6 @@ static uint32_t g_lastDebugMs = 0;
 #endif
 
 // ---------- Compile-time mounting correction (Euler degrees, Z·Y·X order) ----------
-// Override these in your build flags or before including the header if needed.
-// Example for 90° clockwise (right-handed) finger sensors around +Z: set Z to -90.
 #ifndef GAG_FINGER_MOUNT_CORR_EULER_DEG_X
 #define GAG_FINGER_MOUNT_CORR_EULER_DEG_X 0.0f
 #endif
@@ -43,7 +41,7 @@ static uint32_t g_lastDebugMs = 0;
 #define GAG_FINGER_MOUNT_CORR_EULER_DEG_Y 0.0f
 #endif
 #ifndef GAG_FINGER_MOUNT_CORR_EULER_DEG_Z
-#define GAG_FINGER_MOUNT_CORR_EULER_DEG_Z 0.0f // set to -90.0f for your case if needed
+#define GAG_FINGER_MOUNT_CORR_EULER_DEG_Z 0.0f // e.g., -90.0f if your finger IMUs are rotated CW around +Z
 #endif
 
 #ifndef GAG_WRIST_MOUNT_CORR_EULER_DEG_X
@@ -124,6 +122,13 @@ static inline bool project(const V3& p, int& x, int& y) {
   return (x > -10 && x < kScreenW + 10 && y > -10 && y < kScreenH + 10);
 }
 
+// NEW: projection with *screen* offset (used to shift the hand left by 30px)
+static inline bool project_with_offset(const V3& p, int& x, int& y, int dx, int dy) {
+  if (!project(p, x, y)) return false;
+  x += dx; y += dy;
+  return (x > -10 && x < kScreenW + 10 && y > -10 && y < kScreenH + 10);
+}
+
 static inline void drawLineSafe(int x0, int y0, int x1, int y1) {
   display.drawLine(x0, y0, x1, y1);
 }
@@ -131,9 +136,11 @@ static inline void drawLineSafe(int x0, int y0, int x1, int y1) {
 // ---------- Mounting corrections (default identity; set from macros in init) ----------
 static Q gFingerMountCorr = Q{1,0,0,0};
 static Q gWristMountCorr  = Q{1,0,0,0};
+static Q gWristFixCorr = Q{1,0,0,0};
+static Q gFingerFixCorr = Q{1,0,0,0};
 
 // ---------- Public API ----------
-void viz_init() {
+void viz_init(void) {
   Serial.println("[VIZ] init");
   delay(100);
   display.init();
@@ -165,8 +172,14 @@ void viz_init() {
     GAG_WRIST_MOUNT_CORR_EULER_DEG_X
   );
 
+  // gWristFixCorr = q_euler_zyx_deg(/*Z*/ -180.0f, /*Y*/ 0.0f, /*X*/ 0.0f);
+  // gWristFixCorr = q_euler_zyx_deg(/*Z*/ -90.0f, /*Y*/ 0.0f, /*X*/ 90.0f);
+  // gWristFixCorr = q_euler_zyx_deg(/*Z*/ -90.0f, /*Y*/ 0.0f, /*X*/ 180.0f);
+  gWristFixCorr = q_euler_zyx_deg(/*Z*/ -180.0f, /*Y*/ 180.0f, /*X*/ 0.0f);
+  gFingerFixCorr = q_euler_zyx_deg(/*Z*/ -0.0f, /*Y*/ 90.0f, /*X*/ -90.0f);
+
   #ifdef VIZ_DEBUG
-    Serial.println(F("[VIZ] init"));
+    Serial.println(F("[VIZ] init]"));
     Serial.print(F("[VIZ] OLED addr=0x")); Serial.println(GAG_OLED_ADDR, HEX);
     Serial.print(F("[VIZ] SDA=")); Serial.print(GAG_OLED_SDA);
     Serial.print(F(" SCL=")); Serial.println(GAG_OLED_SCL);
@@ -210,14 +223,35 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
 
   // -------- Apply mounting corrections (local sensor frame) --------
   // q_adj = q_measured * q_mountCorr
+  // Q qCorr[GAG_NUM_SENSORS];
+  // for (int i = 0; i < GAG_NUM_SENSORS; ++i) {
+  //   if (i == GAG_WRIST_INDEX) {
+  //     qCorr[i] = q_mul(q[i], gWristMountCorr);
+  //   } else {
+  //     qCorr[i] = q_mul(q[i], gFingerMountCorr);
+  //   }
+  // }
   Q qCorr[GAG_NUM_SENSORS];
   for (int i = 0; i < GAG_NUM_SENSORS; ++i) {
     if (i == GAG_WRIST_INDEX) {
-      qCorr[i] = q_mul(q[i], gWristMountCorr);
+      // Apply: q_adj = q_meas * gWristMountCorr * gWristFixCorr
+      // Order matters: rightmost (Rx 180°) happens first, then Rz -90°
+      Q t = q_mul(q[i], gWristMountCorr);
+      qCorr[i] = q_mul(t, gWristFixCorr);
     } else {
-      qCorr[i] = q_mul(q[i], gFingerMountCorr);
+      // gFingerFixCorr
+      Q t = q_mul(q[i], gFingerMountCorr);
+      qCorr[i] = q_mul(t, gFingerFixCorr);
     }
   }
+
+  // -------- Global transform requests --------
+  // 1) Move entire hand skeleton 30px left on screen
+  const int kHandOffsetXpx = -30;
+  const int kHandOffsetYpx = 0;
+
+  // 2) Rotate entire hand skeleton by 180° around X (world-space)
+  const Q qWorldFlipX = q_from_axis_angle(V3{1,0,0}, 180.0f);
 
   // Model: wrist at origin (0,0,0). Base palm & finger ray points along +X.
   const V3 basePalmDir = V3{ 1.0f, 0.0f, 0.0f };
@@ -225,10 +259,10 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
 
   display.clear();
 
-  // Draw a tiny cross at the wrist origin for reference
+  // Draw a tiny cross at the wrist origin for reference (with 30px left offset)
   {
     int cx, cy;
-    if (project(V3{0,0,0}, cx, cy)) {
+    if (project_with_offset(V3{0,0,0}, cx, cy, kHandOffsetXpx, kHandOffsetYpx)) {
       display.setPixel(cx, cy);
       if (cx+1 < kScreenW) display.setPixel(cx+1, cy);
       if (cy+1 < kScreenH) display.setPixel(cx, cy+1);
@@ -261,6 +295,9 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
     V3 palmLocal  = rotZ_apply(deg, basePalmDir);
     V3 palmWorld  = q_rotate(qCorr[GAG_WRIST_INDEX], palmLocal);
 
+    // Apply the global 180° X-rotation to the palm direction
+    palmWorld = q_rotate(qWorldFlipX, palmWorld);
+
     // Palm segment endpoints
     V3 P0 = V3{0,0,0};
     V3 P1 = V3{ palmWorld.x * kPalmLen, palmWorld.y * kPalmLen, palmWorld.z * kPalmLen };
@@ -268,17 +305,25 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
     // Finger orientation: absolute, corrected
     V3 fingWorld = q_rotate(qCorr[i], baseFingDir);
 
+    // (3) Switch the finger X and Z axes
+    float tmp = fingWorld.x;
+    fingWorld.x = fingWorld.z;
+    fingWorld.z = tmp;
+
+    // Apply the same global 180° X-rotation to the finger direction
+    fingWorld = q_rotate(qWorldFlipX, fingWorld);
+
     V3 F1 = V3{
       P1.x + fingWorld.x * kFingerLen,
       P1.y + fingWorld.y * kFingerLen,
       P1.z + fingWorld.z * kFingerLen
     };
 
-    // Project & draw
+    // Project (with 30px-left offset) & draw
     int x0,y0,x1,y1,xf,yf;
-    bool okP0 = project(P0, x0, y0);
-    bool okP1 = project(P1, x1, y1);
-    bool okF1 = project(F1, xf, yf);
+    bool okP0 = project_with_offset(P0, x0, y0, kHandOffsetXpx, kHandOffsetYpx);
+    bool okP1 = project_with_offset(P1, x1, y1, kHandOffsetXpx, kHandOffsetYpx);
+    bool okF1 = project_with_offset(F1, xf, yf, kHandOffsetXpx, kHandOffsetYpx);
 
     if (okP0 && okP1) drawLineSafe(x0, y0, x1, y1); // wrist -> knuckle
     if (okP1 && okF1) drawLineSafe(x1, y1, xf, yf); // knuckle -> fingertip
@@ -312,13 +357,16 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
       const int cellH = totalH / rows;
       const int topPx = 1;
 
-      // Cube size: ~40% of the smaller cell dimension (in pixels), >=3px half-extent
-      const int minCell = min(cellW, cellH);
-      const float halfPx = (float)max(3, (minCell * 8) / 20); // 0.4 * min(cellW,cellH)
+      // Cube half-size in pixels:
+      //   previous: ~0.4 * min(cellW, cellH)  (with >=3px minimum)
+      //   NEW: scale to 2/3 of the previous size
+      const int   minCell    = min(cellW, cellH);
+      const float baseHalfPx = (float)max(3, (minCell * 8) / 20); // 0.4 * minCell
+      const float halfPx     = baseHalfPx * (2.0f / 3.0f);        // <-- 2/3 size
 
       // For screen → world mapping at a fixed z
-      const float cxScr = (float)kScreenW * 0.5f;
-      const float cyScr = (float)kScreenH * 0.5f;
+      const float cxScr  = (float)kScreenW * 0.5f;
+      const float cyScr  = (float)kScreenH * 0.5f;
       const float zWorld = 0.0f;                         // cubes lie in z=0 plane
       const float denom  = kUsePerspective ? (zWorld + kZ0) : 1.0f;
 
