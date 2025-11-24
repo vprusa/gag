@@ -106,6 +106,9 @@ static inline V3 rotZ_apply(float deg, const V3& v) {
   return V3{ c * v.x - s * v.y, s * v.x + c * v.y, v.z };
 }
 
+// Helper at top of file (if you don't already have an inverse)
+static inline Q q_conj(const Q& q) { return Q{ q.w, -q.x, -q.y, -q.z }; } // unit quaternion inverse
+
 static inline bool project(const V3& p, int& x, int& y) {
   float u, v;
   if (kUsePerspective) {
@@ -175,7 +178,8 @@ void viz_init(void) {
   // gWristFixCorr = q_euler_zyx_deg(/*Z*/ -180.0f, /*Y*/ 0.0f, /*X*/ 0.0f);
   // gWristFixCorr = q_euler_zyx_deg(/*Z*/ -90.0f, /*Y*/ 0.0f, /*X*/ 90.0f);
   // gWristFixCorr = q_euler_zyx_deg(/*Z*/ -90.0f, /*Y*/ 0.0f, /*X*/ 180.0f);
-  gWristFixCorr = q_euler_zyx_deg(/*Z*/ -180.0f, /*Y*/ 180.0f, /*X*/ 0.0f);
+  // gWristFixCorr = q_euler_zyx_deg(/*Z*/ 180.0f, /*Y*/ 180.0f, /*X*/ 180.0f);
+  gWristFixCorr = q_euler_zyx_deg(/*Z*/ 180.0f, /*Y*/ 0.0f, /*X*/ 0.0f);
   gFingerFixCorr = q_euler_zyx_deg(/*Z*/ -0.0f, /*Y*/ 90.0f, /*X*/ -90.0f);
 
   #ifdef VIZ_DEBUG
@@ -205,6 +209,8 @@ void viz_use_perspective(bool enable) {
     Serial.print(F("[VIZ] perspective ")); Serial.println(enable ? F("ON") : F("OFF"));
   #endif
 }
+
+static Q gWristRemapCorr = Q{1,0,0,0};
 
 // Expect sensors in order [0..4]=fingers, [5]=wrist(HG)
 void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
@@ -236,12 +242,64 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
     if (i == GAG_WRIST_INDEX) {
       // Apply: q_adj = q_meas * gWristMountCorr * gWristFixCorr
       // Order matters: rightmost (Rx 180°) happens first, then Rz -90°
+      // Q t = q_mul(q[i], gWristMountCorr);
+
+      // Inside viz_draw_frame(), where you build qCorr[] for the wrist:
+      // const Q Rx180 = q_euler_zyx_deg(/*Z*/0.0f, /*Y*/0.0f, /*X*/180.0f);
+      // // (Ry180 works too; either X or Y flips yaw.)
+
+      // // Compose mounting corr first, then conjugate by Rx180:  q' = Rx180 * q * Rx180^{-1}
+      // // For 180°, inverse equals the same rotation up to sign, so using Rx180 twice is fine.
+      // Q t = q_mul(q[GAG_WRIST_INDEX], gWristMountCorr);     // local mounting corr
+      // Q u = q_mul(Rx180, t);                                // pre-multiply (world side of conjugation)
+      // // qCorr[GAG_WRIST_INDEX] = q_mul(u, q_conj(Rx180));     // post-multiply (local side)
+      // Q u2 = q_mul(u, q_conj(Rx180));     // post-multiply (local side)
+      // // qCorr[GAG_WRIST_INDEX] = q_mul(u, q_conj(Rx180));     // post-multiply (local side)
+      // qCorr[i] = q_mul(u2, gWristFixCorr);
+
+
+      // Inside viz_draw_frame(), where you build qCorr[] for the wrist:
+      // const Q Rx180 = q_euler_zyx_deg(/*Z*/0.0f, /*Y*/0.0f, /*X*/180.0f);
+      // // (Ry180 works too; either X or Y flips yaw.)
+
+      // // Compose mounting corr first, then conjugate by Rx180:  q' = Rx180 * q * Rx180^{-1}
+      // // For 180°, inverse equals the same rotation up to sign, so using Rx180 twice is fine.
+      // Q t = q_mul(q[GAG_WRIST_INDEX], gWristMountCorr);     // local mounting corr
+      // Q u = q_mul(Rx180, t);                                // pre-multiply (world side of conjugation)
+      // qCorr[GAG_WRIST_INDEX] = q_mul(u, q_conj(Rx180));     // post-multiply (local side)
+      // gWristMountCorr = Q{ 0.0f, 0.70710678f, 0.70710678f, 0.0f };
+      // gWristRemapCorr = q_from_axis_angle(V3{1.0f, 1.0f, 0.0f}, 180.0f);
+      // // q_adj = q_meas * (existing wrist mount corr) * (remap corr)  // post-multiply = local frame
+      // // if (i == GAG_WRIST_INDEX) {
+      //   Q t = q_mul(q[i], gWristMountCorr);
+      //   qCorr[i] = q_mul(t, q_mul(gWristRemapCorr, q_conj(Rx180)));   // <-- swap X/Y and invert Z
+      // } else {
+        // qCorr[i] = q_mul(q[i], gFingerMountCorr);
+      // }
+
+      gWristRemapCorr = q_from_axis_angle(V3{0.0f, 0.0f, 1.0f}, 180.0f);
+
+      // qCorr[i] = q_mul(t, q_mul(gWristRemapCorr, q_conj(Rx180)));   // <-- swap X/Y and invert Z
+      // const Q Rx180 = q_euler_zyx_deg(/*Z*/180.0f, /*Y*/0.0f, /*X*/0.0f);
       Q t = q_mul(q[i], gWristMountCorr);
-      qCorr[i] = q_mul(t, gWristFixCorr);
+      Q u = q_mul(t, gWristRemapCorr);
+      qCorr[i] = Q{u.w,u.y,u.x,-u.z};
+
     } else {
       // gFingerFixCorr
-      Q t = q_mul(q[i], gFingerMountCorr);
-      qCorr[i] = q_mul(t, gFingerFixCorr);
+      const Q Rx180 = q_euler_zyx_deg(/*Z*/0.0f, /*Y*/0.0f, /*X*/0.0f);
+      // (Ry180 works too; either X or Y flips yaw.)
+
+      // Compose mounting corr first, then conjugate by Rx180:  q' = Rx180 * q * Rx180^{-1}
+      // For 180°, inverse equals the same rotation up to sign, so using Rx180 twice is fine.
+      Q t = q_mul(q[i], Rx180);     // local mounting corr
+      // Q u = q_mul(Rx180, t);                                // pre-multiply (world side of conjugation)
+      // Q t = q_mul(q[i], gFingerMountCorr);
+      // qCorr[i] = q_mul(t, gFingerFixCorr);
+      qCorr[i] = t; // q_mul(t, gFingerFixCorr);
+
+      // Q t = q_mul(q[i], gFingerMountCorr);
+      // qCorr[i] = q_mul(t, gFingerFixCorr);
     }
   }
 
