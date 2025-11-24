@@ -287,16 +287,20 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
 
     } else {
       // gFingerFixCorr
-      const Q Rx180 = q_euler_zyx_deg(/*Z*/0.0f, /*Y*/0.0f, /*X*/0.0f);
+      // const Q Rx180 = q_euler_zyx_deg(/*Z*/0.0f, /*Y*/90.0f, /*X*/0.0f);
+      const Q Rx180 = q_euler_zyx_deg(/*Z*/0.0f, /*Y*/0.0f, /*X*/90.0f);
       // (Ry180 works too; either X or Y flips yaw.)
 
       // Compose mounting corr first, then conjugate by Rx180:  q' = Rx180 * q * Rx180^{-1}
       // For 180°, inverse equals the same rotation up to sign, so using Rx180 twice is fine.
-      Q t = q_mul(q[i], Rx180);     // local mounting corr
+      Q u = q_mul(q[i], Rx180);     // local mounting corr
       // Q u = q_mul(Rx180, t);                                // pre-multiply (world side of conjugation)
       // Q t = q_mul(q[i], gFingerMountCorr);
       // qCorr[i] = q_mul(t, gFingerFixCorr);
-      qCorr[i] = t; // q_mul(t, gFingerFixCorr);
+      // qCorr[i] = t; // q_mul(t, gFingerFixCorr);
+        // gWristRemapCorr = q_from_axis_angle(V3{0.0f, 0.0f, 1.0f}, 180.0f);
+      Q t = u;
+      qCorr[i] = Q{t.w,t.y,t.x,t.z};
 
       // Q t = q_mul(q[i], gFingerMountCorr);
       // qCorr[i] = q_mul(t, gFingerFixCorr);
