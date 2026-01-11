@@ -20,6 +20,17 @@ static uint8_t  gFlashSensorMask = 0;   // bit0..bit5 match your project sensor 
 static uint8_t  gFlashColourId   = 0;   // pattern index ("colour")
 static uint32_t gFlashUntilMs    = 0;   // millis() timestamp when highlight expires
 
+// ---------- Command history (for the rotated text area) ----------
+static constexpr uint8_t kCmdHistoryLines = 3;
+static constexpr size_t  kCmdLineMaxLen   = 40;  // stored; rendering may truncate further
+static char    gCmdHistory[kCmdHistoryLines][kCmdLineMaxLen];
+static uint8_t gCmdHistoryCount = 0;  // number of valid lines in gCmdHistory
+static uint8_t gCmdSeq = 0;           // prefix counter (mod 10)
+
+// ---------- Optional: wrist magnetometer quaternion cube ----------
+// Stored in public VizQuaternion form to avoid order-of-declaration issues.
+static VizQuaternion gWristMagQuat = {1,0,0,0};
+
 static inline bool timeReached(uint32_t now, uint32_t target) {
   // Works across millis() wrap-around.
   return (int32_t)(now - target) >= 0;
@@ -202,6 +213,103 @@ static inline void drawLineStyled(int x0, int y0, int x1, int y1, bool highlight
   drawLinePattern(x0, y0, x1, y1, gesturePatternFromColourId(colourId), 0);
 }
 
+// ================== Small rotated text for the command history ==================
+// We render a tiny built-in 5x7 font rotated 90° clockwise, so a short command
+// string can be drawn vertically in the narrow strip between skeleton and cubes.
+//
+// Glyph format: 7 rows, 5 bits per row (MSB = leftmost).
+struct Glyph5x7 {
+  char ch;
+  uint8_t row[7];
+};
+
+// Only include the characters we expect in command strings and prefixes.
+// Unknown characters are rendered as space.
+static const Glyph5x7 kFont5x7[] = {
+  {' ', {0,0,0,0,0,0,0}},
+  {':', {0b00000,0b00100,0b00100,0b00000,0b00100,0b00100,0b00000}},
+  {'-', {0b00000,0b00000,0b00000,0b11111,0b00000,0b00000,0b00000}},
+  {'_', {0b00000,0b00000,0b00000,0b00000,0b00000,0b00000,0b11111}},
+  {'0', {0b01110,0b10001,0b10011,0b10101,0b11001,0b10001,0b01110}},
+  {'1', {0b00100,0b01100,0b00100,0b00100,0b00100,0b00100,0b01110}},
+  {'2', {0b01110,0b10001,0b00001,0b00010,0b00100,0b01000,0b11111}},
+  {'3', {0b11111,0b00010,0b00100,0b00010,0b00001,0b10001,0b01110}},
+  {'4', {0b00010,0b00110,0b01010,0b10010,0b11111,0b00010,0b00010}},
+  {'5', {0b11111,0b10000,0b11110,0b00001,0b00001,0b10001,0b01110}},
+  {'6', {0b00110,0b01000,0b10000,0b11110,0b10001,0b10001,0b01110}},
+  {'7', {0b11111,0b00001,0b00010,0b00100,0b01000,0b01000,0b01000}},
+  {'8', {0b01110,0b10001,0b10001,0b01110,0b10001,0b10001,0b01110}},
+  {'9', {0b01110,0b10001,0b10001,0b01111,0b00001,0b00010,0b01100}},
+  {'A', {0b01110,0b10001,0b10001,0b11111,0b10001,0b10001,0b10001}},
+  {'B', {0b11110,0b10001,0b10001,0b11110,0b10001,0b10001,0b11110}},
+  {'C', {0b01110,0b10001,0b10000,0b10000,0b10000,0b10001,0b01110}},
+  {'D', {0b11110,0b10001,0b10001,0b10001,0b10001,0b10001,0b11110}},
+  {'E', {0b11111,0b10000,0b10000,0b11110,0b10000,0b10000,0b11111}},
+  {'F', {0b11111,0b10000,0b10000,0b11110,0b10000,0b10000,0b10000}},
+  {'G', {0b01110,0b10001,0b10000,0b10111,0b10001,0b10001,0b01110}},
+  {'H', {0b10001,0b10001,0b10001,0b11111,0b10001,0b10001,0b10001}},
+  {'I', {0b11111,0b00100,0b00100,0b00100,0b00100,0b00100,0b11111}},
+  {'J', {0b00111,0b00010,0b00010,0b00010,0b10010,0b10010,0b01100}},
+  {'K', {0b10001,0b10010,0b10100,0b11000,0b10100,0b10010,0b10001}},
+  {'L', {0b10000,0b10000,0b10000,0b10000,0b10000,0b10000,0b11111}},
+  {'M', {0b10001,0b11011,0b10101,0b10101,0b10001,0b10001,0b10001}},
+  {'N', {0b10001,0b11001,0b10101,0b10011,0b10001,0b10001,0b10001}},
+  {'O', {0b01110,0b10001,0b10001,0b10001,0b10001,0b10001,0b01110}},
+  {'P', {0b11110,0b10001,0b10001,0b11110,0b10000,0b10000,0b10000}},
+  {'Q', {0b01110,0b10001,0b10001,0b10001,0b10101,0b10010,0b01101}},
+  {'R', {0b11110,0b10001,0b10001,0b11110,0b10100,0b10010,0b10001}},
+  {'S', {0b01111,0b10000,0b10000,0b01110,0b00001,0b00001,0b11110}},
+  {'T', {0b11111,0b00100,0b00100,0b00100,0b00100,0b00100,0b00100}},
+  {'U', {0b10001,0b10001,0b10001,0b10001,0b10001,0b10001,0b01110}},
+  {'V', {0b10001,0b10001,0b10001,0b10001,0b10001,0b01010,0b00100}},
+  {'W', {0b10001,0b10001,0b10001,0b10101,0b10101,0b10101,0b01010}},
+  {'X', {0b10001,0b10001,0b01010,0b00100,0b01010,0b10001,0b10001}},
+  {'Y', {0b10001,0b10001,0b01010,0b00100,0b00100,0b00100,0b00100}},
+  {'Z', {0b11111,0b00001,0b00010,0b00100,0b01000,0b10000,0b11111}},
+};
+
+static inline char toUpperAscii(char c) {
+  if (c >= 'a' && c <= 'z') return (char)(c - 'a' + 'A');
+  return c;
+}
+
+static inline const uint8_t* glyphRowsFor(char ch) {
+  ch = toUpperAscii(ch);
+  const size_t n = sizeof(kFont5x7) / sizeof(kFont5x7[0]);
+  for (size_t i = 0; i < n; ++i) {
+    if (kFont5x7[i].ch == ch) return kFont5x7[i].row;
+  }
+  return kFont5x7[0].row; // space
+}
+
+// Draw a single character rotated 90 degrees clockwise.
+// Bounding box: width=7px, height=5px.
+static inline void drawChar5x7Rot90CW(int x0, int y0, char ch) {
+  const uint8_t* rows = glyphRowsFor(ch);
+  for (int r = 0; r < 7; ++r) {
+    const uint8_t bits = rows[r];
+    for (int c = 0; c < 5; ++c) {
+      const uint8_t mask = (uint8_t)(1u << (4 - c));
+      if (!(bits & mask)) continue;
+      // Original (c,r) -> rotated CW: (x',y') = (6 - r, c)
+      const int x = x0 + (6 - r);
+      const int y = y0 + c;
+      if (x >= 0 && x < kScreenW && y >= 0 && y < kScreenH) {
+        display.setPixel(x, y);
+      }
+    }
+  }
+}
+
+// Draw a string rotated 90 degrees clockwise (text runs top-to-bottom).
+static inline void drawString5x7Rot90CW(int x0, int y0, const char* s, uint8_t maxChars) {
+  if (!s) return;
+  const uint8_t adv = 6; // 5px tall (after rotation) + 1px gap
+  for (uint8_t i = 0; i < maxChars && s[i] != '\0'; ++i) {
+    drawChar5x7Rot90CW(x0, y0 + (int)i * adv, s[i]);
+  }
+}
+
 // ---------- Public API: gesture colours + flash trigger ----------
 // We keep a tiny mapping so each gesture name gets a stable unique colour id.
 // (Up to the palette size. After that, ids wrap.)
@@ -250,6 +358,34 @@ void viz_flash_sensors(uint8_t sensorMask, uint8_t colourId, uint32_t durationMs
   gFlashSensorMask = sensorMask;
   gFlashColourId = colourId;
   gFlashUntilMs = millis() + durationMs;
+}
+
+void viz_set_wrist_mag_quat(const VizQuaternion& q) {
+  gWristMagQuat = q;
+}
+
+void viz_log_command(const char* commandText) {
+  if (!commandText || commandText[0] == '\0') {
+    return;
+  }
+
+  // Build a prefixed line: "<digit>:<command>" where digit is modulo 10.
+  char buf[kCmdLineMaxLen];
+  const uint8_t d = (uint8_t)(gCmdSeq % 10);
+  gCmdSeq++;
+  // Keep it simple; truncation is OK.
+  snprintf(buf, sizeof(buf), "%u:%s", (unsigned)d, commandText);
+
+  // Shift history down (index 0 = newest).
+  for (int i = (int)kCmdHistoryLines - 1; i > 0; --i) {
+    strncpy(gCmdHistory[i], gCmdHistory[i - 1], kCmdLineMaxLen - 1);
+    gCmdHistory[i][kCmdLineMaxLen - 1] = '\0';
+  }
+  strncpy(gCmdHistory[0], buf, kCmdLineMaxLen - 1);
+  gCmdHistory[0][kCmdLineMaxLen - 1] = '\0';
+  if (gCmdHistoryCount < kCmdHistoryLines) {
+    gCmdHistoryCount++;
+  }
 }
 
 // ---------- Mounting corrections (default identity; set from macros in init) ----------
@@ -445,10 +581,15 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
   const uint8_t flashMask = flashActive ? gFlashSensorMask : 0;
   const uint8_t flashColour = gFlashColourId;
 
+  // Blink state used for "X" markers (inside cubes + on skeleton tips).
+  // About ~8 Hz (toggle every 64 ms).
+  const bool blinkOn = flashActive && (((nowMs >> 6) & 1u) == 0u);
+
   display.clear();
   display.setColor(WHITE);
 
-  // Draw a tiny cross at the wrist origin for reference (with 30px left offset)
+  // Draw a small marker at the wrist origin for reference (with 30px left offset).
+  // When the wrist is highlighted by a recognized gesture, blink a larger "X".
   {
     int cx, cy;
     if (project_with_offset(V3{0,0,0}, cx, cy, kHandOffsetXpx, kHandOffsetYpx)) {
@@ -460,10 +601,12 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
         if (cx-1 >= 0)        display.setPixel(cx-1, cy);
         if (cy-1 >= 0)        display.setPixel(cx, cy-1);
       } else {
-        // Bigger + shaped marker using the gesture "colour".
-        const int r = 3;
-        drawLineStyled(cx - r, cy, cx + r, cy, true, flashColour);
-        drawLineStyled(cx, cy - r, cx, cy + r, true, flashColour);
+        // Gesture marker (0.5x larger than the old one): blink a bigger "X".
+        if (blinkOn) {
+          const int r = 5;
+          drawLineStyled(cx - r, cy - r, cx + r, cy + r, true, flashColour);
+          drawLineStyled(cx - r, cy + r, cx + r, cy - r, true, flashColour);
+        }
       }
     }
   }
@@ -526,6 +669,13 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
     if (okP0 && okP1) drawLineStyled(x0, y0, x1, y1, hlFinger, flashColour); // wrist -> knuckle
     if (okP1 && okF1) drawLineStyled(x1, y1, xf, yf, hlFinger, flashColour); // knuckle -> fingertip
 
+    // Blink an "X" marker at the fingertip when this sensor is highlighted.
+    if (hlFinger && blinkOn && okF1) {
+      const int r = 4;
+      drawLineStyled(xf - r, yf - r, xf + r, yf + r, true, flashColour);
+      drawLineStyled(xf - r, yf + r, xf + r, yf - r, true, flashColour);
+    }
+
     #ifdef VIZ_DEBUG
       if (doLog) {
         Serial.print(F("  [ray ")); Serial.print(i); Serial.print(F("] deg=")); Serial.print(deg, 1);
@@ -542,48 +692,105 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
     #endif
   }
 
+  // ================= Rotated command history text area =================
+  // This is the space to the LEFT of the cubes visualization.
+  const int rightHalfLeft = (kScreenW / 2) + 1;
+
   // ================= 3D wire cubes for each sensor =================
-  // Layout region: to the RIGHT of screen center, arranged 2 rows × 3 columns.
+  // Layout region: a compact grid on the right, arranged 3 rows × 2 columns.
   {
-    const int cols = 3, rows = 2;
-    const int leftPx   = (kScreenW / 2) + 1;                 // start just right of center
-    const int rightW   = max(0, kScreenW - leftPx - 1);      // available width on right
-    const int totalH   = max(0, kScreenH - 2);               // small vertical margins
+    const int cols = 2, rows = 3;
 
-    if (rightW > 6 && totalH > 6) {
-      const int cellW = rightW / cols;
-      const int cellH = totalH / rows;
-      const int topPx = 1;
+    // Reserve a small bottom-right square for the magnetometer cube.
+    const int magBoxPx = 16;
+    const int gridTopPx = 1;
+    const int gridBottomPx = max(gridTopPx, kScreenH - magBoxPx - 2); // 1px gap above mag cube
+    const int gridH = max(0, gridBottomPx - gridTopPx + 1);
+    const int cellH = max(1, gridH / rows);
 
+    // Choose a fixed-ish grid width so we have space left of the grid for text.
+    // 3 rotated command lines need ~21px (3*7px) and we keep ~1px gap.
+    const int minTextW = 22;
+    const int gridRightMargin = 1;
+    const int maxGridW = max(0, kScreenW - gridRightMargin - rightHalfLeft - minTextW);
+    const int gridW = min(40, maxGridW); // 2 columns => 20px per cell by default
+
+    const int gridLeftPx = max(rightHalfLeft, kScreenW - gridRightMargin - gridW);
+    const int cellW = max(1, gridW / cols);
+
+    // ---- Draw the rotated command history in the left strip ----
+    {
+      const int textW = max(0, gridLeftPx - rightHalfLeft);
+      const int lineW = 7; // rotated glyph width
+      const int maxLinesFit = (lineW > 0) ? (textW / lineW) : 0;
+      const int linesToDraw = min((int)kCmdHistoryLines, maxLinesFit);
+      const uint8_t maxChars = (uint8_t)min(12, (kScreenH / 6)); // safety
+
+      // We render newest on the RIGHT-most column, older to the left.
+      for (int li = 0; li < linesToDraw; ++li) {
+        const int histIdx = li; // gCmdHistory[0] is newest
+        if (histIdx >= (int)gCmdHistoryCount) break;
+        const int x = (gridLeftPx - (linesToDraw - li) * lineW);
+        drawString5x7Rot90CW(x, 0, gCmdHistory[histIdx], maxChars);
+      }
+    }
+
+    // ---- Draw the 6 sensor cubes (with labels + blinking X markers) ----
+    if (gridW > 6 && gridH > 6) {
       // Cube half-size in pixels:
-      //   previous: ~0.4 * min(cellW, cellH)  (with >=3px minimum)
-      //   NEW: scale to 2/3 of the previous size
+      //   base: ~0.4 * min(cellW, cellH)
+      //   old scaling: 2/3
+      //   requested: 3/4 of current size => (2/3)*(3/4) = 1/2
       const int   minCell    = min(cellW, cellH);
       const float baseHalfPx = (float)max(3, (minCell * 8) / 20); // 0.4 * minCell
-      const float halfPx     = baseHalfPx * (2.0f / 3.0f);        // <-- 2/3 size
+      const float halfPx     = baseHalfPx * 0.5f;                // 1/2 of base
 
       // For screen → world mapping at a fixed z
       const float cxScr  = (float)kScreenW * 0.5f;
       const float cyScr  = (float)kScreenH * 0.5f;
-      const float zWorld = 0.0f;                         // cubes lie in z=0 plane
+      const float zWorld = 0.0f;
       const float denom  = kUsePerspective ? (zWorld + kZ0) : 1.0f;
 
       // 12 cube edges (indices into 8-vertex list)
       static const uint8_t edges[12][2] = {
-        {0,1},{1,2},{2,3},{3,0},  // bottom
-        {4,5},{5,6},{6,7},{7,4},  // top
-        {0,4},{1,5},{2,6},{3,7}   // uprights
+        {0,1},{1,2},{2,3},{3,0},
+        {4,5},{5,6},{6,7},{7,4},
+        {0,4},{1,5},{2,6},{3,7}
       };
 
+      auto sensorLabel = [](int s) -> char {
+        switch (s) {
+          case 0: return 'T'; // thumb
+          case 1: return 'I'; // index
+          case 2: return 'M'; // middle
+          case 3: return 'R'; // ring
+          case 4: return 'L'; // little
+          case 5: return 'W'; // wrist
+          default: return '?';
+        }
+      };
+
+      // Labels use the library font (single char).
+      display.setTextAlignment(TEXT_ALIGN_LEFT);
+      display.setFont(ArialMT_Plain_10);
+
       for (int s = 0; s < GAG_NUM_SENSORS; ++s) {
-        const int r = s / cols;                    // row: 0..1
-        const int c = s % cols;                    // col: 0..2
-        const int cxPx = leftPx + c*cellW + cellW/2;
-        const int cyPx = topPx  + r*cellH + cellH/2;
+        const int r = s / cols; // 0..2
+        const int c = s % cols; // 0..1
+        const int cxPx = gridLeftPx + c * cellW + cellW / 2;
+        const int cyPx = gridTopPx  + r * cellH + cellH / 2;
+
+        // Label (top-left of the cell)
+        {
+          const int lx = gridLeftPx + c * cellW + 1;
+          const int ly = gridTopPx  + r * cellH;
+          char tmp[2] = { sensorLabel(s), 0 };
+          display.drawString(lx, ly, String(tmp));
+        }
 
         // Convert cell-center screen position to world at zWorld
         const float u = ((float)cxPx - cxScr) / kScale;
-        const float v = (cyScr - (float)cyPx) / kScale; // note screen Y flips
+        const float v = (cyScr - (float)cyPx) / kScale;
         const V3 center = V3{ u * denom, v * denom, zWorld };
 
         // Convert half-size in pixels to world units (respect perspective)
@@ -610,6 +817,84 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
           bool okA = project(vWorld[a], x0, y0);
           bool okB = project(vWorld[b], x1, y1);
           if (okA && okB) drawLineStyled(x0, y0, x1, y1, hlCube, flashColour);
+        }
+
+        // Blink an "X" inside the cube when highlighted.
+        if (hlCube && blinkOn) {
+          const int rpx = (int)max(3.0f, halfPx * 0.9f);
+          drawLineStyled(cxPx - rpx, cyPx - rpx, cxPx + rpx, cyPx + rpx, true, flashColour);
+          drawLineStyled(cxPx - rpx, cyPx + rpx, cxPx + rpx, cyPx - rpx, true, flashColour);
+        }
+      }
+    }
+
+    // ---- Magnetometer cube (bottom-right), label 'w' ----
+    {
+      // Normalize the stored mag quaternion and apply the same wrist correction used for the wrist cube.
+      Q qm = Q{ gWristMagQuat.w, gWristMagQuat.x, gWristMagQuat.y, gWristMagQuat.z };
+      float n = qm.w*qm.w + qm.x*qm.x + qm.y*qm.y + qm.z*qm.z;
+      if (n > 0.00001f) {
+        float inv = 1.0f / sqrtf(n);
+        qm.w *= inv; qm.x *= inv; qm.y *= inv; qm.z *= inv;
+      } else {
+        qm = Q{1,0,0,0};
+      }
+
+      // Reuse the wrist correction convention from the wrist sensor (index 5).
+      const Q wristRemap = q_from_axis_angle(V3{0.0f, 0.0f, 1.0f}, 180.0f);
+      Q t = q_mul(qm, gWristMountCorr);
+      Q u = q_mul(t, wristRemap);
+      Q qMagCorr = Q{u.w, u.y, u.x, -u.z};
+
+      const int cxPx = kScreenW - (magBoxPx / 2) - 1;
+      const int cyPx = kScreenH - (magBoxPx / 2) - 1;
+
+      // Label
+      {
+        const int lx = kScreenW - magBoxPx + 1;
+        const int ly = kScreenH - magBoxPx;
+        display.drawString(lx, ly, String("w"));
+      }
+
+      const float cxScr  = (float)kScreenW * 0.5f;
+      const float cyScr  = (float)kScreenH * 0.5f;
+      const float zWorld = 0.0f;
+      const float denom  = kUsePerspective ? (zWorld + kZ0) : 1.0f;
+
+      const float u0 = ((float)cxPx - cxScr) / kScale;
+      const float v0 = (cyScr - (float)cyPx) / kScale;
+      const V3 center = V3{ u0 * denom, v0 * denom, zWorld };
+
+      const int minCell = magBoxPx;
+      const float baseHalfPx = (float)max(3, (minCell * 8) / 20);
+      const float halfPx = baseHalfPx * 0.5f;
+      const float h = (halfPx / kScale) * denom;
+
+      V3 vLocal[8] = {
+        V3{-h,-h,-h}, V3{ h,-h,-h}, V3{ h, h,-h}, V3{-h, h,-h},
+        V3{-h,-h, h}, V3{ h,-h, h}, V3{ h, h, h}, V3{-h, h, h}
+      };
+
+      static const uint8_t edges[12][2] = {
+        {0,1},{1,2},{2,3},{3,0},
+        {4,5},{5,6},{6,7},{7,4},
+        {0,4},{1,5},{2,6},{3,7}
+      };
+
+      V3 vWorld[8];
+      for (int vi = 0; vi < 8; ++vi) {
+        V3 rloc = q_rotate(qMagCorr, vLocal[vi]);
+        vWorld[vi] = V3{ center.x + rloc.x, center.y + rloc.y, center.z + rloc.z };
+      }
+
+      for (int e = 0; e < 12; ++e) {
+        int a = edges[e][0], b = edges[e][1];
+        int x0,y0,x1,y1;
+        bool okA = project(vWorld[a], x0, y0);
+        bool okB = project(vWorld[b], x1, y1);
+        if (okA && okB) {
+          // Mag cube is never "highlighted" by sensor masks; keep it solid.
+          display.drawLine(x0, y0, x1, y1);
         }
       }
     }

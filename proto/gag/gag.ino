@@ -23,147 +23,10 @@
 // ================================================================
 // === Gesture recognition integration (gag-recog-lib)            ===
 // ================================================================
-// NOTE (Arduino/PlatformIO .ino preprocessing):
-// The Arduino build pipeline auto-generates function prototypes and inserts
-// them near the top of the translated .cpp. If a type used in a function
-// signature (e.g. gag::Sensor) is only defined by a header that is included
-// *after* any non-preprocessor code (global objects, function bodies, ...),
-// those auto-generated prototypes may see an unknown type and fail with:
-//   error: 'gag' does not name a type
-// Therefore, keep the GagRecog headers included here, before any code.
-
 // Set to 0 if you want to compile the firmware without the recognition library.
-#ifndef USE_GAG_RECOG
+// #ifndef USE_GAG_RECOG
 #define USE_GAG_RECOG 1
-#endif
-
-// Include unconditionally to keep Arduino's auto-prototype generator happy
-// even if USE_GAG_RECOG is toggled off via build flags.
-#include "GagRecog.h"
-#include "GagRecogSerialLoader.h"
-
-
-// ================================================================
-// === BLE HID (Mouse) command output                            ===
-// ================================================================
-//
-// Uses the "ESP32 BLE Mouse" library by T-vK:
-//   https://github.com/T-vK/ESP32-BLE-Mouse
-//
-// The BLE HID device is independent from the existing Serial/BT-Serial data stream.
-// This lets you keep the existing visualization protocol over USB Serial, while
-// using BLE for mouse button events.
-//
-// Command strings (GestureDef.command), examples:
-//   MOUSE_LEFT_CLICK
-//   MOUSE_RIGHT_CLICK
-//   MOUSE_MIDDLE_CLICK
-//   MOUSE_BACK_CLICK
-//   MOUSE_FORWARD_CLICK
-//   MOUSE_LEFT_DOWN / MOUSE_LEFT_UP (same for RIGHT/MIDDLE/BACK/FORWARD)
-//
-// Any separators are accepted (space, ':', '-', '_') and are normalized internally.
-//
-// Set to 0 to compile without BLE HID mouse.
-#define USE_BLE_HID_MOUSE 1
-
-#if USE_BLE_HID_MOUSE && defined(MASTER_HAND)
-  #include <BleMouse.h>
-  #include <ctype.h>
-  #include <strings.h>
-  #include <string.h>
-
-  // Device name shown on the laptop/PC when pairing.
-  // Tip: if you run two hands/boards, include side in the name.
-  static BleMouse g_bleMouse("GAG Mouse", "vprusa/gag", 100);
-
-  static void gagNormalizeCommand(const char* in, char* out, size_t outLen) {
-    if (!out || outLen == 0) return;
-    out[0] = '\0';
-    if (!in) return;
-
-    size_t j = 0;
-    bool prevUnderscore = false;
-
-    // Skip leading whitespace
-    while (*in == ' ' || *in == '\t' || *in == '\r' || *in == '\n') ++in;
-
-    for (size_t i = 0; in[i] != '\0' && j + 1 < outLen; ++i) {
-      const unsigned char c = (unsigned char)in[i];
-
-      if (isalnum(c)) {
-        out[j++] = (char)toupper(c);
-        prevUnderscore = false;
-      } else {
-        // Any non-alnum becomes '_' (collapse repeats)
-        if (!prevUnderscore && j > 0) {
-          out[j++] = '_';
-          prevUnderscore = true;
-        }
-      }
-    }
-
-    // Trim trailing underscore
-    while (j > 0 && out[j - 1] == '_') --j;
-    out[j] = '\0';
-  }
-
-  static uint8_t gagMouseButtonFromToken(const char* token) {
-    if (!token) return 0;
-    if (!strcasecmp(token, "LEFT")) return MOUSE_LEFT;
-    if (!strcasecmp(token, "RIGHT")) return MOUSE_RIGHT;
-    if (!strcasecmp(token, "MIDDLE")) return MOUSE_MIDDLE;
-    if (!strcasecmp(token, "BACK")) return MOUSE_BACK;
-    if (!strcasecmp(token, "FORWARD")) return MOUSE_FORWARD;
-    return 0;
-  }
-
-  static bool gagExecuteBleMouseCommand(const char* commandRaw) {
-    if (!commandRaw || commandRaw[0] == '\0') return false;
-    if (!g_bleMouse.isConnected()) return false;
-
-    char cmd[64];
-    gagNormalizeCommand(commandRaw, cmd, sizeof(cmd));
-    if (cmd[0] == '\0') return false;
-
-    // Expected forms after normalization:
-    //   MOUSE_LEFT_CLICK
-    //   MOUSE_LEFT_DOWN
-    //   MOUSE_LEFT_UP
-    //
-    // Also accepted:
-    //   LEFT_CLICK   (implicitly mouse)
-    const char* s = cmd;
-    if (!strncmp(s, "MOUSE_", 6)) s += 6;
-
-    // Split: <BTN>_<ACTION>
-    const char* us = strchr(s, '_');
-    if (!us) return false;
-
-    char btnTok[16] = {0};
-    char actTok[16] = {0};
-
-    const size_t btnLen = (size_t)(us - s);
-    if (btnLen == 0 || btnLen >= sizeof(btnTok)) return false;
-    memcpy(btnTok, s, btnLen);
-    btnTok[btnLen] = '\0';
-
-    strncpy(actTok, us + 1, sizeof(actTok) - 1);
-
-    const uint8_t btn = gagMouseButtonFromToken(btnTok);
-    if (btn == 0) return false;
-
-    if (!strcasecmp(actTok, "CLICK")) { g_bleMouse.click(btn); return true; }
-    if (!strcasecmp(actTok, "DOWN") || !strcasecmp(actTok, "PRESS")) { g_bleMouse.press(btn); return true; }
-    if (!strcasecmp(actTok, "UP") || !strcasecmp(actTok, "RELEASE")) { g_bleMouse.release(btn); return true; }
-
-    return false;
-  }
-#endif
-
-// ================================================================
-// === Gesture recognition integration (gag-recog-lib)            ===
-// ================================================================
+// #endif
 
 #if USE_GAG_RECOG
 
@@ -183,6 +46,9 @@
     #define GAG_DEBUG_RECOG_WRITE(x)
     #define GAG_DEBUG_RECOG_WRITE_LEN(x, y)
 #endif
+
+  #include "GagRecog.h"
+  #include "GagRecogSerialLoader.h"
 
   static gag::Recognizer g_recog;
   static gag::SerialLoader g_recogLoader(g_recog);
@@ -222,12 +88,6 @@
   }
 
   static void onGestureRecognized(const gag::RecognizedGesture& gr) {
-
-#if USE_BLE_HID_MOUSE && defined(MASTER_HAND)
-  // Execute HID command (mouse button event) if we are paired/connected.
-  // If not connected yet, the command is ignored.
-  gagExecuteBleMouseCommand(gr.command);
-#endif
     // Flash the sensors used by the recognized gesture for 100ms.
     GAG_DEBUG_RECOG_PRINTLN("gag.ino::onGestureRecognized");
 
@@ -235,6 +95,13 @@
       const uint8_t libMask = g_recog.getGestureSensorMaskByName(gr.name);
       const uint8_t gagMask = mapRecogMaskToGagMask(libMask);
       viz_flash_sensors(gagMask, getGestureColour(gr.name), 100);
+
+      // Show the last few triggered commands in the visualization text area.
+      if (gr.command && gr.command[0] != '\0') {
+        viz_log_command(gr.command);
+      } else if (gr.name && gr.name[0] != '\0') {
+        viz_log_command(gr.name);
+      }
     #endif
   }
 
@@ -262,7 +129,7 @@
     /*{
       gag::GestureDef g;
       strncpy(g.name, "index_up_45", sizeof(g.name) - 1);
-      strncpy(g.command, "MOUSE_LEFT_CLICK", sizeof(g.command) - 1);
+      strncpy(g.command, "CMD_INDEX_UP_45", sizeof(g.command) - 1);
       g.threshold_rad = 12.0f * DEG2RAD;
       g.recognition_delay_ms = 100;
       g.max_time_ms = 2000;
@@ -281,7 +148,7 @@
     {
       gag::GestureDef g;
       strncpy(g.name, "index_up_45", sizeof(g.name) - 1);
-      strncpy(g.command, "MOUSE_LEFT_CLICK", sizeof(g.command) - 1);
+      strncpy(g.command, "CMD_INDEX_UP_45", sizeof(g.command) - 1);
       g.threshold_rad = 12.0f * DEG2RAD;
       g.recognition_delay_ms = 100;
       g.max_time_ms = 1000;
@@ -468,14 +335,7 @@ void setup() {
         ; // wait for Leonardo enumeration, others continue immediately
     #endif
 
-    
-#if USE_BLE_HID_MOUSE && defined(MASTER_HAND)
-    // Start advertising as a BLE HID mouse.
-    // Pair it from your laptop's Bluetooth settings (shows up as "GAG Mouse").
-    g_bleMouse.begin();
-#endif
-
-// ---- Recognition library init ----
+    // ---- Recognition library init ----
     #if USE_GAG_RECOG
         g_recog.begin(g_recogNullOut);
         gag_setup_my_gestures(g_recog);

@@ -44,6 +44,18 @@ void viz_init();
 // If you don’t have all sensors yet, pass identity (1,0,0,0) for missing ones.
 void viz_draw_frame(const VizQuaternion q[GAG_NUM_SENSORS]);
 
+// Optional: set an additional quaternion to visualize MPU9250 magnetometer-based
+// rotation on the wrist. This is drawn as a separate cube labelled 'w'
+// in the bottom-right corner.
+//
+// If you never call this, an identity quaternion is used.
+void viz_set_wrist_mag_quat(const VizQuaternion& q);
+
+// Optional: log the last few triggered commands into the visualization.
+// The command history is rendered in a narrow text area to the left of the
+// cube grid (rotated 90 degrees).
+void viz_log_command(const char* commandText);
+
 // Optional: tweak look/feel at runtime
 void viz_set_deg_spacing(float degrees);   // fan spacing between palm rays (default ~20°)
 void viz_use_perspective(bool enable);     // enable simple perspective (default false)
