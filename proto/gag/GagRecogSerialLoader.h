@@ -15,7 +15,7 @@ namespace gag {
  *   GAG SAMPLE            (loads the 3 sample gestures)
  *
  * Add gesture:
- *   GAG BEGIN <name> <cmd> <threshold_rad> <delay_ms> <max_time_ms> <active0|1> [relative0|1]
+ *   GAG BEGIN <name> <command> <threshold_rad> <delay_ms> <max_time_ms> <active0|1> [relative0|1]
  *   GAG SENSOR <WRIST|THUMB|INDEX|MIDDLE|RING|LITTLE|0..5> <count>
  *   GAG Q <w> <x> <y> <z>        (repeat <count> times)
  *   ... (more sensors) ...

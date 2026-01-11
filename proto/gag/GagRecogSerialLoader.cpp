@@ -85,7 +85,7 @@ void SerialLoader::printHelp() const {
   _out->println(F("  GAG LIST"));
   _out->println(F("  GAG CLEAR"));
   _out->println(F("  GAG SAMPLE"));
-  _out->println(F("  GAG BEGIN <name> <cmd> <threshold_rad> <delay_ms> <max_time_ms> <active0|1> [relative0|1]"));
+  _out->println(F("  GAG BEGIN <name> <command> <threshold_rad> <delay_ms> <max_time_ms> <active0|1> [relative0|1]"));
   _out->println(F("  GAG SENSOR <WRIST|THUMB|INDEX|MIDDLE|RING|LITTLE|0..5> <count>"));
   _out->println(F("  GAG Q <w> <x> <y> <z>   (repeat <count> times)"));
   _out->println(F("  GAG END"));
