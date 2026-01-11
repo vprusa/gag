@@ -264,8 +264,6 @@ void loop() {
   viz_draw_frame(q);
 #endif
 
-
-
     setOrRotateSelectedGyro(-1); 
     loadDataFromFIFO(true);
     

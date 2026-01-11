@@ -204,6 +204,7 @@ void viz_set_deg_spacing(float degrees) {
 }
 
 void viz_use_perspective(bool enable) {
+  
   kUsePerspective = enable;
   #ifdef VIZ_DEBUG
     Serial.print(F("[VIZ] perspective ")); Serial.println(enable ? F("ON") : F("OFF"));
