@@ -228,6 +228,7 @@ struct Glyph5x7 {
 static const Glyph5x7 kFont5x7[] = {
   {' ', {0,0,0,0,0,0,0}},
   {':', {0b00000,0b00100,0b00100,0b00000,0b00100,0b00100,0b00000}},
+  {'!', {0b00100,0b00100,0b00100,0b00100,0b00100,0b00000,0b00100}},
   {'-', {0b00000,0b00000,0b00000,0b11111,0b00000,0b00000,0b00000}},
   {'_', {0b00000,0b00000,0b00000,0b00000,0b00000,0b00000,0b11111}},
   {'0', {0b01110,0b10001,0b10011,0b10101,0b11001,0b10001,0b01110}},
@@ -406,6 +407,51 @@ void viz_log_command(const char* commandText) {
   gCmdSeq++;
   // Keep it simple; truncation is OK.
   snprintf(buf, sizeof(buf), "%u:%s", (unsigned)d, commandText);
+
+  // Shift history down (index 0 = newest).
+  for (int i = (int)kCmdHistoryLines - 1; i > 0; --i) {
+    strncpy(gCmdHistory[i], gCmdHistory[i - 1], kCmdLineMaxLen - 1);
+    gCmdHistory[i][kCmdLineMaxLen - 1] = '\0';
+  }
+  strncpy(gCmdHistory[0], buf, kCmdLineMaxLen - 1);
+  gCmdHistory[0][kCmdLineMaxLen - 1] = '\0';
+  if (gCmdHistoryCount < kCmdHistoryLines) {
+    gCmdHistoryCount++;
+  }
+}
+
+
+void viz_log_label(const char* label, bool commandsEnabled) {
+  if (!label || label[0] == '\0') {
+    return;
+  }
+
+  // Build a compact prefixed line: "<digit><state><label>"
+  // where:
+  //  - digit is modulo 10
+  //  - state is ':' when enabled, '!' when disabled
+  //  - label is expected to be short (UI typically shows up to 6 chars; up to 8 if space allows)
+  char buf[kCmdLineMaxLen];
+  const uint8_t d = (uint8_t)(gCmdSeq % 10);
+  gCmdSeq++;
+  const char stateCh = commandsEnabled ? ':' : '!';
+
+  // Copy/sanitize label into a temp buffer (upper-case, strip spaces)
+  char lab[9];
+  uint8_t li = 0;
+  for (uint8_t i = 0; label[i] != '\0' && li < 8; ++i) {
+    const char c = label[i];
+    if (c == ' ' || c == '\t' || c == '\r' || c == '\n') continue;
+    // Upper-case ASCII
+    if (c >= 'a' && c <= 'z') {
+      lab[li++] = (char)(c - 'a' + 'A');
+    } else {
+      lab[li++] = c;
+    }
+  }
+  lab[li] = '\0';
+
+  snprintf(buf, sizeof(buf), "%u%c%s", (unsigned)d, stateCh, lab);
 
   // Shift history down (index 0 = newest).
   for (int i = (int)kCmdHistoryLines - 1; i > 0; --i) {
@@ -735,8 +781,7 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
     const int cols = 2, rows = 3;
 
     // Reserve a small bottom-right square for the magnetometer cube.
-    // const int magBoxPx = 16;
-    const int magBoxPx = 0;
+    const int magBoxPx = 16;
 
     // ---- Right-side command history text strip ----
     const int lineW = 7; // rotated glyph width
@@ -765,17 +810,19 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
 
       // Keep text above the mag cube area.
       const int availTextH = max(0, kScreenH - magBoxPx - 2);
-      const uint8_t maxChars = (uint8_t)max(0, min(14, (availTextH / 6)));
+      const uint8_t maxChars = (uint8_t)max(0, min(10, (availTextH / 6)));
 
-      // Render newest on the RIGHT-most column, older to the left.
-      // Also rotate 180° relative to the old 90° CW, so the text is not upside-down.
-      for (int li = 0; li < linesToDraw; ++li) {
-        const int histIdx = li; // gCmdHistory[0] is newest
-        if (histIdx >= (int)gCmdHistoryCount) break;
-        const int x = (kScreenW - (li + 1) * lineW);
-        if (x < textLeftPx) continue;
-        drawString5x7Rot90CCW(x, 0, gCmdHistory[histIdx], maxChars);
-      }
+      // Render newest on the LEFT-most column of the strip (near the cubes), older to the right.
+// Use a 90° clockwise glyph rotation so the text reads top-to-bottom in the same order as stored.
+for (int li = 0; li < linesToDraw; ++li) {
+  const int histIdx = li; // gCmdHistory[0] is newest
+  if (histIdx >= (int)gCmdHistoryCount) break;
+
+  const int x = textLeftPx + li * lineW;
+  if (x >= kScreenW) break;
+
+  drawString5x7Rot90CW(x, 0, gCmdHistory[histIdx], maxChars);
+}
     }
 
     // ---- Draw the 6 sensor cubes (with labels + blinking X markers) ----
@@ -899,7 +946,7 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
       {
         const int lx = kScreenW - magBoxPx + 1;
         const int ly = kScreenH - magBoxPx;
-        // display.drawString(lx, ly, String("w"));
+        display.drawString(lx, ly, String("w"));
       }
 
       const float cxScr  = (float)kScreenW * 0.5f;
@@ -940,7 +987,7 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
         bool okB = project(vWorld[b], x1, y1);
         if (okA && okB) {
           // Mag cube is never "highlighted" by sensor masks; keep it solid.
-          // display.drawLine(x0, y0, x1, y1);
+          display.drawLine(x0, y0, x1, y1);
         }
       }
     }

@@ -37,6 +37,12 @@
 #define GAG_RECOG_MAX_CMD_LEN 32
 #endif
 
+#ifndef GAG_RECOG_MAX_LABEL_LEN
+// Max length for GestureDef.label including null terminator.
+// The UI typically uses up to 6 chars (or up to 8 when space allows).
+#define GAG_RECOG_MAX_LABEL_LEN 9
+#endif
+
 #ifndef GAG_RECOG_MAX_QUATS_PER_SENSOR
 // In gag-web, typical per-sensor keyframes are ~3-10. Keep some headroom.
 #define GAG_RECOG_MAX_QUATS_PER_SENSOR 16
@@ -144,6 +150,7 @@ struct SensorGestureData {
 struct GestureDef {
   char name[GAG_RECOG_MAX_NAME_LEN] = {0};
   char command[GAG_RECOG_MAX_CMD_LEN] = {0};
+  char label[GAG_RECOG_MAX_LABEL_LEN] = {0};
 
   // threshold in radians (0..pi-ish). Must match the distance metric used.
   float threshold_rad = 0.0f;
@@ -214,6 +221,7 @@ struct GestureDef {
 struct RecognizedGesture {
   const char* name;
   const char* command;
+  const char* label;
   uint32_t start_ms;
   uint32_t end_ms;
   uint32_t duration_ms;

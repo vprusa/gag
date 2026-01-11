@@ -20,6 +20,21 @@ static inline void trimInPlace(char* s) {
   }
 }
 
+
+static inline bool isNumericToken(const char* s) {
+  if (!s || !*s) return false;
+  // Allow leading sign.
+  if (*s == '+' || *s == '-') ++s;
+  bool sawDigit = false;
+  bool sawDot = false;
+  while (*s) {
+    if (*s >= '0' && *s <= '9') { sawDigit = true; ++s; continue; }
+    if (*s == '.' && !sawDot) { sawDot = true; ++s; continue; }
+    return false;
+  }
+  return sawDigit;
+}
+
 SerialLoader::SerialLoader(Recognizer& r) : _r(r) {}
 
 void SerialLoader::begin(Stream& in, Print& out) {
@@ -85,7 +100,7 @@ void SerialLoader::printHelp() const {
   _out->println(F("  GAG LIST"));
   _out->println(F("  GAG CLEAR"));
   _out->println(F("  GAG SAMPLE"));
-  _out->println(F("  GAG BEGIN <name> <command> <threshold_rad> <delay_ms> <max_time_ms> <active0|1> [relative0|1]"));
+  _out->println(F("  GAG BEGIN <name> <cmd> [label] <threshold_rad> <delay_ms> <max_time_ms> <active0|1> [relative0|1]"));
   _out->println(F("  GAG SENSOR <WRIST|THUMB|INDEX|MIDDLE|RING|LITTLE|0..5> <count>"));
   _out->println(F("  GAG Q <w> <x> <y> <z>   (repeat <count> times)"));
   _out->println(F("  GAG END"));
@@ -135,14 +150,27 @@ bool SerialLoader::processLine(char* line) {
   if (!strcasecmp(cmd, "BEGIN")) {
     const char* name = strtok(nullptr, " \t");
     const char* gcmd = strtok(nullptr, " \t");
-    const char* thr = strtok(nullptr, " \t");
+    const char* tok3 = strtok(nullptr, " \t"); // threshold (legacy) OR label (new)
+    const char* label = nullptr;
+    const char* thr = nullptr;
+
+    // Backwards-compatible syntax:
+    //   OLD: GAG BEGIN <name> <command> <threshold_rad> <delay_ms> <max_time_ms> <active0|1> [relative0|1]
+    //   NEW: GAG BEGIN <name> <command> <label> <threshold_rad> <delay_ms> <max_time_ms> <active0|1> [relative0|1]
+    if (isNumericToken(tok3)) {
+      thr = tok3;
+    } else {
+      label = tok3;
+      thr = strtok(nullptr, " \t");
+    }
+
     const char* dly = strtok(nullptr, " \t");
     const char* mx  = strtok(nullptr, " \t");
     const char* act = strtok(nullptr, " \t");
     const char* rel = strtok(nullptr, " \t");
 
     if (!name || !gcmd || !thr || !dly || !mx || !act) {
-      if (_out) _out->println(F("GAG:ERR BEGIN expects 6 args (+ optional relative flag)"));
+      if (_out) _out->println(F("GAG:ERR BEGIN expects 6 args (legacy) or 7 args (with label) (+ optional relative flag)"));
       return true;
     }
 
@@ -150,6 +178,11 @@ bool SerialLoader::processLine(char* line) {
     _b.active = true;
     strncpy(_b.g.name, name, sizeof(_b.g.name)-1);
     strncpy(_b.g.command, gcmd, sizeof(_b.g.command)-1);
+    if (label) {
+      strncpy(_b.g.label, label, sizeof(_b.g.label)-1);
+    } else {
+      _b.g.label[0] = '\0';
+    }
     _b.g.threshold_rad = (float)atof(thr);
     _b.g.recognition_delay_ms = (uint32_t)strtoul(dly, nullptr, 10);
     _b.g.max_time_ms = (uint32_t)strtoul(mx, nullptr, 10);
@@ -158,7 +191,9 @@ bool SerialLoader::processLine(char* line) {
 
     if (_out) {
       _out->print(F("GAG:OK begin name="));
-      _out->println(_b.g.name);
+      _out->print(_b.g.name);
+      _out->print(F(" label="));
+      _out->println(_b.g.label);
     }
     return true;
   }

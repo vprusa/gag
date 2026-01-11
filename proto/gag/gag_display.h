@@ -56,6 +56,10 @@ void viz_set_wrist_mag_quat(const VizQuaternion& q);
 // the screen (rotated 90 degrees).
 void viz_log_command(const char* commandText);
 
+// Log a compact label (recommended): stores a short string as "<n><:|!><LABEL>".
+// ':' means commands enabled, '!' means suppressed/disabled.
+void viz_log_label(const char* label, bool commandsEnabled);
+
 // Optional: tweak look/feel at runtime
 void viz_set_deg_spacing(float degrees);   // fan spacing between palm rays (default ~20°)
 void viz_use_perspective(bool enable);     // enable simple perspective (default false)

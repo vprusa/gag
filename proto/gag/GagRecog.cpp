@@ -106,6 +106,15 @@ bool Recognizer::addGesture(const GestureDef& def) {
   _gestures[_count] = def;
   _gestures[_count].name[GAG_RECOG_MAX_NAME_LEN - 1] = '\0';
   _gestures[_count].command[GAG_RECOG_MAX_CMD_LEN - 1] = '\0';
+  _gestures[_count].label[GAG_RECOG_MAX_LABEL_LEN - 1] = '\0';
+  // If no label is provided, derive a short one from command or name (best-effort).
+  if (_gestures[_count].label[0] == '\0') {
+    const char* src = (_gestures[_count].command[0] != '\0') ? _gestures[_count].command : _gestures[_count].name;
+    // Copy up to 8 characters; keep it simple.
+    strncpy(_gestures[_count].label, src, GAG_RECOG_MAX_LABEL_LEN - 1);
+    _gestures[_count].label[GAG_RECOG_MAX_LABEL_LEN - 1] = '\0';
+  }
+
   _gestures[_count].normalizeAllKeyframes();
 
   // Clear runtime for this slot.
@@ -437,6 +446,7 @@ void Recognizer::maybeRecognize(uint8_t gi, uint32_t now) {
   RecognizedGesture rg;
   rg.name = g.name;
   rg.command = g.command;
+  rg.label = g.label;
   rg.start_ms = startMin;
   rg.end_ms = endMax;
   rg.duration_ms = (uint32_t)(endMax - startMin);
@@ -456,6 +466,8 @@ void Recognizer::printRecognized(const RecognizedGesture& rg) {
   _out->print(rg.name);
   _out->print(F(" cmd="));
   _out->print(rg.command);
+  _out->print(F(" label="));
+  _out->print(rg.label ? rg.label : "");
   _out->print(F(" start_ms="));
   _out->print(rg.start_ms);
   _out->print(F(" end_ms="));
@@ -475,7 +487,7 @@ void Recognizer::printGestures() const {
     const GestureDef& g = _gestures[gi];
     _out->print(F("[")); _out->print(gi); _out->print(F("] "));
     _out->print(g.name);
-    _out->print(F(" cmd=")); _out->print(g.command);
+    _out->print(F(" cmd=")); _out->print(g.command); _out->print(F(" label=")); _out->print(g.label);
     _out->print(F(" active=")); _out->print(g.active ? 1 : 0);
     _out->print(F(" rel=")); _out->print(g.relative ? 1 : 0);
     _out->print(F(" thr=")); _out->print(g.threshold_rad, 6);
