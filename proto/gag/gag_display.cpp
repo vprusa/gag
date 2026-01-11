@@ -301,12 +301,43 @@ static inline void drawChar5x7Rot90CW(int x0, int y0, char ch) {
   }
 }
 
+// Draw a single character rotated 90 degrees counter-clockwise.
+// This is equivalent to taking the 90° CW result and rotating it by 180°,
+// which fixes the "upside-down" appearance on some layouts.
+// Bounding box: width=7px, height=5px.
+static inline void drawChar5x7Rot90CCW(int x0, int y0, char ch) {
+  const uint8_t* rows = glyphRowsFor(ch);
+  for (int r = 0; r < 7; ++r) {
+    const uint8_t bits = rows[r];
+    for (int c = 0; c < 5; ++c) {
+      const uint8_t mask = (uint8_t)(1u << (4 - c));
+      if (!(bits & mask)) continue;
+      // Original (c,r) -> rotated CCW: (x',y') = (r, 4 - c)
+      const int x = x0 + r;
+      const int y = y0 + (4 - c);
+      if (x >= 0 && x < kScreenW && y >= 0 && y < kScreenH) {
+        display.setPixel(x, y);
+      }
+    }
+  }
+}
+
 // Draw a string rotated 90 degrees clockwise (text runs top-to-bottom).
 static inline void drawString5x7Rot90CW(int x0, int y0, const char* s, uint8_t maxChars) {
   if (!s) return;
   const uint8_t adv = 6; // 5px tall (after rotation) + 1px gap
   for (uint8_t i = 0; i < maxChars && s[i] != '\0'; ++i) {
     drawChar5x7Rot90CW(x0, y0 + (int)i * adv, s[i]);
+  }
+}
+
+// Draw a string rotated 90 degrees counter-clockwise.
+// (Text still advances top-to-bottom in screen coordinates.)
+static inline void drawString5x7Rot90CCW(int x0, int y0, const char* s, uint8_t maxChars) {
+  if (!s) return;
+  const uint8_t adv = 6; // 5px tall (after rotation) + 1px gap
+  for (uint8_t i = 0; i < maxChars && s[i] != '\0'; ++i) {
+    drawChar5x7Rot90CCW(x0, y0 + (int)i * adv, s[i]);
   }
 }
 
@@ -692,46 +723,57 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
     #endif
   }
 
-  // ================= Rotated command history text area =================
-  // This is the space to the LEFT of the cubes visualization.
+  // ================= Layout: skeleton (left) | cubes (middle) | text (right) =================
+  // We keep the skeleton offset so the hand stays on the left.
+  // The 6 sensor cubes are moved from the far-right into the middle.
+  // The command history text moves into a dedicated right strip.
   const int rightHalfLeft = (kScreenW / 2) + 1;
 
   // ================= 3D wire cubes for each sensor =================
-  // Layout region: a compact grid on the right, arranged 3 rows × 2 columns.
+  // Layout region: a compact grid in the middle, arranged 3 rows × 2 columns.
   {
     const int cols = 2, rows = 3;
 
     // Reserve a small bottom-right square for the magnetometer cube.
     const int magBoxPx = 16;
+
+    // ---- Right-side command history text strip ----
+    const int lineW = 7; // rotated glyph width
+    const int desiredTextW = (int)kCmdHistoryLines * lineW + 3; // ~24px for 3 lines + margin
+    const int textStripW = min(desiredTextW, kScreenW / 2);
+    const int textLeftPx = max(0, kScreenW - textStripW);
+
+    // ---- Middle grid geometry (between center and text strip) ----
     const int gridTopPx = 1;
     const int gridBottomPx = max(gridTopPx, kScreenH - magBoxPx - 2); // 1px gap above mag cube
     const int gridH = max(0, gridBottomPx - gridTopPx + 1);
     const int cellH = max(1, gridH / rows);
 
-    // Choose a fixed-ish grid width so we have space left of the grid for text.
-    // 3 rotated command lines need ~21px (3*7px) and we keep ~1px gap.
-    const int minTextW = 22;
-    const int gridRightMargin = 1;
-    const int maxGridW = max(0, kScreenW - gridRightMargin - rightHalfLeft - minTextW);
-    const int gridW = min(40, maxGridW); // 2 columns => 20px per cell by default
-
-    const int gridLeftPx = max(rightHalfLeft, kScreenW - gridRightMargin - gridW);
+    const int gridGapToText = 1;
+    const int gridLeftPx = rightHalfLeft;
+    // Keep a small gap between the grid and the right-side text strip.
+    const int gridRightPx = max(gridLeftPx, textLeftPx - gridGapToText - 1);
+    const int gridW = max(0, gridRightPx - gridLeftPx + 1);
     const int cellW = max(1, gridW / cols);
 
-    // ---- Draw the rotated command history in the left strip ----
+    // ---- Draw the rotated command history in the right strip ----
     {
-      const int textW = max(0, gridLeftPx - rightHalfLeft);
-      const int lineW = 7; // rotated glyph width
+      const int textW = max(0, kScreenW - textLeftPx);
       const int maxLinesFit = (lineW > 0) ? (textW / lineW) : 0;
       const int linesToDraw = min((int)kCmdHistoryLines, maxLinesFit);
-      const uint8_t maxChars = (uint8_t)min(12, (kScreenH / 6)); // safety
 
-      // We render newest on the RIGHT-most column, older to the left.
+      // Keep text above the mag cube area.
+      const int availTextH = max(0, kScreenH - magBoxPx - 2);
+      const uint8_t maxChars = (uint8_t)max(0, min(14, (availTextH / 6)));
+
+      // Render newest on the RIGHT-most column, older to the left.
+      // Also rotate 180° relative to the old 90° CW, so the text is not upside-down.
       for (int li = 0; li < linesToDraw; ++li) {
         const int histIdx = li; // gCmdHistory[0] is newest
         if (histIdx >= (int)gCmdHistoryCount) break;
-        const int x = (gridLeftPx - (linesToDraw - li) * lineW);
-        drawString5x7Rot90CW(x, 0, gCmdHistory[histIdx], maxChars);
+        const int x = (kScreenW - (li + 1) * lineW);
+        if (x < textLeftPx) continue;
+        drawString5x7Rot90CCW(x, 0, gCmdHistory[histIdx], maxChars);
       }
     }
 
@@ -743,7 +785,8 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
       //   requested: 3/4 of current size => (2/3)*(3/4) = 1/2
       const int   minCell    = min(cellW, cellH);
       const float baseHalfPx = (float)max(3, (minCell * 8) / 20); // 0.4 * minCell
-      const float halfPx     = baseHalfPx * 0.5f;                // 1/2 of base
+      // Make cubes 2px larger (width+2, height+2) => half-size +1px.
+      const float halfPx     = baseHalfPx * 0.5f + 1.0f;         // 1/2 of base, plus 1px
 
       // For screen → world mapping at a fixed z
       const float cxScr  = (float)kScreenW * 0.5f;
@@ -770,9 +813,8 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
         }
       };
 
-      // Labels use the library font (single char).
-      display.setTextAlignment(TEXT_ALIGN_LEFT);
-      display.setFont(ArialMT_Plain_10);
+      // Labels: a single character rotated 270° (i.e. 90° CCW) using the 5x7
+      // pixel font so it stays legible and doesn't crowd the cube.
 
       for (int s = 0; s < GAG_NUM_SENSORS; ++s) {
         const int r = s / cols; // 0..2
@@ -780,12 +822,15 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
         const int cxPx = gridLeftPx + c * cellW + cellW / 2;
         const int cyPx = gridTopPx  + r * cellH + cellH / 2;
 
-        // Label (top-left of the cell)
+        // Label (left of the cube, moved 4px further left)
         {
-          const int lx = gridLeftPx + c * cellW + 1;
-          const int ly = gridTopPx  + r * cellH;
-          char tmp[2] = { sensorLabel(s), 0 };
-          display.drawString(lx, ly, String(tmp));
+          // Old (horizontal) label was at: gridLeftPx + c*cellW + 1
+          // New: shift 4px left, rotate 270°.
+          int lx = gridLeftPx + c * cellW + 1 - 4;
+          int ly = cyPx - 2; // vertically center a 5px-tall rotated glyph
+          if (lx < 0) lx = 0;
+          if (ly < 0) ly = 0;
+          drawChar5x7Rot90CCW(lx, ly, sensorLabel(s));
         }
 
         // Convert cell-center screen position to world at zWorld

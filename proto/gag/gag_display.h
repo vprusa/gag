@@ -52,8 +52,8 @@ void viz_draw_frame(const VizQuaternion q[GAG_NUM_SENSORS]);
 void viz_set_wrist_mag_quat(const VizQuaternion& q);
 
 // Optional: log the last few triggered commands into the visualization.
-// The command history is rendered in a narrow text area to the left of the
-// cube grid (rotated 90 degrees).
+// The command history is rendered in a narrow text area on the right side of
+// the screen (rotated 90 degrees).
 void viz_log_command(const char* commandText);
 
 // Optional: tweak look/feel at runtime
