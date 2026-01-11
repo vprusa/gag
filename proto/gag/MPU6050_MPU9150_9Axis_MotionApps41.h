@@ -152,8 +152,8 @@ THE SOFTWARE.
 // after moving string constants to flash memory storage using the F()
 // compiler macro (Arduino IDE 1.0+ required).
 
-#define DEBUG
-#ifdef DEBUG
+// #define MPU_DEBUG
+#ifdef MPU_DEBUG
     #define MPU_DEBUG_PRINT(x) Serial.print(x)
     #define MPU_DEBUG_PRINTF(x, y) Serial.print(x, y)
     #define MPU_DEBUG_PRINTLN(x) Serial.println(x)
@@ -456,7 +456,7 @@ const unsigned char dmpUpdatesMPU6050[MPU6050_DMP_UPDATES_SIZE] PROGMEM = {
     0x00,   0x60,   0x04,   0x00, 0x40, 0x00, 0x00
 };
 
-#define MPU_DEBUG
+// #define MPU_DEBUG
 #ifdef MPU_DEBUG
     #define MPU_DEBUG_PRINT(x) Serial.print(x)
     #define MPU_DEBUG_PRINTF(x, y) Serial.print(x, y)

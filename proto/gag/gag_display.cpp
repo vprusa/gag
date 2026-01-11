@@ -2,6 +2,7 @@
 
 #include "gag_display.h"
 #include <math.h>
+#include <string.h>
 
 // ================== Debug controls ==================
 // Uncomment to enable serial debug prints
@@ -13,6 +14,16 @@
 
 // ---------- OLED driver ----------
 static SSD1306Wire display(GAG_OLED_ADDR, GAG_OLED_SDA, GAG_OLED_SCL);
+
+// ---------- Gesture highlight state ----------
+static uint8_t  gFlashSensorMask = 0;   // bit0..bit5 match your project sensor order
+static uint8_t  gFlashColourId   = 0;   // pattern index ("colour")
+static uint32_t gFlashUntilMs    = 0;   // millis() timestamp when highlight expires
+
+static inline bool timeReached(uint32_t now, uint32_t target) {
+  // Works across millis() wrap-around.
+  return (int32_t)(now - target) >= 0;
+}
 
 // ---------- Tunables ----------
 static float kPalmDegSpacing = 20.0f;   // degrees between palm rays
@@ -132,8 +143,113 @@ static inline bool project_with_offset(const V3& p, int& x, int& y, int dx, int 
   return (x > -10 && x < kScreenW + 10 && y > -10 && y < kScreenH + 10);
 }
 
-static inline void drawLineSafe(int x0, int y0, int x1, int y1) {
-  display.drawLine(x0, y0, x1, y1);
+// ---------- Line drawing helpers ----------
+// We implement a tiny Bresenham so we can support "colours" on a 1‑bit OLED
+// via patterns (dashed/dotted). Solid lines use pattern 0xFFFF.
+static inline void drawLinePattern(int x0, int y0, int x1, int y1, uint16_t pattern, uint8_t phase = 0) {
+  // Standard Bresenham (integer), drawing only the pixels that match the pattern.
+  int dx = abs(x1 - x0);
+  int sx = (x0 < x1) ? 1 : -1;
+  int dy = -abs(y1 - y0);
+  int sy = (y0 < y1) ? 1 : -1;
+  int err = dx + dy;
+
+  uint16_t step = 0;
+  while (true) {
+    const uint8_t bit = (uint8_t)((pattern >> ((step + phase) & 15u)) & 1u);
+    if (bit) display.setPixel(x0, y0);
+    if (x0 == x1 && y0 == y1) break;
+    const int e2 = 2 * err;
+    if (e2 >= dy) { err += dy; x0 += sx; }
+    if (e2 <= dx) { err += dx; y0 += sy; }
+    ++step;
+  }
+}
+
+// "Palette" of distinct patterns. Each entry is a different "colour".
+// (We avoid 0x0000 and 0xFFFF as highlight colours because they either draw nothing or look identical to solid.)
+static const uint16_t kGesturePatterns[] = {
+  0xF0F0, // long dashes
+  0xCCCC, // medium dashes
+  0xAAAA, // dotted
+  0xFF00, // dash-gap
+  0x0F0F, // inverse dash-gap
+  0x3333, // sparse
+  0x5555, // alternating
+  0x3C3C, // blocky
+  0xE1E1, // asymmetric
+  0x87E1, // pseudo-random
+  0x1FE0, // head-heavy
+  0x07F8, // center-heavy
+  0xF99F, // dense ends
+  0xD2D2, // pattern
+  0xB4B4, // pattern
+  0x6DB6  // pattern
+};
+
+static inline uint16_t gesturePatternFromColourId(uint8_t colourId) {
+  const uint8_t n = (uint8_t)(sizeof(kGesturePatterns) / sizeof(kGesturePatterns[0]));
+  return kGesturePatterns[(uint8_t)(colourId % n)];
+}
+
+static inline void drawLineStyled(int x0, int y0, int x1, int y1, bool highlight, uint8_t colourId) {
+  if (!highlight) {
+    // Fast path
+    display.drawLine(x0, y0, x1, y1);
+    return;
+  }
+  // Patterned line for highlight.
+  drawLinePattern(x0, y0, x1, y1, gesturePatternFromColourId(colourId), 0);
+}
+
+// ---------- Public API: gesture colours + flash trigger ----------
+// We keep a tiny mapping so each gesture name gets a stable unique colour id.
+// (Up to the palette size. After that, ids wrap.)
+static constexpr uint8_t kMaxGestureColourEntries = (uint8_t)(sizeof(kGesturePatterns) / sizeof(kGesturePatterns[0]));
+static char gGestureColourNames[kMaxGestureColourEntries][33];
+static uint8_t gGestureColourCount = 0;
+
+static inline bool streq_n(const char* a, const char* b, size_t n) {
+  if (!a || !b) return false;
+  for (size_t i = 0; i < n; ++i) {
+    const char ca = a[i];
+    const char cb = b[i];
+    if (ca != cb) return false;
+    if (ca == '\0') return true;
+  }
+  // If both strings are at least n chars and all matched, treat as equal for our purposes.
+  return true;
+}
+
+uint8_t getGestureColour(const char* gestureName) {
+  if (!gestureName || gestureName[0] == '\0') return 0;
+
+  // Look up existing.
+  for (uint8_t i = 0; i < gGestureColourCount; ++i) {
+    if (streq_n(gGestureColourNames[i], gestureName, sizeof(gGestureColourNames[i]) - 1)) {
+      return i;
+    }
+  }
+
+  // Assign a new colour id.
+  const uint8_t id = (gGestureColourCount < kMaxGestureColourEntries)
+    ? gGestureColourCount
+    : (uint8_t)(gGestureColourCount % kMaxGestureColourEntries);
+
+  // If we still have free slots, store the name. (If we wrapped, we just return an id without storing.)
+  if (gGestureColourCount < kMaxGestureColourEntries) {
+    strncpy(gGestureColourNames[id], gestureName, sizeof(gGestureColourNames[id]) - 1);
+    gGestureColourNames[id][sizeof(gGestureColourNames[id]) - 1] = '\0';
+    gGestureColourCount++;
+  }
+
+  return id;
+}
+
+void viz_flash_sensors(uint8_t sensorMask, uint8_t colourId, uint32_t durationMs) {
+  gFlashSensorMask = sensorMask;
+  gFlashColourId = colourId;
+  gFlashUntilMs = millis() + durationMs;
 }
 
 // ---------- Mounting corrections (default identity; set from macros in init) ----------
@@ -320,26 +436,44 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
   const V3 basePalmDir = V3{ 1.0f, 0.0f, 0.0f };
   const V3 baseFingDir = V3{ 1.0f, 0.0f, 0.0f };
 
+  // -------- Gesture highlight window --------
+  const uint32_t nowMs = millis();
+  const bool flashActive = (gFlashUntilMs != 0) && !timeReached(nowMs, gFlashUntilMs);
+  if (!flashActive) {
+    gFlashSensorMask = 0;
+  }
+  const uint8_t flashMask = flashActive ? gFlashSensorMask : 0;
+  const uint8_t flashColour = gFlashColourId;
+
   display.clear();
+  display.setColor(WHITE);
 
   // Draw a tiny cross at the wrist origin for reference (with 30px left offset)
   {
     int cx, cy;
     if (project_with_offset(V3{0,0,0}, cx, cy, kHandOffsetXpx, kHandOffsetYpx)) {
-      display.setPixel(cx, cy);
-      if (cx+1 < kScreenW) display.setPixel(cx+1, cy);
-      if (cy+1 < kScreenH) display.setPixel(cx, cy+1);
-      if (cx-1 >= 0)        display.setPixel(cx-1, cy);
-      if (cy-1 >= 0)        display.setPixel(cx, cy-1);
+      const bool hlWrist = (flashMask & (1u << (uint8_t)GAG_WRIST_INDEX)) != 0;
+      if (!hlWrist) {
+        display.setPixel(cx, cy);
+        if (cx+1 < kScreenW) display.setPixel(cx+1, cy);
+        if (cy+1 < kScreenH) display.setPixel(cx, cy+1);
+        if (cx-1 >= 0)        display.setPixel(cx-1, cy);
+        if (cy-1 >= 0)        display.setPixel(cx, cy-1);
+      } else {
+        // Bigger + shaped marker using the gesture "colour".
+        const int r = 3;
+        drawLineStyled(cx - r, cy, cx + r, cy, true, flashColour);
+        drawLineStyled(cx, cy - r, cx, cy + r, true, flashColour);
+      }
     }
   }
 
   // -------- Debug throttling --------
   #ifdef VIZ_DEBUG
     bool doLog = false;
-    uint32_t now = millis();
-    if (now - g_lastDebugMs >= VIZ_DEBUG_INTERVAL_MS) {
-      g_lastDebugMs = now;
+    uint32_t now = nowMs;
+    if (nowMs - g_lastDebugMs >= VIZ_DEBUG_INTERVAL_MS) {
+      g_lastDebugMs = nowMs;
       doLog = true;
       Serial.print(F("[VIZ] frame t=")); Serial.print(now);
       Serial.print(F("ms scale=")); Serial.print(kScale, 3);
@@ -388,8 +522,9 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
     bool okP1 = project_with_offset(P1, x1, y1, kHandOffsetXpx, kHandOffsetYpx);
     bool okF1 = project_with_offset(F1, xf, yf, kHandOffsetXpx, kHandOffsetYpx);
 
-    if (okP0 && okP1) drawLineSafe(x0, y0, x1, y1); // wrist -> knuckle
-    if (okP1 && okF1) drawLineSafe(x1, y1, xf, yf); // knuckle -> fingertip
+    const bool hlFinger = (flashMask & (1u << (uint8_t)i)) != 0;
+    if (okP0 && okP1) drawLineStyled(x0, y0, x1, y1, hlFinger, flashColour); // wrist -> knuckle
+    if (okP1 && okF1) drawLineStyled(x1, y1, xf, yf, hlFinger, flashColour); // knuckle -> fingertip
 
     #ifdef VIZ_DEBUG
       if (doLog) {
@@ -468,12 +603,13 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
         }
 
         // Project and draw edges
+        const bool hlCube = (flashMask & (1u << (uint8_t)s)) != 0;
         for (int e = 0; e < 12; ++e) {
           int a = edges[e][0], b = edges[e][1];
           int x0,y0,x1,y1;
           bool okA = project(vWorld[a], x0, y0);
           bool okB = project(vWorld[b], x1, y1);
-          if (okA && okB) drawLineSafe(x0, y0, x1, y1);
+          if (okA && okB) drawLineStyled(x0, y0, x1, y1, hlCube, flashColour);
         }
       }
     }

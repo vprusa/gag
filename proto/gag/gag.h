@@ -15,6 +15,23 @@
 #define GAG_DEBUG_PRINTLN(x) Serial.println(x)
 #define GAG_DEBUG_PRINTLNF(x, y) Serial.println(x, y)
 
+// #define GAG_DEBUG_SETUP
+#ifdef GAG_DEBUG_SETUP
+    #define GAG_DEBUG_SETUP_PRINT(x) Serial.print(x)
+    #define GAG_DEBUG_SETUP_PRINTF(x, y) Serial.print(x, y)
+    #define GAG_DEBUG_SETUP_PRINTLN(x) Serial.println(x)
+    #define GAG_DEBUG_SETUP_PRINTLNF(x, y) Serial.println(x, y)
+    #define GAG_DEBUG_SETUP_WRITE(x) Serial.write(x)
+    #define GAG_DEBUG_SETUP_WRITE_LEN(x,y) Serial.write(x,y)
+#else
+    #define GAG_DEBUG_SETUP_PRINT(x)
+    #define GAG_DEBUG_SETUP_PRINTF(x, y) 
+    #define GAG_DEBUG_SETUP_PRINTLN(x) 
+    #define GAG_DEBUG_SETUP_PRINTLNF(x, y)
+    #define GAG_DEBUG_SETUP_WRITE(x)
+    #define GAG_DEBUG_SETUP_WRITE_LEN(x, y)
+#endif
+
 #include "MPU6050_MPU9150_9Axis_MotionApps41.h"
 // #include "MPU6050_9Axis_MotionApps41.h"
 #ifdef MEASURE_OFFSETS
@@ -523,12 +540,12 @@ void setupSensors() {
 
         int selectorOffsettedPin = selectSingleMPU(i);
 
-        Serial.print(F("selectedSensor: "));
-        Serial.println((int)selectedSensor);
+        GAG_DEBUG_SETUP_PRINT(F("selectedSensor: "));
+        GAG_DEBUG_SETUP_PRINTLN((int)selectedSensor);
         // MASTER_SERIAL_NAME.println(F(""));
         // MASTER_SERIAL_NAME.println(""));
-        Serial.print(F("Enabled on pin: "));
-        Serial.print(selectorOffsettedPin);
+        GAG_DEBUG_SETUP_PRINT(F("Enabled on pin: "));
+        GAG_DEBUG_SETUP_PRINT(selectorOffsettedPin);
         
         // MASTER_SERIAL_NAME.print(F("Enabled on pin: "));
         // MASTER_SERIAL_NAME.print(selectorOffsettedPin);
@@ -540,7 +557,7 @@ void setupSensors() {
           loadHGData(HG);
         }
          
-        MASTER_SERIAL_NAME.println(F("\n\n"));
+        GAG_DEBUG_SETUP_PRINTLN(F("\n\n"));
     }
 }
 
@@ -593,32 +610,32 @@ uint8_t initMPUAndDMP(uint8_t attempt, uint8_t i) {
     }
     // initialize device
 #ifdef MASTER_SERIAL_NAME
-    MASTER_SERIAL_NAME.println(F("USB: Initializing I2C devices..."));
+    GAG_DEBUG_SETUP_PRINTLN(F("USB: Initializing I2C devices..."));
 #endif
-    MASTER_SERIAL_NAME.print(F("Enabling DMP... "));
-    MASTER_SERIAL_NAME.println(selectedSensor);
+    GAG_DEBUG_SETUP_PRINT(F("Enabling DMP... "));
+    GAG_DEBUG_SETUP_PRINTLN(selectedSensor);
     MPU6050_MPU9150 mpu = *gyros[selectedSensor].mpu;
     mpu.initialize();
-    MASTER_SERIAL_NAME.println(F("Testing device connections..."));
-    MASTER_SERIAL_NAME.println(mpu.testConnection() ? F("MPU* connection successful") : F("MPU* connection failed"));
-    MASTER_SERIAL_NAME.println("testConnection");
-    MASTER_SERIAL_NAME.println(mpu.getDeviceID());
+    GAG_DEBUG_SETUP_PRINTLN(F("Testing device connections..."));
+    GAG_DEBUG_SETUP_PRINTLN(mpu.testConnection() ? F("MPU* connection successful") : F("MPU* connection failed"));
+    GAG_DEBUG_SETUP_PRINTLN("testConnection");
+    GAG_DEBUG_SETUP_PRINTLN(mpu.getDeviceID());
     if(selectedSensor != HP) {
-        MASTER_SERIAL_NAME.println(F("dmpInitialize MPU6050..."));
-        MASTER_SERIAL_NAME.println(F("Initializing DMP..."));
+        GAG_DEBUG_SETUP_PRINTLN(F("dmpInitialize MPU6050..."));
+        GAG_DEBUG_SETUP_PRINTLN(F("Initializing DMP..."));
         devStatus = mpu.dmpInitialize();
-        MASTER_SERIAL_NAME.print(F("DMP initialized..."));
+        GAG_DEBUG_SETUP_PRINT(F("DMP initialized..."));
     } else {
-        MASTER_SERIAL_NAME.println(F("dmpInitialize MPU9150..."));
+        GAG_DEBUG_SETUP_PRINTLN(F("dmpInitialize MPU9150..."));
         mpu.isMPU9150 = true;
         devStatus = mpu.dmpInitialize2();
-        Serial.println("devStatus");
-        Serial.println(devStatus);
+        GAG_DEBUG_SETUP_PRINTLN("devStatus");
+        GAG_DEBUG_SETUP_PRINTLN(devStatus);
         mpu.setDMPEnabled(true);
         mpu.setFIFOEnabled(true);
         mpu.resetFIFO();
         //devStatus = mpu.dmpInitialize();
-        MASTER_SERIAL_NAME.print(F("Skipping initialing DMP for MPU9150..."));
+        GAG_DEBUG_SETUP_PRINT(F("Skipping initialing DMP for MPU9150..."));
     }
     // supply your own gyro offsets here for each mpu, scaled for min sensitivity
     // lets ignore this considering we want realtive values anyway
@@ -647,17 +664,17 @@ uint8_t initMPUAndDMP(uint8_t attempt, uint8_t i) {
     mpu.setDMPEnabled(true);
 
     // set our DMP Ready flag so the main loop( ) function knows it's okay to use it
-    MASTER_SERIAL_NAME.println(F("DMP ready! Getting packet size..."));
-    MASTER_SERIAL_NAME.print(F("packet size: "));
+    GAG_DEBUG_SETUP_PRINTLN(F("DMP ready! Getting packet size..."));
+    GAG_DEBUG_SETUP_PRINT(F("packet size: "));
 
     if(selectedSensor == HP) {
-        MASTER_SERIAL_NAME.print(packetSizeM);
+        GAG_DEBUG_SETUP_PRINT(packetSizeM);
         mpu.setFIFOEnabled(true);
         // calibrateQuaternionOffset(&mpu);
     }else{
-        MASTER_SERIAL_NAME.print(packetSizeS);
+        GAG_DEBUG_SETUP_PRINT(packetSizeS);
     }
-    MASTER_SERIAL_NAME.println(F(""));
+    GAG_DEBUG_SETUP_PRINTLN(F(""));
 
     return 0;
 }
@@ -996,8 +1013,8 @@ void writePacket() {
                 Serial.write((byte)0x00);
             #endif
         #else
-            MASTER_SERIAL_NAME.write(dataPacket, PACKET_LENGTH);
-            MASTER_SERIAL_NAME.write((byte)0x00);
+            // MASTER_SERIAL_NAME.write(dataPacket, PACKET_LENGTH);
+            // MASTER_SERIAL_NAME.write((byte)0x00);
         #endif
         gyros[selectedSensor].hasDataReady = false;
         gyros[selectedSensor].alreadySentData = true;
