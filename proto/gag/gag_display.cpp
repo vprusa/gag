@@ -735,7 +735,8 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
     const int cols = 2, rows = 3;
 
     // Reserve a small bottom-right square for the magnetometer cube.
-    const int magBoxPx = 16;
+    // const int magBoxPx = 16;
+    const int magBoxPx = 0;
 
     // ---- Right-side command history text strip ----
     const int lineW = 7; // rotated glyph width
@@ -898,7 +899,7 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
       {
         const int lx = kScreenW - magBoxPx + 1;
         const int ly = kScreenH - magBoxPx;
-        display.drawString(lx, ly, String("w"));
+        // display.drawString(lx, ly, String("w"));
       }
 
       const float cxScr  = (float)kScreenW * 0.5f;
@@ -939,7 +940,7 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
         bool okB = project(vWorld[b], x1, y1);
         if (okA && okB) {
           // Mag cube is never "highlighted" by sensor masks; keep it solid.
-          display.drawLine(x0, y0, x1, y1);
+          // display.drawLine(x0, y0, x1, y1);
         }
       }
     }

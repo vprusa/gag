@@ -14,7 +14,7 @@
  *
  * Serial output:
  *  - On recognition, library prints a single line:
- *      GAG:RECOG name=<name> command=<command> start_ms=<start> end_ms=<end> dur_ms=<dur>
+ *      GAG:RECOG name=<name> cmd=<cmd> start_ms=<start> end_ms=<end> dur_ms=<dur>
  *
  * Optional debug:
  *  - Define GAG_RECOG_DEBUG before including this header to get verbose prints.

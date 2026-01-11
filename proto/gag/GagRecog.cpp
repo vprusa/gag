@@ -456,8 +456,6 @@ void Recognizer::printRecognized(const RecognizedGesture& rg) {
   _out->print(rg.name);
   _out->print(F(" cmd="));
   _out->print(rg.command);
-  _out->print(F(" command="));
-  _out->print(rg.command);
   _out->print(F(" start_ms="));
   _out->print(rg.start_ms);
   _out->print(F(" end_ms="));
@@ -478,7 +476,6 @@ void Recognizer::printGestures() const {
     _out->print(F("[")); _out->print(gi); _out->print(F("] "));
     _out->print(g.name);
     _out->print(F(" cmd=")); _out->print(g.command);
-    _out->print(F(" command=")); _out->print(g.command);
     _out->print(F(" active=")); _out->print(g.active ? 1 : 0);
     _out->print(F(" rel=")); _out->print(g.relative ? 1 : 0);
     _out->print(F(" thr=")); _out->print(g.threshold_rad, 6);
@@ -500,7 +497,7 @@ void Recognizer::addSampleGestures() {
   {
     GestureDef g;
     strncpy(g.name, "wrist_left_90", sizeof(g.name)-1);
-    strncpy(g.command, "MOUSE_LEFT_CLICK", sizeof(g.command)-1);
+    strncpy(g.command, "CMD_WRIST_LEFT", sizeof(g.command)-1);
     g.threshold_rad = 20.0f * (float)M_PI / 180.0f;
     g.recognition_delay_ms = 5000;
     g.max_time_ms = 5000;
@@ -520,7 +517,7 @@ void Recognizer::addSampleGestures() {
   {
     GestureDef g;
     strncpy(g.name, "index_bend_45", sizeof(g.name)-1);
-    strncpy(g.command, "MOUSE_RIGHT_CLICK", sizeof(g.command)-1);
+    strncpy(g.command, "CMD_INDEX_BEND", sizeof(g.command)-1);
     g.threshold_rad = 10.0f * (float)M_PI / 180.0f;
     g.recognition_delay_ms = 1000;
     g.max_time_ms = 2000;
@@ -540,7 +537,7 @@ void Recognizer::addSampleGestures() {
   {
     GestureDef g;
     strncpy(g.name, "index_middle_bend_45", sizeof(g.name)-1);
-    strncpy(g.command, "MOUSE_MIDDLE_CLICK", sizeof(g.command)-1);
+    strncpy(g.command, "CMD_INDEX_MIDDLE_BEND", sizeof(g.command)-1);
     g.threshold_rad = 10.0f * (float)M_PI / 180.0f;
     g.recognition_delay_ms = 1000;
     g.max_time_ms = 2000;
