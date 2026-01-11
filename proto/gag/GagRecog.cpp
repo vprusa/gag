@@ -1,7 +1,14 @@
+// ======================= GagRecog.cpp (updated) =======================
+// Add this whole file content (replace your existing GagRecog.cpp with this one)
+
 #include "GagRecog.h"
 #include <string.h>
 
-#define GAG_DEBUG_RECOG_LIB
+// -----------------------------------------------------------------------------
+// Library debug macros (requested)
+// -----------------------------------------------------------------------------
+
+// #define GAG_DEBUG_RECOG_LIB
 #ifdef GAG_DEBUG_RECOG_LIB
     #define GAG_DEBUG_RECOG_LIB_PRINT(x) Serial.print(x)
     #define GAG_DEBUG_RECOG_LIB_PRINTF(x, y) Serial.print(x, y)
@@ -11,12 +18,31 @@
     #define GAG_DEBUG_RECOG_LIB_WRITE_LEN(x,y) Serial.write(x,y)
 #else
     #define GAG_DEBUG_RECOG_LIB_PRINT(x)
-    #define GAG_DEBUG_RECOG_LIB_PRINTF(x, y) 
-    #define GAG_DEBUG_RECOG_LIB_PRINTLN(x) 
+    #define GAG_DEBUG_RECOG_LIB_PRINTF(x, y)
+    #define GAG_DEBUG_RECOG_LIB_PRINTLN(x)
     #define GAG_DEBUG_RECOG_LIB_PRINTLNF(x, y)
     #define GAG_DEBUG_RECOG_LIB_WRITE(x)
     #define GAG_DEBUG_RECOG_LIB_WRITE_LEN(x, y)
 #endif
+
+namespace {
+
+// Small RAII helper that prints "<method>-start" on entry and "<method>-end" on exit.
+struct GagRecogLibMethodScope {
+  const char* method;
+
+  explicit GagRecogLibMethodScope(const char* m) : method(m) {
+    GAG_DEBUG_RECOG_LIB_PRINT(method);
+    GAG_DEBUG_RECOG_LIB_PRINTLN("-start");
+  }
+
+  ~GagRecogLibMethodScope() {
+    GAG_DEBUG_RECOG_LIB_PRINT(method);
+    GAG_DEBUG_RECOG_LIB_PRINTLN("-end");
+  }
+};
+
+}  // namespace
 
 namespace gag {
 
@@ -25,20 +51,28 @@ static inline bool timeReached(uint32_t now, uint32_t target) {
   return (int32_t)(now - target) >= 0;
 }
 
-Recognizer::Recognizer() {}
+Recognizer::Recognizer() {
+  GagRecogLibMethodScope _dbg("Recognizer::Recognizer");
+}
 
 void Recognizer::begin(Print& out) {
+  GagRecogLibMethodScope _dbg("Recognizer::begin");
   _out = &out;
 }
 
 void Recognizer::clear() {
+  GagRecogLibMethodScope _dbg("Recognizer::clear");
   _count = 0;
   clearAllRuntimes();
 }
 
-uint8_t Recognizer::count() const { return _count; }
+uint8_t Recognizer::count() const {
+  GagRecogLibMethodScope _dbg("Recognizer::count");
+  return _count;
+}
 
 int8_t Recognizer::findGestureIndexByName(const char* name) const {
+  GagRecogLibMethodScope _dbg("Recognizer::findGestureIndexByName");
   if (!name || name[0] == '\0') return -1;
   for (uint8_t i = 0; i < _count; ++i) {
     // Names are stored as NUL-terminated fixed arrays.
@@ -50,12 +84,14 @@ int8_t Recognizer::findGestureIndexByName(const char* name) const {
 }
 
 uint8_t Recognizer::getGestureSensorMaskByName(const char* name) const {
+  GagRecogLibMethodScope _dbg("Recognizer::getGestureSensorMaskByName");
   const int8_t idx = findGestureIndexByName(name);
   if (idx < 0) return 0;
   return _gestures[(uint8_t)idx].sensorMask();
 }
 
 bool Recognizer::addGesture(const GestureDef& def) {
+  GagRecogLibMethodScope _dbg("Recognizer::addGesture");
   if (_count >= GAG_RECOG_MAX_GESTURES) return false;
 
   const uint8_t requiredMask = def.requiredSensorMask();
@@ -91,16 +127,19 @@ bool Recognizer::addGesture(const GestureDef& def) {
 }
 
 void Recognizer::setOnRecognized(OnRecognizedCallback cb) {
+  GagRecogLibMethodScope _dbg("Recognizer::setOnRecognized");
   _cb = cb;
 }
 
 inline bool Recognizer::isCooldownActive(uint8_t gi, uint32_t now) const {
+  GagRecogLibMethodScope _dbg("Recognizer::isCooldownActive");
   const uint32_t until = _rt[gi].cooldown_until_ms;
   if (until == 0) return false;
   return !timeReached(now, until);
 }
 
 inline void Recognizer::clearRuntime(uint8_t gi) {
+  GagRecogLibMethodScope _dbg("Recognizer::clearRuntime");
   for (uint8_t si = 0; si < static_cast<uint8_t>(Sensor::COUNT); ++si) {
     SensorRuntime& srt = _rt[gi].srt[si];
     srt.completed = false;
@@ -115,6 +154,7 @@ inline void Recognizer::clearRuntime(uint8_t gi) {
 }
 
 inline void Recognizer::clearAllRuntimes() {
+  GagRecogLibMethodScope _dbg("Recognizer::clearAllRuntimes");
   for (uint8_t gi = 0; gi < GAG_RECOG_MAX_GESTURES; ++gi) {
     _rt[gi].cooldown_until_ms = 0;
     clearRuntime(gi);
@@ -134,6 +174,7 @@ static inline uint8_t mapIndexByProgress(uint8_t idx, uint8_t fromLen, uint8_t t
 }
 
 inline bool Recognizer::doesMatch(uint8_t gi, Sensor sensor, uint8_t refIndex, const Quaternion& refNorm, const Quaternion& sampleNorm) const {
+  // GagRecogLibMethodScope _dbg("Recognizer::doesMatch");
   const GestureDef& g = _gestures[gi];
 
   // Default: absolute comparison.
@@ -169,6 +210,7 @@ inline bool Recognizer::doesMatch(uint8_t gi, Sensor sensor, uint8_t refIndex, c
 }
 
 void Recognizer::processSample(Sensor sensor, const Quaternion& q, uint32_t now_ms) {
+  GagRecogLibMethodScope _dbg("Recognizer::processSample");
   const uint32_t now = (now_ms == 0) ? millis() : now_ms;
   const Quaternion sampleNorm = q.normalized();
 
@@ -203,6 +245,7 @@ void Recognizer::processSample(Sensor sensor, const Quaternion& q, uint32_t now_
 }
 
 void Recognizer::handleSensorUpdate(uint8_t gi, Sensor sensor, const Quaternion& sampleNorm, uint32_t now) {
+  GagRecogLibMethodScope _dbg("Recognizer::handleSensorUpdate");
   GestureDef& g = _gestures[gi];
   const uint8_t si = static_cast<uint8_t>(sensor);
   SensorRuntime& srt = _rt[gi].srt[si];
@@ -346,6 +389,7 @@ void Recognizer::handleSensorUpdate(uint8_t gi, Sensor sensor, const Quaternion&
 }
 
 void Recognizer::maybeRecognize(uint8_t gi, uint32_t now) {
+  GagRecogLibMethodScope _dbg("Recognizer::maybeRecognize");
   const GestureDef& g = _gestures[gi];
 
   const uint8_t requiredMask = g.requiredSensorMask();
@@ -379,7 +423,7 @@ void Recognizer::maybeRecognize(uint8_t gi, uint32_t now) {
   const uint32_t maxTime = g.max_time_ms;
   if (maxTime > 0 && (uint32_t)(endMax - startMin) > maxTime) {
     // Completions are too far apart; drop the ones that are too old relative to the newest.
-  for (uint8_t si = 0; si < static_cast<uint8_t>(Sensor::COUNT); ++si) {
+    for (uint8_t si = 0; si < static_cast<uint8_t>(Sensor::COUNT); ++si) {
       if ((requiredMask & (1u << si)) == 0) continue;
       SensorRuntime& srt = _rt[gi].srt[si];
       if (srt.completed && (uint32_t)(endMax - srt.completed_end_ms) > maxTime) {
@@ -406,6 +450,7 @@ void Recognizer::maybeRecognize(uint8_t gi, uint32_t now) {
 }
 
 void Recognizer::printRecognized(const RecognizedGesture& rg) {
+  GagRecogLibMethodScope _dbg("Recognizer::printRecognized");
   if (!_out) return;
   _out->print(F("GAG:RECOG name="));
   _out->print(rg.name);
@@ -420,6 +465,7 @@ void Recognizer::printRecognized(const RecognizedGesture& rg) {
 }
 
 void Recognizer::printGestures() const {
+  GagRecogLibMethodScope _dbg("Recognizer::printGestures");
   if (!_out) return;
   _out->println(F("GAG:GESTURES BEGIN"));
   _out->print(F("count="));
@@ -427,8 +473,7 @@ void Recognizer::printGestures() const {
 
   for (uint8_t gi = 0; gi < _count; ++gi) {
     const GestureDef& g = _gestures[gi];
-    _out->
-    (F("[")); _out->print(gi); _out->print(F("] "));
+    _out->print(F("[")); _out->print(gi); _out->print(F("] "));
     _out->print(g.name);
     _out->print(F(" cmd=")); _out->print(g.command);
     _out->print(F(" active=")); _out->print(g.active ? 1 : 0);
@@ -447,6 +492,7 @@ void Recognizer::printGestures() const {
 }
 
 void Recognizer::addSampleGestures() {
+  GagRecogLibMethodScope _dbg("Recognizer::addSampleGestures");
   // Sample gesture 1: wrist 0 -> 90deg left -> 0
   {
     GestureDef g;

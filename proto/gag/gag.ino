@@ -89,6 +89,8 @@
 
   static void onGestureRecognized(const gag::RecognizedGesture& gr) {
     // Flash the sensors used by the recognized gesture for 100ms.
+    GAG_DEBUG_RECOG_PRINTLN("gag.ino::onGestureRecognized");
+
     #ifdef USE_VISUALIZATION
       const uint8_t libMask = g_recog.getGestureSensorMaskByName(gr.name);
       const uint8_t gagMask = mapRecogMaskToGagMask(libMask);
@@ -110,6 +112,144 @@
     );
     q.normalizeInPlace();
     g_recog.processSample(mapGagSensorToRecog(idx), q, millis());
+  }
+
+  static void gag_setup_my_gestures(gag::Recognizer& recog) {
+    constexpr float PI_F = 3.14159265358979323846f;
+    constexpr float DEG2RAD = PI_F / 180.0f;
+
+    // 2.1. Index finger up (45 degrees) and back down.
+    /*{
+      gag::GestureDef g;
+      strncpy(g.name, "index_up_45", sizeof(g.name) - 1);
+      strncpy(g.command, "CMD_INDEX_UP_45", sizeof(g.command) - 1);
+      g.threshold_rad = 12.0f * DEG2RAD;
+      g.recognition_delay_ms = 100;
+      g.max_time_ms = 2000;
+      g.active = true;
+      g.relative = false;
+
+      auto& sd = g.perSensor[(uint8_t)gag::Sensor::INDEX];
+      sd.len = 2;
+      sd.q[0] = gag::Quaternion(1, 0, 0, 0);
+      sd.q[1] = gag::Quaternion(0.92387953f, 0.38268343f, 0, 0); // +45° around X
+      // sd.q[2] = gag::Quaternion(1, 0, 0, 0);
+
+      recog.addGesture(g);
+    }*/
+
+    {
+      gag::GestureDef g;
+      strncpy(g.name, "index_up_45", sizeof(g.name) - 1);
+      strncpy(g.command, "CMD_INDEX_UP_45", sizeof(g.command) - 1);
+      g.threshold_rad = 12.0f * DEG2RAD;
+      g.recognition_delay_ms = 100;
+      g.max_time_ms = 1000;
+      g.active = true;
+      g.relative = false;
+
+      auto& sd = g.perSensor[(uint8_t)gag::Sensor::INDEX];
+      sd.len = 2;
+      sd.q[0] = gag::Quaternion(1, 0, 0, 0);
+      // sd.q[1] = gag::Quaternion(0.92387953f, 0, 0.38268343f, 0); // +45° around Y
+      sd.q[1] = gag::Quaternion(0.92387953f, -0.38268343f, 0, 0); // +45° around X
+      // sd.q[1] = gag::Quaternion(0.97630f, 0, 0.21644f, 0); // +45° around Y
+      // sd.q[1] = gag::Quaternion(0.97630f, 0, 0.21644f, 0); // +45° around Y
+      // sd.q[2] = gag::Quaternion(1, 0, 0, 0);
+
+      recog.addGesture(g);
+    }
+
+/*
+    {
+
+        gag::GestureDef g;
+        strncpy(g.name, "always", sizeof(g.name) - 1);
+        strncpy(g.command, "CMD_ALWAYS", sizeof(g.command) - 1);
+
+        g.active = true;
+        g.relative = false;
+
+        // Make it match everything:
+        // dist returned by the library is in [0..pi] (or NaN->0), so 100 rad guarantees match.
+        g.threshold_rad = 100.0f;
+
+        // Prevent flooding recognitions on every sample:
+        g.recognition_delay_ms = 250;  // adjust as you like (0 = spam every sample)
+        g.max_time_ms = 0;             // irrelevant for single-sensor single-keyframe
+
+        // Pick a sensor that you KNOW will produce samples.
+        // WRIST is a good choice (assuming you always read it).
+        auto& sd = g.perSensor[(uint8_t)gag::Sensor::WRIST];
+        sd.len = 1;
+        sd.q[0] = gag::Quaternion(1, 0, 0, 0); // reference doesn't matter due to huge threshold
+
+        recog.addGesture(g);
+    }
+*/
+/*
+    // 2.2. Wrist rotation 180 degrees around X axis.
+    {
+      gag::GestureDef g;
+      strncpy(g.name, "wrist_x_180", sizeof(g.name) - 1);
+      strncpy(g.command, "CMD_WRIST_X_180", sizeof(g.command) - 1);
+      g.threshold_rad = 20.0f * DEG2RAD;
+      g.recognition_delay_ms = 800;
+      g.max_time_ms = 3000;
+      g.active = true;
+      g.relative = false;
+
+      auto& sd = g.perSensor[(uint8_t)gag::Sensor::WRIST];
+      sd.len = 3;
+      sd.q[0] = gag::Quaternion(1, 0, 0, 0);
+      sd.q[1] = gag::Quaternion(0, 1, 0, 0); // 180° around X
+      sd.q[2] = gag::Quaternion(1, 0, 0, 0);
+
+      recog.addGesture(g);
+    }
+
+    // 2.3. Wrist rotation 180 degrees around Y axis.
+    {
+      gag::GestureDef g;
+      strncpy(g.name, "wrist_y_180", sizeof(g.name) - 1);
+      strncpy(g.command, "CMD_WRIST_Y_180", sizeof(g.command) - 1);
+      g.threshold_rad = 20.0f * DEG2RAD;
+      g.recognition_delay_ms = 800;
+      g.max_time_ms = 3000;
+      g.active = true;
+      g.relative = false;
+
+      auto& sd = g.perSensor[(uint8_t)gag::Sensor::WRIST];
+      sd.len = 3;
+      sd.q[0] = gag::Quaternion(1, 0, 0, 0);
+      sd.q[1] = gag::Quaternion(0, 0, 1, 0); // 180° around Y
+      sd.q[2] = gag::Quaternion(1, 0, 0, 0);
+
+      recog.addGesture(g);
+    }
+
+    // 2.4. Wrist rotation around Z: 45° left, back, 45° right, back.
+    {
+      gag::GestureDef g;
+      strncpy(g.name, "wrist_z_left_right_45", sizeof(g.name) - 1);
+      strncpy(g.command, "CMD_WRIST_Z_LR_45", sizeof(g.command) - 1);
+      g.threshold_rad = 15.0f * DEG2RAD;
+      g.recognition_delay_ms = 1000;
+      g.max_time_ms = 5000;
+      g.active = true;
+      g.relative = false;
+
+      auto& sd = g.perSensor[(uint8_t)gag::Sensor::WRIST];
+      sd.len = 5;
+      sd.q[0] = gag::Quaternion(1, 0, 0, 0);
+      sd.q[1] = gag::Quaternion(0.92387953f, 0, 0,  0.38268343f); // +45° around Z
+      sd.q[2] = gag::Quaternion(1, 0, 0, 0);
+      sd.q[3] = gag::Quaternion(0.92387953f, 0, 0, -0.38268343f); // -45° around Z
+      sd.q[4] = gag::Quaternion(1, 0, 0, 0);
+
+      recog.addGesture(g);
+    }
+    */
   }
 #endif // USE_GAG_RECOG
 
@@ -191,10 +331,13 @@ void setup() {
     // ---- Recognition library init ----
     #if USE_GAG_RECOG
         g_recog.begin(g_recogNullOut);
+        gag_setup_my_gestures(g_recog);
         g_recog.setOnRecognized(onGestureRecognized);
         // Read gesture definitions from the same stream as commands, but only
         // when the next byte is 'G'/'g' (see loop()).
         g_recogLoader.begin(MASTER_SERIAL_NAME, g_recogNullOut);
+
+        // gag_setup_my_gestures(g_recog);
     #endif
     
     // MASTER_SERIAL_NAME.println(F("USB up"));
