@@ -27,6 +27,13 @@
 #endif
 #ifndef GAG_WRIST_INDEX
 #define GAG_WRIST_INDEX 5  // HG
+
+// Enable/disable the optional magnetometer cube (wrist 'w') in the bottom-right.
+// 0 = disabled (default), 1 = enabled.
+#ifndef GAG_VIZ_ENABLE_MAG_CUBE
+#define GAG_VIZ_ENABLE_MAG_CUBE 0
+#endif
+
 #endif
 
 // Public API: light-weight and easy to integrate with your existing quaternions.

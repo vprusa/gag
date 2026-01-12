@@ -537,6 +537,11 @@ void setupSensors() {
         } else{
           gyros[selectedSensor].fifoBuffer = new uint8_t[FIFO_SIZE_MPU6050];
         }
+        // Allocate quaternion container once (avoid heap churn/leaks in the main loop)
+        if (gyros[selectedSensor].q == nullptr) {
+          gyros[selectedSensor].q = new Quaternion(); // default ctor => identity
+        }
+
 
         int selectorOffsettedPin = selectSingleMPU(i);
 
@@ -576,11 +581,11 @@ void loadHGData(int selectedSensor) {
                     mpu.getFIFOBytes(fifoBuffer, packetSize);
                     fifoCount -= packetSize;
                 }
-                Quaternion *newQ = new Quaternion();
-                uint8_t res = mpu.dmpGetQuaternion(newQ,fifoBuffer);
-                newQ->normalize();
-
-                gyros[selectedSensor].q = newQ;
+                if (gyros[selectedSensor].q == nullptr) {
+                  gyros[selectedSensor].q = new Quaternion();
+                }
+                uint8_t res = mpu.dmpGetQuaternion(gyros[selectedSensor].q, fifoBuffer);
+                gyros[selectedSensor].q->normalize();
                 gyros[selectedSensor].hasDataReady=true;
             }
 }
@@ -972,7 +977,13 @@ bool loadDataFromFIFO(bool forceLoad) {
                   rotatedQ.normalize();
 
                   // Save rotated quaternion
-                  gyros[selectedSensor].q = new Quaternion(rotatedQ);
+                  if (gyros[selectedSensor].q == nullptr) {
+                    gyros[selectedSensor].q = new Quaternion();
+                  }
+                  gyros[selectedSensor].q->w = rotatedQ.w;
+                  gyros[selectedSensor].q->x = rotatedQ.x;
+                  gyros[selectedSensor].q->y = rotatedQ.y;
+                  gyros[selectedSensor].q->z = rotatedQ.z;
                   q.w = gyros[selectedSensor].q->w;
                   q.x = gyros[selectedSensor].q->x;
                   q.y = gyros[selectedSensor].q->y;
@@ -980,7 +991,13 @@ bool loadDataFromFIFO(bool forceLoad) {
                   storeQuaternionInFIFO();
 
                 } else {
-                  gyros[selectedSensor].q = new Quaternion(sensorQ);
+                  if (gyros[selectedSensor].q == nullptr) {
+                    gyros[selectedSensor].q = new Quaternion();
+                  }
+                  gyros[selectedSensor].q->w = sensorQ.w;
+                  gyros[selectedSensor].q->x = sensorQ.x;
+                  gyros[selectedSensor].q->y = sensorQ.y;
+                  gyros[selectedSensor].q->z = sensorQ.z;
                 }
 
                 //mpu.resetFIFO();

@@ -16,17 +16,18 @@
 //#define USE_DISPLAY 1
 
 //#define MEASURE_OFFSETS 1
+//#include "definitions.h"
+//#include "gag.h"
+//#include "Wire.h"V
+//#include <cty// ================================================================
 #include "definitions.h"
 #include "gag.h"
 #include "Wire.h"
-
 #include <ctype.h>
 #include <string.h>
 #include <strings.h>
 #include "GagRecog.h"
 #include "GagRecogSerialLoader.h"
-
-// ================================================================
 // === BLE HID (Mouse) command output                            ===
 // ================================================================
 //
@@ -661,6 +662,7 @@ void setup() {
     timeNow = millis(); //Start counting time in milliseconds
     MASTER_SERIAL_NAME.println(F("Setup - done"));
 }
+static uint32_t last = 0;
 
 // ================================================================
 // ===                    MAIN PROGRAM LOOP                     ===
@@ -669,11 +671,17 @@ void loop() {
 
     int currentlySellectedSensor = selectedSensor;
   
+ static uint32_t last = 0;
     handSwitchPrev = timeNow;
     timePrev = timeNow; // the previous time is stored before the actual time read
     timeNow = millis(); // actual time read
     elapsedTime = (timeNow - timePrev);
  
+if (millis() - last > 500) {
+  last = millis();
+  Serial.printf("heap=%u\n", (unsigned)ESP.getFreeHeap());
+}
+
 // #ifdef USE_DISPLAY
 //     remainingTimeBudget = ui.update();
 // #endif
@@ -681,7 +689,11 @@ void loop() {
 #ifdef MASTER_HAND
     // --- Gesture serial loader (only consumes input if it starts with 'G'/'g') ---
     bool handledGestureLine = false;
-    #if USE_GAG_RECOG
+  if (timeNow - last > 500) {
+    last = millis();
+    Serial.printf("heap=%u\n", (unsigned)ESP.getFreeHeap());
+  }
+   #if USE_GAG_RECOG
         if (MASTER_SERIAL_NAME.available() > 0) {
             int p = MASTER_SERIAL_NAME.peek();
             if (p == 'G' || p == 'g') {
@@ -823,7 +835,7 @@ void loop() {
     slaveHandDataRequestHandler();
 #endif
     automaticFifoReset();
-#ifdef MASTER_HAND
+#ifdef MASTER_HAND  
     if(useSlaveHand) {
         loadSlaveHandData();
     }

@@ -337,10 +337,20 @@ static inline void drawString5x7Rot90CW(int x0, int y0, const char* s, uint8_t m
 static inline void drawString5x7Rot90CCW(int x0, int y0, const char* s, uint8_t maxChars) {
   if (!s) return;
   const uint8_t adv = 6; // 5px tall (after rotation) + 1px gap
-  for (uint8_t i = 0; i < maxChars && s[i] != '\0'; ++i) {
-    drawChar5x7Rot90CCW(x0, y0 + (int)i * adv, s[i]);
+
+  // IMPORTANT: With the chosen glyph rotation / display layout, the perceived
+  // reading direction on the OLED is opposite to the in-memory string order.
+  // To make the command label read normally (e.g. "0!LMBC" rather than "CBML!0"),
+  // we draw characters in reverse order.
+  uint8_t n = 0;
+  while (n < maxChars && s[n] != ' ') ++n;
+  if (n == 0) return;
+
+  for (uint8_t i = 0; i < n; ++i) {
+    drawChar5x7Rot90CCW(x0, y0 + (int)i * adv, s[n - 1 - i]);
   }
 }
+
 
 // ---------- Public API: gesture colours + flash trigger ----------
 // We keep a tiny mapping so each gesture name gets a stable unique colour id.
@@ -781,7 +791,7 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
     const int cols = 2, rows = 3;
 
     // Reserve a small bottom-right square for the magnetometer cube.
-    const int magBoxPx = 16;
+    const int magBoxPx = (GAG_VIZ_ENABLE_MAG_CUBE ? 16 : 0);
 
     // ---- Right-side command history text strip ----
     const int lineW = 7; // rotated glyph width
@@ -813,16 +823,18 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
       const uint8_t maxChars = (uint8_t)max(0, min(10, (availTextH / 6)));
 
       // Render newest on the LEFT-most column of the strip (near the cubes), older to the right.
-// Use a 90° clockwise glyph rotation so the text reads top-to-bottom in the same order as stored.
-for (int li = 0; li < linesToDraw; ++li) {
-  const int histIdx = li; // gCmdHistory[0] is newest
-  if (histIdx >= (int)gCmdHistoryCount) break;
+      // Mirror the glyphs horizontally+vertically compared to the previous implementation.
+      // Practically, this is equivalent to switching from 90° CW to 90° CCW rotation for each glyph,
+      // which fixes the “upside-down / mirrored” appearance on the OLED.
+      for (int li = 0; li < linesToDraw; ++li) {
+        const int histIdx = li; // gCmdHistory[0] is newest
+        if (histIdx >= (int)gCmdHistoryCount) break;
 
-  const int x = textLeftPx + li * lineW;
-  if (x >= kScreenW) break;
+        const int x = textLeftPx + li * lineW;
+        if (x >= kScreenW) break;
 
-  drawString5x7Rot90CW(x, 0, gCmdHistory[histIdx], maxChars);
-}
+        drawString5x7Rot90CCW(x, 0, gCmdHistory[histIdx], maxChars);
+      }
     }
 
     // ---- Draw the 6 sensor cubes (with labels + blinking X markers) ----
@@ -921,7 +933,8 @@ for (int li = 0; li < linesToDraw; ++li) {
       }
     }
 
-    // ---- Magnetometer cube (bottom-right), label 'w' ----
+    #if GAG_VIZ_ENABLE_MAG_CUBE
+// ---- Magnetometer cube (bottom-right), label 'w' ----
     {
       // Normalize the stored mag quaternion and apply the same wrist correction used for the wrist cube.
       Q qm = Q{ gWristMagQuat.w, gWristMagQuat.x, gWristMagQuat.y, gWristMagQuat.z };
@@ -991,6 +1004,7 @@ for (int li = 0; li < linesToDraw; ++li) {
         }
       }
     }
+#endif // GAG_VIZ_ENABLE_MAG_CUBE
   }
 
   display.display();
