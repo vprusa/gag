@@ -799,10 +799,27 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
   {
     const int cols = 2, rows = 3;
 
-    // Reserve a small bottom-right strip for optional widgets (mag cube + accel widget).
-    const int magBoxPx = (GAG_VIZ_ENABLE_MAG_CUBE ? 16 : 0);
-    const int accelBoxPx = (GAG_VIZ_ENABLE_ACCEL_WIDGET ? 16 : 0);
-    const int extraRowPx = ((magBoxPx > 0) || (accelBoxPx > 0)) ? 18 : 0;
+    // Optional wrist widgets (accelerometer + magnetometer)
+    //
+    // Changes requested:
+    //  - move widgets UP (they were in the bottom-right strip)
+    //  - do NOT reserve a bottom strip anymore
+    //  - allow higher visual sensitivity for accel
+    const int magBoxPx      = (GAG_VIZ_ENABLE_MAG_CUBE ? 16 : 0);
+    const int accelWidgetW  = (GAG_VIZ_ENABLE_ACCEL_WIDGET ? 24 : 0);
+    const int accelWidgetH  = (GAG_VIZ_ENABLE_ACCEL_WIDGET ? 22 : 0);
+
+    const int widgetGapY    = 2;
+    const int widgetShiftUp = 50; // pixels
+
+    // Stack accel (top) + mag cube (below) in the right strip, then shift upward.
+    const int widgetStackH =
+        (accelWidgetH > 0 ? accelWidgetH : 0) +
+        ((accelWidgetH > 0 && magBoxPx > 0) ? widgetGapY : 0) +
+        (magBoxPx > 0 ? magBoxPx : 0);
+    const int widgetTopY = max(0, (kScreenH - widgetStackH) - widgetShiftUp);
+
+    const int extraRowPx = 0;
 
     // ---- Right-side command history text strip ----
     const int lineW = 7; // rotated glyph width
@@ -812,7 +829,7 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
 
     // ---- Middle grid geometry (between center and text strip) ----
     const int gridTopPx = 1;
-    const int gridBottomPx = max(gridTopPx, kScreenH - extraRowPx - 2); // 1px gap above widget row
+    const int gridBottomPx = max(gridTopPx, kScreenH - 2);
     const int gridH = max(0, gridBottomPx - gridTopPx + 1);
     const int cellH = max(1, gridH / rows);
 
@@ -829,8 +846,8 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
       const int maxLinesFit = (lineW > 0) ? (textW / lineW) : 0;
       const int linesToDraw = min((int)kCmdHistoryLines, maxLinesFit);
 
-      // Keep text above the widget row.
-      const int availTextH = max(0, kScreenH - extraRowPx - 2);
+      const int textTopY = (widgetStackH > 0) ? min(kScreenH - 1, widgetTopY + widgetStackH + 2) : 0;
+      const int availTextH = max(0, kScreenH - textTopY - 2);
       const uint8_t maxChars = (uint8_t)max(0, min(10, (availTextH / 6)));
 
       // Render newest on the LEFT-most column of the strip (near the cubes), older to the right.
@@ -844,7 +861,7 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
         const int x = textLeftPx + li * lineW;
         if (x >= kScreenW) break;
 
-        drawString5x7Rot90CCW(x, 0, gCmdHistory[histIdx], maxChars);
+        drawString5x7Rot90CCW(x, textTopY, gCmdHistory[histIdx], maxChars);
       }
     }
 
@@ -964,12 +981,14 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
       Q qMagCorr = Q{u.w, u.y, u.x, -u.z};
 
       const int cxPx = kScreenW - (magBoxPx / 2) - 1;
-      const int cyPx = kScreenH - (magBoxPx / 2) - 1;
+      // Move up: place mag cube under the accel widget stack.
+      const int magY0 = widgetTopY + (accelWidgetH > 0 ? (accelWidgetH + widgetGapY) : 0);
+      const int cyPx = magY0 + (magBoxPx / 2);
 
       // Label
       {
         const int lx = kScreenW - magBoxPx + 1;
-        const int ly = kScreenH - magBoxPx;
+        const int ly = magY0;
         display.drawString(lx, ly, String("m"));
       }
 
@@ -1018,90 +1037,94 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
 #endif // GAG_VIZ_ENABLE_MAG_CUBE
 
     #if GAG_VIZ_ENABLE_ACCEL_WIDGET
-    // ---- Accelerometer widget (bottom-right), label 'a' ----
+    // ---- Accelerometer widget (right side), label 'a' ----
     {
-      // Widget placement: to the left of the mag cube if present, otherwise at bottom-right.
-      const int widgetH = accelBoxPx;
-      const int widgetW = 24; // enough for XY cross + Z arrow
+      // Widget placement: stack at the right edge, ABOVE the mag cube (if enabled).
+      const int widgetW = accelWidgetW;
+      const int widgetH = accelWidgetH;
 
-      const int y0 = kScreenH - widgetH;
-      const int xMag0 = (magBoxPx > 0) ? (kScreenW - magBoxPx) : kScreenW;
-      const int x0 = max(0, xMag0 - widgetW - 2);
+      if (widgetW > 0 && widgetH > 0) {
+        const int x0 = kScreenW - widgetW;
+        const int y0 = widgetTopY;
 
-      // Optional border
-      display.drawRect(x0, y0, widgetW, widgetH);
+        // Label (small)
+        display.drawString(x0, max(0, y0 - 1), String("a"));
 
-      // Label
-      display.drawString(x0 + 1, y0 - 1, String("a"));
+        // Accel values are expected in 'g' units (per gag.ino scaling).
+        const float ax = gWristAccel.x;
+        const float ay = gWristAccel.y;
+        const float az = gWristAccel.z;
 
-      // Normalize/scaling: treat |a| ~2g as full-scale.
-      const float ax = gWristAccel.x;
-      const float ay = gWristAccel.y;
-      const float az = gWristAccel.z;
+        // Make the visualization MORE sensitive:
+        // - use a higher px-per-g gain
+        // - use ceil() so small changes still show up as 1px
+        const float pxPerG = 30.0f;
 
-      const int cx = x0 + 9;
-      const int cy = y0 + (widgetH / 2);
-      const int maxLen = 7;
-      const float fullScale = 2.0f;
+        const int cx = x0 + 10;
+        const int cy = y0 + (widgetH / 2);
 
-      auto clampLen = [&](float v) -> int {
-        float av = (v < 0) ? -v : v;
-        float t = (fullScale > 0.0001f) ? (av / fullScale) : 0.0f;
-        if (t > 1.0f) t = 1.0f;
-        return (int)(t * (float)maxLen + 0.5f);
-      };
+        const int maxLenX = min(cx - x0 - 1, (x0 + widgetW - 1) - (cx + 4)); // leave room for Z arrow
+        const int maxLenY = min(cy - y0 - 1, (y0 + widgetH - 1) - cy - 1);
+        const int maxLenZ = maxLenY;
 
-      auto drawArrowH = [&](int x1, int y, int dir) {
-        // dir: +1 (right) or -1 (left)
-        display.drawLine(cx, cy, x1, y);
-        display.drawLine(x1, y, x1 - dir * 2, y - 1);
-        display.drawLine(x1, y, x1 - dir * 2, y + 1);
-      };
+        auto lenPx = [&](float v, int maxLen) -> int {
+          float av = (v < 0) ? -v : v;
+          // ceil => more sensitivity for small signals
+          int L = (int)ceilf(av * pxPerG);
+          if (L < 0) L = 0;
+          if (L > maxLen) L = maxLen;
+          return L;
+        };
 
-      auto drawArrowV = [&](int x, int y1, int dir) {
-        // dir: +1 (up) or -1 (down)
-        display.drawLine(cx, cy, x, y1);
-        display.drawLine(x, y1, x - 1, y1 + dir * 2);
-        display.drawLine(x, y1, x + 1, y1 + dir * 2);
-      };
+        auto drawArrowH = [&](int x1, int y, int dir) {
+          display.drawLine(cx, cy, x1, y);
+          display.drawLine(x1, y, x1 - dir * 2, y - 1);
+          display.drawLine(x1, y, x1 - dir * 2, y + 1);
+        };
 
-      // X axis (horizontal)
-      {
-        const int len = clampLen(ax);
-        const int dir = (ax >= 0) ? +1 : -1;
-        const int x1 = cx + dir * len;
-        if (len > 0) drawArrowH(x1, cy, dir);
-      }
+        auto drawArrowV = [&](int x, int y1, int dir) {
+          display.drawLine(x, cy, x, y1);
+          display.drawLine(x, y1, x - 1, y1 + dir * 2);
+          display.drawLine(x, y1, x + 1, y1 + dir * 2);
+        };
 
-      // Y axis (vertical)
-      {
-        const int len = clampLen(ay);
-        const int dir = (ay >= 0) ? +1 : -1; // + => up
-        const int y1 = cy - dir * len;
-        if (len > 0) {
-          // reuse the same arrowhead style
-          display.drawLine(cx, cy, cx, y1);
-          display.drawLine(cx, y1, cx - 1, y1 + dir * 2);
-          display.drawLine(cx, y1, cx + 1, y1 + dir * 2);
+        // X axis (horizontal)
+        {
+          const int len = lenPx(ax, maxLenX);
+          const int dir = (ax >= 0) ? +1 : -1;
+          const int x1 = cx + dir * len;
+          if (len > 0) drawArrowH(x1, cy, dir);
         }
-      }
 
-      // Center dot
-      display.setPixel(cx, cy);
-
-      // Z axis: separate arrow on the right
-      {
-        const int zx = x0 + widgetW - 5;
-        const int zc = cy;
-        const int len = clampLen(az);
-        const int dir = (az >= 0) ? +1 : -1;
-        const int y1 = zc - dir * len;
-        if (len > 0) {
-          display.drawLine(zx, zc, zx, y1);
-          display.drawLine(zx, y1, zx - 1, y1 + dir * 2);
-          display.drawLine(zx, y1, zx + 1, y1 + dir * 2);
+        // Y axis (vertical)
+        {
+          const int len = lenPx(ay, maxLenY);
+          const int dir = (ay >= 0) ? +1 : -1; // + => up
+          const int y1 = cy - dir * len;
+          if (len > 0) {
+            display.drawLine(cx, cy, cx, y1);
+            display.drawLine(cx, y1, cx - 1, y1 + dir * 2);
+            display.drawLine(cx, y1, cx + 1, y1 + dir * 2);
+          }
         }
-        display.setPixel(zx, zc);
+
+        // Center dot
+        display.setPixel(cx, cy);
+
+        // Z axis: separate arrow on the right
+        {
+          const int zx = x0 + widgetW - 3;
+          const int zc = cy;
+          const int len = lenPx(az, maxLenZ);
+          const int dir = (az >= 0) ? +1 : -1;
+          const int y1 = zc - dir * len;
+          if (len > 0) {
+            display.drawLine(zx, zc, zx, y1);
+            display.drawLine(zx, y1, zx - 1, y1 + dir * 2);
+            display.drawLine(zx, y1, zx + 1, y1 + dir * 2);
+          }
+          display.setPixel(zx, zc);
+        }
       }
     }
     #endif // GAG_VIZ_ENABLE_ACCEL_WIDGET
