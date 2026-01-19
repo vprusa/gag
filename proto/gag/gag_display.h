@@ -28,10 +28,16 @@
 #ifndef GAG_WRIST_INDEX
 #define GAG_WRIST_INDEX 5  // HG
 
-// Enable/disable the optional magnetometer cube (wrist 'w') in the bottom-right.
-// 0 = disabled (default), 1 = enabled.
+// Enable/disable the optional magnetometer-based cube (wrist 'm') in the bottom-right.
+// 0 = disabled, 1 = enabled.
 #ifndef GAG_VIZ_ENABLE_MAG_CUBE
-#define GAG_VIZ_ENABLE_MAG_CUBE 0
+#define GAG_VIZ_ENABLE_MAG_CUBE 1
+#endif
+
+// Enable/disable the optional accelerometer widget (wrist 'a') in the bottom-right.
+// 0 = disabled, 1 = enabled.
+#ifndef GAG_VIZ_ENABLE_ACCEL_WIDGET
+#define GAG_VIZ_ENABLE_ACCEL_WIDGET 1
 #endif
 
 #endif
@@ -39,6 +45,10 @@
 // Public API: light-weight and easy to integrate with your existing quaternions.
 struct VizQuaternion {
   float w, x, y, z;
+};
+
+struct VizAccel {
+  float x, y, z;
 };
 
 // Initialize display and visualization state.
@@ -51,12 +61,20 @@ void viz_init();
 // If you don’t have all sensors yet, pass identity (1,0,0,0) for missing ones.
 void viz_draw_frame(const VizQuaternion q[GAG_NUM_SENSORS]);
 
-// Optional: set an additional quaternion to visualize MPU9250 magnetometer-based
-// rotation on the wrist. This is drawn as a separate cube labelled 'w'
+// Optional: set an additional quaternion to visualize magnetometer-based
+// rotation on the wrist. This is drawn as a separate cube labelled 'm'
 // in the bottom-right corner.
 //
 // If you never call this, an identity quaternion is used.
 void viz_set_wrist_mag_quat(const VizQuaternion& q);
+
+// Backwards-compatible alias.
+static inline void viz_set_wrist_m_quat(const VizQuaternion& q) { viz_set_wrist_mag_quat(q); }
+
+// Optional: set wrist accelerometer data to visualize. This is drawn as a small widget labelled 'a'
+// (cross for X/Y and a separate Z arrow) in the bottom-right corner.
+void viz_set_wrist_accel(const VizAccel& a);
+static inline void viz_set_wrist_accel(float x, float y, float z) { viz_set_wrist_accel(VizAccel{x,y,z}); }
 
 // Optional: log the last few triggered commands into the visualization.
 // The command history is rendered in a narrow text area on the right side of

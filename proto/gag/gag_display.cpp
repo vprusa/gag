@@ -31,6 +31,10 @@ static uint8_t gCmdSeq = 0;           // prefix counter (mod 10)
 // Stored in public VizQuaternion form to avoid order-of-declaration issues.
 static VizQuaternion gWristMagQuat = {1,0,0,0};
 
+// ---------- Optional: wrist accelerometer widget (x,y,z) ----------
+static VizAccel gWristAccel = {0,0,0};
+static bool gHaveWristAccel = false;
+
 static inline bool timeReached(uint32_t now, uint32_t target) {
   // Works across millis() wrap-around.
   return (int32_t)(now - target) >= 0;
@@ -404,6 +408,11 @@ void viz_flash_sensors(uint8_t sensorMask, uint8_t colourId, uint32_t durationMs
 
 void viz_set_wrist_mag_quat(const VizQuaternion& q) {
   gWristMagQuat = q;
+}
+
+void viz_set_wrist_accel(const VizAccel& a) {
+  gWristAccel = a;
+  gHaveWristAccel = true;
 }
 
 void viz_log_command(const char* commandText) {
@@ -790,8 +799,10 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
   {
     const int cols = 2, rows = 3;
 
-    // Reserve a small bottom-right square for the magnetometer cube.
+    // Reserve a small bottom-right strip for optional widgets (mag cube + accel widget).
     const int magBoxPx = (GAG_VIZ_ENABLE_MAG_CUBE ? 16 : 0);
+    const int accelBoxPx = (GAG_VIZ_ENABLE_ACCEL_WIDGET ? 16 : 0);
+    const int extraRowPx = ((magBoxPx > 0) || (accelBoxPx > 0)) ? 18 : 0;
 
     // ---- Right-side command history text strip ----
     const int lineW = 7; // rotated glyph width
@@ -801,7 +812,7 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
 
     // ---- Middle grid geometry (between center and text strip) ----
     const int gridTopPx = 1;
-    const int gridBottomPx = max(gridTopPx, kScreenH - magBoxPx - 2); // 1px gap above mag cube
+    const int gridBottomPx = max(gridTopPx, kScreenH - extraRowPx - 2); // 1px gap above widget row
     const int gridH = max(0, gridBottomPx - gridTopPx + 1);
     const int cellH = max(1, gridH / rows);
 
@@ -818,8 +829,8 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
       const int maxLinesFit = (lineW > 0) ? (textW / lineW) : 0;
       const int linesToDraw = min((int)kCmdHistoryLines, maxLinesFit);
 
-      // Keep text above the mag cube area.
-      const int availTextH = max(0, kScreenH - magBoxPx - 2);
+      // Keep text above the widget row.
+      const int availTextH = max(0, kScreenH - extraRowPx - 2);
       const uint8_t maxChars = (uint8_t)max(0, min(10, (availTextH / 6)));
 
       // Render newest on the LEFT-most column of the strip (near the cubes), older to the right.
@@ -934,7 +945,7 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
     }
 
     #if GAG_VIZ_ENABLE_MAG_CUBE
-// ---- Magnetometer cube (bottom-right), label 'w' ----
+// ---- Magnetometer cube (bottom-right), label 'm' ----
     {
       // Normalize the stored mag quaternion and apply the same wrist correction used for the wrist cube.
       Q qm = Q{ gWristMagQuat.w, gWristMagQuat.x, gWristMagQuat.y, gWristMagQuat.z };
@@ -959,7 +970,7 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
       {
         const int lx = kScreenW - magBoxPx + 1;
         const int ly = kScreenH - magBoxPx;
-        display.drawString(lx, ly, String("w"));
+        display.drawString(lx, ly, String("m"));
       }
 
       const float cxScr  = (float)kScreenW * 0.5f;
@@ -1005,6 +1016,95 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
       }
     }
 #endif // GAG_VIZ_ENABLE_MAG_CUBE
+
+    #if GAG_VIZ_ENABLE_ACCEL_WIDGET
+    // ---- Accelerometer widget (bottom-right), label 'a' ----
+    {
+      // Widget placement: to the left of the mag cube if present, otherwise at bottom-right.
+      const int widgetH = accelBoxPx;
+      const int widgetW = 24; // enough for XY cross + Z arrow
+
+      const int y0 = kScreenH - widgetH;
+      const int xMag0 = (magBoxPx > 0) ? (kScreenW - magBoxPx) : kScreenW;
+      const int x0 = max(0, xMag0 - widgetW - 2);
+
+      // Optional border
+      display.drawRect(x0, y0, widgetW, widgetH);
+
+      // Label
+      display.drawString(x0 + 1, y0 - 1, String("a"));
+
+      // Normalize/scaling: treat |a| ~2g as full-scale.
+      const float ax = gWristAccel.x;
+      const float ay = gWristAccel.y;
+      const float az = gWristAccel.z;
+
+      const int cx = x0 + 9;
+      const int cy = y0 + (widgetH / 2);
+      const int maxLen = 7;
+      const float fullScale = 2.0f;
+
+      auto clampLen = [&](float v) -> int {
+        float av = (v < 0) ? -v : v;
+        float t = (fullScale > 0.0001f) ? (av / fullScale) : 0.0f;
+        if (t > 1.0f) t = 1.0f;
+        return (int)(t * (float)maxLen + 0.5f);
+      };
+
+      auto drawArrowH = [&](int x1, int y, int dir) {
+        // dir: +1 (right) or -1 (left)
+        display.drawLine(cx, cy, x1, y);
+        display.drawLine(x1, y, x1 - dir * 2, y - 1);
+        display.drawLine(x1, y, x1 - dir * 2, y + 1);
+      };
+
+      auto drawArrowV = [&](int x, int y1, int dir) {
+        // dir: +1 (up) or -1 (down)
+        display.drawLine(cx, cy, x, y1);
+        display.drawLine(x, y1, x - 1, y1 + dir * 2);
+        display.drawLine(x, y1, x + 1, y1 + dir * 2);
+      };
+
+      // X axis (horizontal)
+      {
+        const int len = clampLen(ax);
+        const int dir = (ax >= 0) ? +1 : -1;
+        const int x1 = cx + dir * len;
+        if (len > 0) drawArrowH(x1, cy, dir);
+      }
+
+      // Y axis (vertical)
+      {
+        const int len = clampLen(ay);
+        const int dir = (ay >= 0) ? +1 : -1; // + => up
+        const int y1 = cy - dir * len;
+        if (len > 0) {
+          // reuse the same arrowhead style
+          display.drawLine(cx, cy, cx, y1);
+          display.drawLine(cx, y1, cx - 1, y1 + dir * 2);
+          display.drawLine(cx, y1, cx + 1, y1 + dir * 2);
+        }
+      }
+
+      // Center dot
+      display.setPixel(cx, cy);
+
+      // Z axis: separate arrow on the right
+      {
+        const int zx = x0 + widgetW - 5;
+        const int zc = cy;
+        const int len = clampLen(az);
+        const int dir = (az >= 0) ? +1 : -1;
+        const int y1 = zc - dir * len;
+        if (len > 0) {
+          display.drawLine(zx, zc, zx, y1);
+          display.drawLine(zx, y1, zx - 1, y1 + dir * 2);
+          display.drawLine(zx, y1, zx + 1, y1 + dir * 2);
+        }
+        display.setPixel(zx, zc);
+      }
+    }
+    #endif // GAG_VIZ_ENABLE_ACCEL_WIDGET
   }
 
   display.display();

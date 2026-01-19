@@ -100,9 +100,10 @@ void SerialLoader::printHelp() const {
   _out->println(F("  GAG LIST"));
   _out->println(F("  GAG CLEAR"));
   _out->println(F("  GAG SAMPLE"));
-  _out->println(F("  GAG BEGIN <name> <cmd> [label] <threshold_rad> <delay_ms> <max_time_ms> <active0|1> [relative0|1]"));
+  _out->println(F("  GAG BEGIN <name> <cmd> [label] <threshold_rad> <delay_ms> <max_time_ms> <active0|1> [relative0|1] [threshold_accel]"));
   _out->println(F("  GAG SENSOR <WRIST|THUMB|INDEX|MIDDLE|RING|LITTLE|0..5> <count>"));
   _out->println(F("  GAG Q <w> <x> <y> <z>   (repeat <count> times)"));
+  _out->println(F("  GAG A <x> <y> <z>       (repeat <count> times)"));
   _out->println(F("  GAG END"));
   _out->println(F("  GAG ABORT"));
 }
@@ -167,10 +168,16 @@ bool SerialLoader::processLine(char* line) {
     const char* dly = strtok(nullptr, " \t");
     const char* mx  = strtok(nullptr, " \t");
     const char* act = strtok(nullptr, " \t");
-    const char* rel = strtok(nullptr, " \t");
+
+    // Optional tail args:
+    //   [relative0|1] [threshold_accel]
+    // Or just:
+    //   [threshold_accel]
+    const char* opt1 = strtok(nullptr, " \t");
+    const char* opt2 = strtok(nullptr, " \t");
 
     if (!name || !gcmd || !thr || !dly || !mx || !act) {
-      if (_out) _out->println(F("GAG:ERR BEGIN expects 6 args (legacy) or 7 args (with label) (+ optional relative flag)"));
+      if (_out) _out->println(F("GAG:ERR BEGIN expects: <name> <cmd> [label] <thr_q> <delay_ms> <max_time_ms> <active> [relative] [thr_a]"));
       return true;
     }
 
@@ -184,10 +191,25 @@ bool SerialLoader::processLine(char* line) {
       _b.g.label[0] = '\0';
     }
     _b.g.threshold_rad = (float)atof(thr);
+    _b.g.threshold_accel = 0.0f;
     _b.g.recognition_delay_ms = (uint32_t)strtoul(dly, nullptr, 10);
     _b.g.max_time_ms = (uint32_t)strtoul(mx, nullptr, 10);
     _b.g.active = (atoi(act) != 0);
-    _b.g.relative = (rel != nullptr && atoi(rel) != 0);
+
+    if (opt1 && opt2) {
+      _b.g.relative = (atoi(opt1) != 0);
+      _b.g.threshold_accel = (float)atof(opt2);
+    } else if (opt1 && !opt2) {
+      // If it's exactly 0/1 treat as relative, otherwise treat as accel threshold.
+      if ((opt1[0] == '0' && opt1[1] == '\0') || (opt1[0] == '1' && opt1[1] == '\0')) {
+        _b.g.relative = (atoi(opt1) != 0);
+      } else {
+        _b.g.relative = false;
+        _b.g.threshold_accel = (float)atof(opt1);
+      }
+    } else {
+      _b.g.relative = false;
+    }
 
     if (_out) {
       _out->print(F("GAG:OK begin name="));
@@ -224,12 +246,11 @@ bool SerialLoader::processLine(char* line) {
     }
 
     _b.currentSensor = s;
+    _b.currentTrack = Builder::Track::NONE;
     _b.expected = (uint8_t)n;
     _b.received = 0;
+    _b.baseLen = 0;
     _b.haveSensor = true;
-
-    // Clear any old data for this sensor.
-    _b.g.perSensor[(uint8_t)s].len = 0;
 
     if (_out) {
       _out->print(F("GAG:OK sensor "));
@@ -245,6 +266,21 @@ bool SerialLoader::processLine(char* line) {
       if (_out) _out->println(F("GAG:ERR no SENSOR selected"));
       return true;
     }
+    if (_b.currentTrack == Builder::Track::ACCEL) {
+      if (_out) _out->println(F("GAG:ERR current SENSOR block is ACCEL; use GAG A"));
+      return true;
+    }
+
+    if (_b.currentTrack == Builder::Track::NONE) {
+      _b.currentTrack = Builder::Track::QUAT;
+      SensorGestureData& sd = _b.g.perSensor[(uint8_t)_b.currentSensor];
+      _b.baseLen = sd.len;
+      if ((uint32_t)_b.baseLen + (uint32_t)_b.expected > (uint32_t)GAG_RECOG_MAX_QUATS_PER_SENSOR) {
+        if (_out) _out->println(F("GAG:ERR too many Q frames for this sensor"));
+        return true;
+      }
+    }
+
     if (_b.received >= _b.expected) {
       if (_out) _out->println(F("GAG:ERR too many Q for this SENSOR"));
       return true;
@@ -261,9 +297,9 @@ bool SerialLoader::processLine(char* line) {
 
     Quaternion q((float)atof(sw), (float)atof(sx), (float)atof(sy), (float)atof(sz));
     SensorGestureData& sd = _b.g.perSensor[(uint8_t)_b.currentSensor];
-    sd.q[_b.received] = q;
+    sd.q[(uint8_t)(_b.baseLen + _b.received)] = q;
     _b.received++;
-    sd.len = _b.received;
+    sd.len = (uint8_t)(_b.baseLen + _b.received);
 
     if (_out) {
       _out->print(F("GAG:OK q "));
@@ -272,6 +308,55 @@ bool SerialLoader::processLine(char* line) {
       _out->println(_b.expected);
     }
 
+    return true;
+  }
+
+  if (!strcasecmp(cmd, "A") || !strcasecmp(cmd, "ACC") || !strcasecmp(cmd, "ACCEL")) {
+    if (!_b.haveSensor) {
+      if (_out) _out->println(F("GAG:ERR no SENSOR selected"));
+      return true;
+    }
+
+    if (_b.currentTrack == Builder::Track::QUAT) {
+      if (_out) _out->println(F("GAG:ERR current SENSOR block is QUAT; use GAG Q"));
+      return true;
+    }
+
+    if (_b.currentTrack == Builder::Track::NONE) {
+      _b.currentTrack = Builder::Track::ACCEL;
+      SensorAccelGestureData& sd = _b.g.perSensorAccel[(uint8_t)_b.currentSensor];
+      _b.baseLen = sd.len;
+      if ((uint32_t)_b.baseLen + (uint32_t)_b.expected > (uint32_t)GAG_RECOG_MAX_QUATS_PER_SENSOR) {
+        if (_out) _out->println(F("GAG:ERR too many A frames for this sensor"));
+        return true;
+      }
+    }
+
+    if (_b.received >= _b.expected) {
+      if (_out) _out->println(F("GAG:ERR too many A for this SENSOR"));
+      return true;
+    }
+
+    const char* sx = strtok(nullptr, " \t");
+    const char* sy = strtok(nullptr, " \t");
+    const char* sz = strtok(nullptr, " \t");
+    if (!sx || !sy || !sz) {
+      if (_out) _out->println(F("GAG:ERR A expects 3 floats"));
+      return true;
+    }
+
+    AccelData a((float)atof(sx), (float)atof(sy), (float)atof(sz));
+    SensorAccelGestureData& sd = _b.g.perSensorAccel[(uint8_t)_b.currentSensor];
+    sd.a[(uint8_t)(_b.baseLen + _b.received)] = a;
+    _b.received++;
+    sd.len = (uint8_t)(_b.baseLen + _b.received);
+
+    if (_out) {
+      _out->print(F("GAG:OK a "));
+      _out->print(_b.received);
+      _out->print(F("/"));
+      _out->println(_b.expected);
+    }
     return true;
   }
 

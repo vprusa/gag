@@ -15,9 +15,10 @@ namespace gag {
  *   GAG SAMPLE            (loads the 3 sample gestures)
  *
  * Add gesture:
- *   GAG BEGIN <name> <cmd> <threshold_rad> <delay_ms> <max_time_ms> <active0|1> [relative0|1]
+ *   GAG BEGIN <name> <cmd> [label] <threshold_rad> <delay_ms> <max_time_ms> <active0|1> [relative0|1] [threshold_accel]
  *   GAG SENSOR <WRIST|THUMB|INDEX|MIDDLE|RING|LITTLE|0..5> <count>
  *   GAG Q <w> <x> <y> <z>        (repeat <count> times)
+ *   GAG A <x> <y> <z>            (repeat <count> times)
  *   ... (more sensors) ...
  *   GAG END
  *
@@ -50,8 +51,12 @@ private:
     bool haveSensor = false;
 
     Sensor currentSensor = Sensor::WRIST;
+    enum class Track : uint8_t { NONE = 0, QUAT = 1, ACCEL = 2 };
+    Track currentTrack = Track::NONE;
+
     uint8_t expected = 0;
     uint8_t received = 0;
+    uint8_t baseLen = 0; // existing length when the current SENSOR block started
   } _b;
 
   bool processLine(char* line);

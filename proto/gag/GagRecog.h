@@ -142,9 +142,51 @@ struct Quaternion {
   }
 };
 
+// Simple accelerometer sample (typically in g units, but the library does not enforce a unit).
+struct AccelData {
+  float x;
+  float y;
+  float z;
+
+  AccelData() : x(0), y(0), z(0) {}
+  AccelData(float x_, float y_, float z_) : x(x_), y(y_), z(z_) {}
+};
+
+/**
+ * Recognition input wrapper.
+ *
+ * Exactly one of (q,a) should be set for any given sample.
+ * This allows a single Recognizer instance to process both rotation samples
+ * (quaternions) and acceleration samples.
+ */
+struct RecogData {
+  const Quaternion* q = nullptr;
+  const AccelData* a = nullptr;
+
+  static inline RecogData fromQuat(const Quaternion& qq) {
+    RecogData d;
+    d.q = &qq;
+    return d;
+  }
+
+  static inline RecogData fromAccel(const AccelData& aa) {
+    RecogData d;
+    d.a = &aa;
+    return d;
+  }
+
+  inline bool isQuat() const { return q != nullptr && a == nullptr; }
+  inline bool isAccel() const { return a != nullptr && q == nullptr; }
+};
+
 struct SensorGestureData {
   uint8_t len = 0;
   Quaternion q[GAG_RECOG_MAX_QUATS_PER_SENSOR];
+};
+
+struct SensorAccelGestureData {
+  uint8_t len = 0;
+  AccelData a[GAG_RECOG_MAX_QUATS_PER_SENSOR];
 };
 
 struct GestureDef {
@@ -154,6 +196,10 @@ struct GestureDef {
 
   // threshold in radians (0..pi-ish). Must match the distance metric used.
   float threshold_rad = 0.0f;
+
+  // threshold for accel comparisons (Euclidean distance in the chosen accel units).
+  // If you use g units, typical values are 0.05..0.4 depending on filtering/noise.
+  float threshold_accel = 0.0f;
 
   // cooldown after recognition (ms)
   uint32_t recognition_delay_ms = 0;
@@ -183,6 +229,9 @@ struct GestureDef {
   // Per-sensor sequences. A gesture may use only a subset (len=0 for unused sensors).
   SensorGestureData perSensor[static_cast<uint8_t>(Sensor::COUNT)];
 
+  // Optional: per-sensor accelerometer sequences.
+  SensorAccelGestureData perSensorAccel[static_cast<uint8_t>(Sensor::COUNT)];
+
   /**
    * Sensors that are required to complete for a recognition.
    *
@@ -193,9 +242,29 @@ struct GestureDef {
   inline uint8_t requiredSensorMask() const {
     uint8_t m = 0;
     for (uint8_t i = 0; i < static_cast<uint8_t>(Sensor::COUNT); ++i) {
-      if (perSensor[i].len == 0) continue;
-      if (relative && i == static_cast<uint8_t>(Sensor::WRIST)) continue;
+      const bool hasQuat = perSensor[i].len > 0;
+      const bool hasAcc  = perSensorAccel[i].len > 0;
+      if (!hasQuat && !hasAcc) continue;
+      // In relative mode, WRIST quaternion is a reference track, not required.
+      // Wrist accel (if provided) is still required.
+      if (relative && i == static_cast<uint8_t>(Sensor::WRIST) && hasQuat && !hasAcc) continue;
       m |= (1u << i);
+    }
+    return m;
+  }
+
+  // Track masks (bit i => quaternion required for sensor i; bit (i+COUNT) => accel required).
+  inline uint16_t requiredTrackMask() const {
+    uint16_t m = 0;
+    for (uint8_t i = 0; i < static_cast<uint8_t>(Sensor::COUNT); ++i) {
+      if (perSensor[i].len > 0) {
+        if (!(relative && i == static_cast<uint8_t>(Sensor::WRIST))) {
+          m |= (uint16_t)(1u << i);
+        }
+      }
+      if (perSensorAccel[i].len > 0) {
+        m |= (uint16_t)(1u << (i + static_cast<uint8_t>(Sensor::COUNT)));
+      }
     }
     return m;
   }
@@ -204,7 +273,7 @@ struct GestureDef {
   inline uint8_t sensorMask() const {
     uint8_t m = 0;
     for (uint8_t i = 0; i < static_cast<uint8_t>(Sensor::COUNT); ++i) {
-      if (perSensor[i].len > 0) m |= (1u << i);
+      if (perSensor[i].len > 0 || perSensorAccel[i].len > 0) m |= (1u << i);
     }
     return m;
   }
@@ -255,6 +324,10 @@ public:
   // Main entry: feed a new sample (sensor + quaternion).
   void processSample(Sensor sensor, const Quaternion& q, uint32_t now_ms = 0);
 
+  // Main entry: feed a new sample (sensor + either quaternion or accel).
+  // Exactly one of RecogData.q or RecogData.a must be set.
+  void processSample(Sensor sensor, const RecogData& data, uint32_t now_ms = 0);
+
   // Print a summary of loaded gestures.
   void printGestures() const;
 
@@ -284,7 +357,8 @@ private:
 
   struct GestureRuntime {
     uint32_t cooldown_until_ms = 0;
-    SensorRuntime srt[static_cast<uint8_t>(Sensor::COUNT)];
+    SensorRuntime qrt[static_cast<uint8_t>(Sensor::COUNT)];
+    SensorRuntime art[static_cast<uint8_t>(Sensor::COUNT)];
   };
 
   GestureDef _gestures[GAG_RECOG_MAX_GESTURES];
@@ -302,9 +376,11 @@ private:
   inline bool isCooldownActive(uint8_t gi, uint32_t now) const;
   inline void clearRuntime(uint8_t gi);
   inline void clearAllRuntimes();
-  inline bool doesMatch(uint8_t gi, Sensor sensor, uint8_t refIndex, const Quaternion& refNorm, const Quaternion& sampleNorm) const;
+  inline bool doesMatchQuat(uint8_t gi, Sensor sensor, uint8_t refIndex, const Quaternion& refNorm, const Quaternion& sampleNorm) const;
+  inline bool doesMatchAccel(uint8_t gi, Sensor sensor, uint8_t refIndex, const AccelData& ref, const AccelData& sample) const;
 
-  void handleSensorUpdate(uint8_t gi, Sensor sensor, const Quaternion& sampleNorm, uint32_t now);
+  void handleQuatUpdate(uint8_t gi, Sensor sensor, const Quaternion& sampleNorm, uint32_t now);
+  void handleAccelUpdate(uint8_t gi, Sensor sensor, const AccelData& sample, uint32_t now);
   void maybeRecognize(uint8_t gi, uint32_t now);
   void printRecognized(const RecognizedGesture& rg);
 };

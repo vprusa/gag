@@ -278,6 +278,7 @@ static inline void feedRecognizerFromSelectedSensor() {
   if (!gyros[selectedSensor].q) return;
 
   const uint8_t idx = (uint8_t)selectedSensor;
+  const uint32_t now = millis();
   gag::Quaternion q(
     (float)gyros[selectedSensor].q->w,
     (float)gyros[selectedSensor].q->x,
@@ -285,7 +286,59 @@ static inline void feedRecognizerFromSelectedSensor() {
     (float)gyros[selectedSensor].q->z
   );
   q.normalizeInPlace();
-  g_recog.processSample(mapGagSensorToRecog(idx), q, millis());
+
+  const gag::Sensor s = mapGagSensorToRecog(idx);
+  g_recog.processSample(s, q, now);
+
+  // Wrist-only: also feed accelerometer samples to the recognizer and visualization.
+  // NOTE: units are expressed in "g" based on a 16384 LSB/g assumption (MPU6050 default).
+  if (idx == 5) { // project wrist index (HG)
+    int16_t accRaw[3] = {0,0,0};
+    // Extract from the most recent DMP packet.
+    if (gyros[selectedSensor].mpu) {
+      gyros[selectedSensor].mpu->dmpGetAccel(accRaw, gyros[selectedSensor].fifoBuffer);
+    }
+    const float invG = 1.0f / 16384.0f;
+    gag::AccelData a((float)accRaw[0] * invG, (float)accRaw[1] * invG, (float)accRaw[2] * invG);
+    g_recog.processSample(s, gag::RecogData::fromAccel(a), now);
+
+    #ifdef USE_VISUALIZATION
+      viz_set_wrist_accel(a.x, a.y, a.z);
+
+      // Optional: magnetometer-based yaw cube ('m') if getMotion9 is available.
+      int16_t ax, ay, az, gx, gy, gz, mx, my, mz;
+      gyros[selectedSensor].mpu->getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
+      // Very basic validity check.
+      if (!(mx == 0 && my == 0 && mz == 0)) {
+        const float axg = (float)ax * invG;
+        const float ayg = (float)ay * invG;
+        const float azg = (float)az * invG;
+
+        // Roll/pitch from accel.
+        const float roll  = atan2f(ayg, azg);
+        const float pitch = atan2f(-axg, sqrtf(ayg*ayg + azg*azg));
+
+        const float cr = cosf(roll),  sr = sinf(roll);
+        const float cp = cosf(pitch), sp = sinf(pitch);
+
+        // Tilt-compensate mag.
+        const float mxf = (float)mx;
+        const float myf = (float)my;
+        const float mzf = (float)mz;
+
+        const float mx2 = mxf * cp + mzf * sp;
+        const float my2 = mxf * sr * sp + myf * cr - mzf * sr * cp;
+        const float heading = atan2f(-my2, mx2);
+
+        VizQuaternion qm;
+        qm.w = cosf(0.5f * heading);
+        qm.x = 0.0f;
+        qm.y = 0.0f;
+        qm.z = sinf(0.5f * heading);
+        viz_set_wrist_mag_quat(qm);
+      }
+    #endif
+  }
 }
 
 static void gag_setup_my_gestures(gag::Recognizer& recog) {
