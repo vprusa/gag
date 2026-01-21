@@ -963,14 +963,14 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
       Q u = q_mul(t, wristRemap);
       Q qMagCorr = Q{u.w, u.y, u.x, -u.z};
 
-      const int cxPx = kScreenW - (magBoxPx / 2) - 1;
+      const int cxPx = kScreenW - (magBoxPx / 2) - 1 - 25;
       const int cyPx = kScreenH - (magBoxPx / 2) - 1;
 
       // Label
       {
         const int lx = kScreenW - magBoxPx + 1;
         const int ly = kScreenH - magBoxPx;
-        display.drawString(lx, ly, String("m"));
+        // display.drawString(lx, ly, String("m"));
       }
 
       const float cxScr  = (float)kScreenW * 0.5f;
@@ -1025,14 +1025,14 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
       const int widgetW = 24; // enough for XY cross + Z arrow
 
       const int y0 = kScreenH - widgetH;
-      const int xMag0 = (magBoxPx > 0) ? (kScreenW - magBoxPx) : kScreenW;
-      const int x0 = max(0, xMag0 - widgetW - 2);
+      const int xMag0 = ((magBoxPx > 0) ? (kScreenW - magBoxPx) : kScreenW) - 30;
+      const int x0 = max(0, xMag0 - widgetW);
 
       // Optional border
-      display.drawRect(x0, y0, widgetW, widgetH);
+      // display.drawRect(x0, y0, widgetW, widgetH);
 
       // Label
-      display.drawString(x0 + 1, y0 - 1, String("a"));
+      // display.drawString(x0 + 1, y0 - 1, String("a"));
 
       // Normalize/scaling: treat |a| ~2g as full-scale.
       const float ax = gWristAccel.x;
@@ -1041,12 +1041,13 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
 
       const int cx = x0 + 9;
       const int cy = y0 + (widgetH / 2);
-      const int maxLen = 7;
-      const float fullScale = 2.0f;
+      const int maxLen = 15; // 7
+      const float fullScale = 8.0f; // 2
 
       auto clampLen = [&](float v) -> int {
         float av = (v < 0) ? -v : v;
-        float t = (fullScale > 0.0001f) ? (av / fullScale) : 0.0f;
+        float t = (fullScale > 0.0001f) ? (av / 
+        ) : 0.0f;
         if (t > 1.0f) t = 1.0f;
         return (int)(t * (float)maxLen + 0.5f);
       };
