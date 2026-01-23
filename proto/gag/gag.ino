@@ -305,6 +305,17 @@ static inline void feedRecognizerFromSelectedSensor() {
     #ifdef USE_VISUALIZATION
       viz_set_wrist_accel(a.x, a.y, a.z);
 
+// packetSizeS
+      // for (int d = 0; d < packetSizeS; d++) {
+      //   uint8_t val = gyros[selectedSensor].fifoBuffer[d];
+      //   Serial.print(val);
+      //   if (val < 100) {
+
+      //   }
+      //   Serial.print("\t");
+      // }
+      // Serial.println("");
+
       // Optional: magnetometer-based yaw cube ('m') if getMotion9 is available.
       int16_t ax, ay, az, gx, gy, gz, mx, my, mz;
       gyros[selectedSensor].mpu->getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
@@ -732,7 +743,7 @@ void loop() {
  
 if (millis() - last > 500) {
   last = millis();
-  Serial.printf("heap=%u\n", (unsigned)ESP.getFreeHeap());
+  // Serial.printf("heap=%u\n", (unsigned)ESP.getFreeHeap());
 }
 
 // #ifdef USE_DISPLAY

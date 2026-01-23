@@ -535,6 +535,7 @@ void setupSensors() {
             gyros[selectedSensor].fifoBuffer = new uint8_t[FIFO_SIZE_MPU9250];
             gyros[selectedSensor].mpu->isMPU9150 = true;
         } else{
+        //   gyros[selectedSensor].fifoBuffer = new uint8_t[FIFO_SIZE_MPU6050];
           gyros[selectedSensor].fifoBuffer = new uint8_t[FIFO_SIZE_MPU6050];
         }
         // Allocate quaternion container once (avoid heap churn/leaks in the main loop)
