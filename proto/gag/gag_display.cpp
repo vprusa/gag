@@ -1046,8 +1046,7 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
 
       auto clampLen = [&](float v) -> int {
         float av = (v < 0) ? -v : v;
-        float t = (fullScale > 0.0001f) ? (av / 
-        ) : 0.0f;
+        float t = (fullScale > 0.0001f) ? (av / fullScale) : 0.0f;
         if (t > 1.0f) t = 1.0f;
         return (int)(t * (float)maxLen + 0.5f);
       };
