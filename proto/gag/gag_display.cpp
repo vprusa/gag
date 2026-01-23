@@ -22,7 +22,7 @@ static uint32_t gFlashUntilMs    = 0;   // millis() timestamp when highlight exp
 
 // ---------- Command history (for the rotated text area) ----------
 static constexpr uint8_t kCmdHistoryLines = 3;
-static constexpr size_t  kCmdLineMaxLen   = 40;  // stored; rendering may truncate further
+static constexpr size_t  kCmdLineMaxLen   = 10;  // stored; rendering may truncate further
 static char    gCmdHistory[kCmdHistoryLines][kCmdLineMaxLen];
 static uint8_t gCmdHistoryCount = 0;  // number of valid lines in gCmdHistory
 static uint8_t gCmdSeq = 0;           // prefix counter (mod 10)
@@ -319,6 +319,7 @@ static inline void drawChar5x7Rot90CCW(int x0, int y0, char ch) {
       if (!(bits & mask)) continue;
       // Original (c,r) -> rotated CCW: (x',y') = (r, 4 - c)
       const int x = x0 + r;
+      // const int y = y0 + (4 - c);
       const int y = y0 + (4 - c);
       if (x >= 0 && x < kScreenW && y >= 0 && y < kScreenH) {
         display.setPixel(x, y);
@@ -844,7 +845,7 @@ void viz_draw_frame(const VizQuaternion q_in[GAG_NUM_SENSORS]) {
         const int x = textLeftPx + li * lineW;
         if (x >= kScreenW) break;
 
-        drawString5x7Rot90CCW(x, 0, gCmdHistory[histIdx], maxChars);
+        drawString5x7Rot90CCW(x, 25, gCmdHistory[histIdx], maxChars);
       }
     }
 
