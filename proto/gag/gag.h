@@ -131,8 +131,6 @@ uint8_t dataPacket[PACKET_LENGTH] = {'*', 0x99, 0,  0, 0,  0, 0,  0, 0,  0, 0,
                                        0x00, 0x00, '\r', '\n'};
 #endif
 
-#define HP 10000
-
 #ifdef USE_BT_GATT_SERIAL
 ServerCallbacks::ServerCallbacks(void){
     GAG_DEBUG_PRINTLN("ServerCallbacks");
@@ -226,7 +224,7 @@ enum Sensor {
     SENSOR_PIN_MU = 3,
     SENSOR_PIN_EU = 4,
     SENSOR_PIN_HG = 5, //0, //5, // hand palm
-    // SENSOR_PIN_HP = 6, // hand palm MPU6050
+    SENSOR_PIN_HP = 6, // hand palm (2nd wrist/palm IMU)
     SENSOR_PIN_NF = -1,
 };
 
@@ -246,9 +244,22 @@ struct Gyro {
     bool hasDataReady = false;
     bool alreadySentData = false;
     long lastResetTime=0;
+
+    // Per-sensor DMP status (needed to support mixing MPU6050 and MPU9250).
+    bool dmpReady = false;
+    uint16_t dmpPacketSize = MPU6050_FIFO_PACKET_SIZE;
+    bool isMpu9250 = false;
+
+    // Latest raw samples (either read from FIFO packet or registers).
+    int16_t rawAccel[3] = {0, 0, 0};
+    int16_t rawGyro[3]  = {0, 0, 0};
 };
 
 Sensor selectedSensor = SENSOR_PIN_NF;
+
+// The recognizer only has one WRIST slot. We will automatically select
+// which physical IMU acts as WRIST (prefer MPU9250/MPU6500-class: deviceID==0x38).
+Sensor wristSensor = SENSOR_PIN_HG;
 
 //Variables
 long elapsedTime, timeNow, timePrev, elapsedTimeToSwitch, handSwitchPrev, handSwitchElapsed; //Variables for time control
@@ -325,11 +336,11 @@ uint8_t selectSingleMPU(uint8_t i) {
             selectorOffsettedPin = SENSOR_PIN_EU_COMPENSATION;
         break;
         #endif
-        // #ifdef SENSOR_PIN_HP_COMPENSATION
-        // case SENSOR_PIN_HP:
-            // selectorOffsettedPin = SENSOR_PIN_HP_COMPENSATION;
-        // break;
-        // #endif
+        #ifdef SENSOR_PIN_HP_COMPENSATION
+        case SENSOR_PIN_HP:
+            selectorOffsettedPin = SENSOR_PIN_HP_COMPENSATION;
+        break;
+        #endif
         #ifdef SENSOR_PIN_HG_COMPENSATION
         case SENSOR_PIN_HG:
             selectorOffsettedPin = SENSOR_PIN_HG_COMPENSATION;
@@ -528,67 +539,123 @@ void setupSensors() {
     // calibrationDone = true;
 
     for (int i = FIRST_SENSOR; i <= LAST_SENSOR; i++) {
-        selectedSensor = (Sensor) i;
+        selectedSensor = (Sensor)i;
         enableSingleMPU(selectedSensor);
-        gyros[selectedSensor].mpu = new MPU6050_MPU9150(MPU6050_MPU9150_ADDRESS_AD0_LOW);//   0x68 / 0x69
-        if(selectedSensor == HP) {
-            gyros[selectedSensor].fifoBuffer = new uint8_t[FIFO_SIZE_MPU9250];
-            gyros[selectedSensor].mpu->isMPU9150 = true;
-        } else{
-        //   gyros[selectedSensor].fifoBuffer = new uint8_t[FIFO_SIZE_MPU6050];
-          gyros[selectedSensor].fifoBuffer = new uint8_t[FIFO_SIZE_MPU6050];
+
+        Gyro &g = gyros[selectedSensor];
+
+        // Will be detected during initMPUAndDMP() from WHO_AM_I (6-bit) == 0x38.
+        g.isMpu9250 = false;
+        g.dmpReady = false;
+        g.dmpPacketSize = packetSizeS;
+
+        // Re-create MPU instances/buffers (setupSensors() can be called again after commands).
+        if (g.mpu) { delete g.mpu; g.mpu = nullptr; }
+        g.mpu = new MPU6050_MPU9150(MPU6050_MPU9150_ADDRESS_AD0_LOW); // 0x68
+        g.mpu->isMPU9150 = false;
+
+        if (g.fifoBuffer) { delete[] g.fifoBuffer; g.fifoBuffer = nullptr; }
+        // Allocate a larger buffer for the two palm/wrist candidates (HG/HP) to be safe.
+        // (Even with DMP packet size 42 this is not strictly required, but avoids surprises.)
+        const bool mayBeWrist = (selectedSensor == HG) || (selectedSensor == HP);
+        const uint16_t fifoSz = mayBeWrist ? FIFO_SIZE_MPU9250 : FIFO_SIZE_MPU6050;
+        g.fifoBuffer = new uint8_t[fifoSz];
+
+        if (g.q == nullptr) {
+            g.q = new Quaternion();
         }
-        // Allocate quaternion container once (avoid heap churn/leaks in the main loop)
-        if (gyros[selectedSensor].q == nullptr) {
-          gyros[selectedSensor].q = new Quaternion(); // default ctor => identity
-        }
 
-
-        int selectorOffsettedPin = selectSingleMPU(i);
-
+        const int selectorOffsettedPin = selectSingleMPU(i);
         GAG_DEBUG_SETUP_PRINT(F("selectedSensor: "));
         GAG_DEBUG_SETUP_PRINTLN((int)selectedSensor);
-        // MASTER_SERIAL_NAME.println(F(""));
-        // MASTER_SERIAL_NAME.println(""));
         GAG_DEBUG_SETUP_PRINT(F("Enabled on pin: "));
-        GAG_DEBUG_SETUP_PRINT(selectorOffsettedPin);
-        
-        // MASTER_SERIAL_NAME.print(F("Enabled on pin: "));
-        // MASTER_SERIAL_NAME.print(selectorOffsettedPin);
-        // MASTER_SERIAL_NAME.println(F(""));
-        
-        initMPUAndDMP(1, i);
+        GAG_DEBUG_SETUP_PRINTLN(selectorOffsettedPin);
 
-        if(i == HG) {
-          loadHGData(HG);
-        }
-         
+        const uint8_t st = initMPUAndDMP(1, (uint8_t)i);
+        (void)st;
+
         GAG_DEBUG_SETUP_PRINTLN(F("\n\n"));
     }
+
+    // Prime the selected wrist quaternion once so the visualizer/recognizer starts from a sane value.
+    loadHGData((int)wristSensor);
 }
 
-void loadHGData(int selectedSensor) {
-   Serial.println(" !!!!! ");
-    Serial.println("Quaternion: ");
-          //  gyros[selectedSensor].mpu->dmpGetGyroSensor()
-           MPU6050_MPU9150 mpu = *gyros[selectedSensor].mpu;
-            fifoCount = mpu.getFIFOCount();
-            uint8_t *fifoBuffer = gyros[selectedSensor].fifoBuffer; // FIFO storage buffer
-            int packetSize = packetSizeS; 
 
-            if (fifoCount >= packetSize && fifoCount <= 1024 && fifoCount != 0 ) {
-                // wait for correct available data length, should be a VERY short wait
-                while (fifoCount >= packetSize) {
-                    mpu.getFIFOBytes(fifoBuffer, packetSize);
-                    fifoCount -= packetSize;
-                }
-                if (gyros[selectedSensor].q == nullptr) {
-                  gyros[selectedSensor].q = new Quaternion();
-                }
-                uint8_t res = mpu.dmpGetQuaternion(gyros[selectedSensor].q, fifoBuffer);
-                gyros[selectedSensor].q->normalize();
-                gyros[selectedSensor].hasDataReady=true;
-            }
+void storeQuaternionInFIFO() {
+    int16_t qI[4];
+
+    // Use correct scaling (16384 like dmpGetQuaternion expects)
+    qI[0] = (int16_t)(q.w * 16384.0f);
+    qI[1] = (int16_t)(q.x * 16384.0f);
+    qI[2] = (int16_t)(q.y * 16384.0f);
+    qI[3] = (int16_t)(q.z * 16384.0f);
+
+    // Store in FIFO using correct order (Big Endian)
+    uint8_t *fifoBuffer = gyros[selectedSensor].fifoBuffer;
+
+    fifoBuffer[0]  = (qI[0] >> 8) & 0xFF;  // High Byte
+    fifoBuffer[1]  = qI[0] & 0xFF;         // Low Byte
+    
+    fifoBuffer[4]  = (qI[1] >> 8) & 0xFF;
+    fifoBuffer[5]  = qI[1] & 0xFF;
+    
+    fifoBuffer[8]  = (qI[2] >> 8) & 0xFF;
+    fifoBuffer[9]  = qI[2] & 0xFF;
+
+    fifoBuffer[12] = (qI[3] >> 8) & 0xFF;
+    fifoBuffer[13] = qI[3] & 0xFF;
+}
+
+
+void loadHGData(int sensorIdx) {
+    Gyro &g = gyros[sensorIdx];
+    MPU6050_MPU9150 *mpu = g.mpu;
+    if (!mpu || !g.fifoBuffer || !g.dmpReady) return;
+
+    // Make sure the requested sensor is actually on the I2C bus.
+    const Sensor prev = selectedSensor;
+    selectedSensor = (Sensor)sensorIdx;
+    enableSingleMPU(sensorIdx);
+
+    fifoCount = mpu->getFIFOCount();
+    uint8_t *fifoBuffer = g.fifoBuffer;
+    const uint16_t packetSize = (g.dmpPacketSize != 0) ? g.dmpPacketSize : packetSizeS;
+
+    if (fifoCount >= packetSize && fifoCount <= 1024 && fifoCount != 0) {
+        while (fifoCount >= packetSize) {
+            mpu->getFIFOBytes(fifoBuffer, packetSize);
+            fifoCount -= packetSize;
+        }
+
+        Quaternion sensorQ;
+        (void)mpu->dmpGetQuaternion(&sensorQ, fifoBuffer);
+        sensorQ.normalize();
+
+        // Also capture raw accel/gyro from the same FIFO packet.
+        mpu->dmpGetGyro(g.rawGyro, fifoBuffer);
+        mpu->dmpGetAccel(g.rawAccel, fifoBuffer);
+
+        Quaternion outQ = sensorQ;
+        if (sensorIdx == (int)wristSensor) {
+            // Wrist IMU is mounted with swapped axes.
+            outQ = Quaternion(sensorQ.w, -sensorQ.y, -sensorQ.x, sensorQ.z);
+            outQ.normalize();
+            q = outQ;
+            storeQuaternionInFIFO();
+        }
+
+        if (g.q == nullptr) g.q = new Quaternion();
+        g.q->w = outQ.w;
+        g.q->x = outQ.x;
+        g.q->y = outQ.y;
+        g.q->z = outQ.z;
+
+        g.hasDataReady = true;
+        g.alreadySentData = false;
+    }
+
+    selectedSensor = prev;
 }
 
 /**
@@ -618,71 +685,77 @@ uint8_t initMPUAndDMP(uint8_t attempt, uint8_t i) {
 #ifdef MASTER_SERIAL_NAME
     GAG_DEBUG_SETUP_PRINTLN(F("USB: Initializing I2C devices..."));
 #endif
-    GAG_DEBUG_SETUP_PRINT(F("Enabling DMP... "));
-    GAG_DEBUG_SETUP_PRINTLN(selectedSensor);
-    MPU6050_MPU9150 mpu = *gyros[selectedSensor].mpu;
-    mpu.initialize();
+    GAG_DEBUG_SETUP_PRINT(F("Enabling DMP for sensor idx: "));
+    GAG_DEBUG_SETUP_PRINTLN(i);
+
+    Gyro &g = gyros[i];
+    MPU6050_MPU9150 *mpu = g.mpu;
+    if (!mpu) {
+        GAG_DEBUG_SETUP_PRINTLN(F("ERROR: mpu pointer is null"));
+        return 1;
+    }
+
+    // Ensure the target IMU is the only one on the I2C bus.
+    enableSingleMPU(i);
+
+    mpu->initialize();
     GAG_DEBUG_SETUP_PRINTLN(F("Testing device connections..."));
-    GAG_DEBUG_SETUP_PRINTLN(mpu.testConnection() ? F("MPU* connection successful") : F("MPU* connection failed"));
-    GAG_DEBUG_SETUP_PRINTLN("testConnection");
-    GAG_DEBUG_SETUP_PRINTLN(mpu.getDeviceID());
-    if(selectedSensor != HP) {
-        GAG_DEBUG_SETUP_PRINTLN(F("dmpInitialize MPU6050..."));
-        GAG_DEBUG_SETUP_PRINTLN(F("Initializing DMP..."));
-        devStatus = mpu.dmpInitialize();
-        GAG_DEBUG_SETUP_PRINT(F("DMP initialized..."));
+    const uint8_t devId6 = mpu->getDeviceID();
+    GAG_DEBUG_SETUP_PRINT(F("WHO_AM_I (6-bit): 0x"));
+    GAG_DEBUG_SETUP_PRINTLNF(devId6, HEX);
+
+    // Classify IMU family from the 6-bit WHO_AM_I value.
+    //  - 0x34 => MPU6050/MPU9150
+    //  - 0x38 => MPU6500/MPU9250
+    g.isMpu9250 = (devId6 == 0x38);
+    if (g.isMpu9250) {
+        // Prefer the MPU9250/6500-class unit as the single WRIST sensor.
+        wristSensor = (Sensor)i;
+    }
+    GAG_DEBUG_SETUP_PRINTLN(mpu->testConnection() ? F("MPU connection successful") : F("MPU connection failed"));
+
+    GAG_DEBUG_SETUP_PRINTLN(F("Initializing DMP..."));
+    devStatus = mpu->dmpInitialize();
+
+    if (devStatus == 0) {
+        mpu->setDMPEnabled(true);
+        mpu->setFIFOEnabled(true);
+        mpu->resetFIFO();
+        g.dmpReady = true;
+        g.dmpPacketSize = mpu->dmpGetFIFOPacketSize();
+        GAG_DEBUG_SETUP_PRINTLN(F("DMP ready"));
     } else {
-        GAG_DEBUG_SETUP_PRINTLN(F("dmpInitialize MPU9150..."));
-        mpu.isMPU9150 = true;
-        devStatus = mpu.dmpInitialize2();
-        GAG_DEBUG_SETUP_PRINTLN("devStatus");
+        // For MPU9250 this is a common failure mode if the loaded DMP image isn't compatible.
+        // The runtime code will fall back to raw accel/gyro fusion (no FIFO).
+        g.dmpReady = false;
+        g.dmpPacketSize = packetSizeS;
+        GAG_DEBUG_SETUP_PRINT(F("DMP init failed, status="));
         GAG_DEBUG_SETUP_PRINTLN(devStatus);
-        mpu.setDMPEnabled(true);
-        mpu.setFIFOEnabled(true);
-        mpu.resetFIFO();
-        //devStatus = mpu.dmpInitialize();
-        GAG_DEBUG_SETUP_PRINT(F("Skipping initialing DMP for MPU9150..."));
     }
-    // supply your own gyro offsets here for each mpu, scaled for min sensitivity
-    // lets ignore this considering we want realtive values anyway
-    
+
+
     #ifdef SET_OFFSETS
-    if(selectedSensor == HP){
-        mpu.setXAccelOffset(sensorsOffsets[i][0], MPU9150_RA_XA_OFFS_H);
-        mpu.setYAccelOffset(sensorsOffsets[i][1], MPU9150_RA_YA_OFFS_H);
-        mpu.setZAccelOffset(sensorsOffsets[i][2], MPU9150_RA_ZA_OFFS_H);
-        mpu.setXGyroOffset(sensorsOffsets[i][3], MPU9150_RA_XG_OFFS_USRH);
-        mpu.setYGyroOffset(sensorsOffsets[i][4], MPU9150_RA_YG_OFFS_USRH);
-        mpu.setZGyroOffset(sensorsOffsets[i][5], MPU9150_RA_ZG_OFFS_USRH);
-    }else{
-        mpu.setXAccelOffset(sensorsOffsets[i][0]);
-        mpu.setYAccelOffset(sensorsOffsets[i][1]);
-        mpu.setZAccelOffset(sensorsOffsets[i][2]);
-        mpu.setXGyroOffset(sensorsOffsets[i][3]);
-        mpu.setYGyroOffset(sensorsOffsets[i][4]);
-        mpu.setZGyroOffset(sensorsOffsets[i][5]);
+    // MPU9250/MPU6500 family uses the "MPU9150" accel offset register block (0x77..).
+    if (g.isMpu9250) {
+        mpu->setXAccelOffset(sensorsOffsets[i][0], MPU9150_RA_XA_OFFS_H);
+        mpu->setYAccelOffset(sensorsOffsets[i][1], MPU9150_RA_YA_OFFS_H);
+        mpu->setZAccelOffset(sensorsOffsets[i][2], MPU9150_RA_ZA_OFFS_H);
+    } else {
+        mpu->setXAccelOffset(sensorsOffsets[i][0]);
+        mpu->setYAccelOffset(sensorsOffsets[i][1]);
+        mpu->setZAccelOffset(sensorsOffsets[i][2]);
     }
-        
+    // Gyro offset registers are compatible.
+    mpu->setXGyroOffset(sensorsOffsets[i][3]);
+    mpu->setYGyroOffset(sensorsOffsets[i][4]);
+    mpu->setZGyroOffset(sensorsOffsets[i][5]);
     #endif
-
-    // make sure it worked (returns 0 if so)
-
-    mpu.setDMPEnabled(true);
-
-    // set our DMP Ready flag so the main loop( ) function knows it's okay to use it
-    GAG_DEBUG_SETUP_PRINTLN(F("DMP ready! Getting packet size..."));
-    GAG_DEBUG_SETUP_PRINT(F("packet size: "));
-
-    if(selectedSensor == HP) {
-        GAG_DEBUG_SETUP_PRINT(packetSizeM);
-        mpu.setFIFOEnabled(true);
-        // calibrateQuaternionOffset(&mpu);
-    }else{
-        GAG_DEBUG_SETUP_PRINT(packetSizeS);
+    if (g.dmpReady) {
+        GAG_DEBUG_SETUP_PRINT(F("packet size: "));
+        GAG_DEBUG_SETUP_PRINTLN(g.dmpPacketSize);
     }
-    GAG_DEBUG_SETUP_PRINTLN(F(""));
 
-    return 0;
+    return devStatus;
 }
 
 int setOrRotateSelectedGyro(int i) {
@@ -705,12 +778,13 @@ void automaticFifoReset() {
     for(int i = 0; i < SENSORS_COUNT; i++){
         if(gyros[i].lastResetTime + MIN_TIME_TO_RESET < now) {
             int selectedNow = setOrRotateSelectedGyro(i);
-            MPU6050_MPU9150 mpu = *gyros[selectedSensor].mpu;
-            int localFifoCount = mpu.getFIFOCount();
+            MPU6050_MPU9150 *mpu = gyros[selectedSensor].mpu;
+            if (!mpu) continue;
+            int localFifoCount = mpu->getFIFOCount();
             if(( localFifoCount >= MAX_FIFO_USAGE_FOR_RESET || 
                 ( gyros[i].lastResetTime + MAX_TIME_TO_RESET < now && 
                 localFifoCount >= MIN_FIFO_USAGE_FOR_RESET) ) ){
-                mpu.resetFIFO();
+                mpu->resetFIFO();
                 gyros[selectedNow].lastResetTime = now;
             }
         }
@@ -839,31 +913,6 @@ void updateQuaternion(int16_t gx, int16_t gy, int16_t gz) {
 }
 
 
-void storeQuaternionInFIFO() {
-    int16_t qI[4];
-
-    // Use correct scaling (16384 like dmpGetQuaternion expects)
-    qI[0] = (int16_t)(q.w * 16384.0f);
-    qI[1] = (int16_t)(q.x * 16384.0f);
-    qI[2] = (int16_t)(q.y * 16384.0f);
-    qI[3] = (int16_t)(q.z * 16384.0f);
-
-    // Store in FIFO using correct order (Big Endian)
-    uint8_t *fifoBuffer = gyros[selectedSensor].fifoBuffer;
-
-    fifoBuffer[0]  = (qI[0] >> 8) & 0xFF;  // High Byte
-    fifoBuffer[1]  = qI[0] & 0xFF;         // Low Byte
-    
-    fifoBuffer[4]  = (qI[1] >> 8) & 0xFF;
-    fifoBuffer[5]  = qI[1] & 0xFF;
-    
-    fifoBuffer[8]  = (qI[2] >> 8) & 0xFF;
-    fifoBuffer[9]  = qI[2] & 0xFF;
-
-    fifoBuffer[12] = (qI[3] >> 8) & 0xFF;
-    fifoBuffer[13] = qI[3] & 0xFF;
-}
-
 // Define quaternion offset
 float q_offset_w = 0.0f, q_offset_x = 0.0f, q_offset_y = 0.0f, q_offset_z = 0.0f;
 
@@ -953,69 +1002,83 @@ void loadMPU60500Data(MPU6050_MPU9150 *mpu) {
 }
 
 bool loadDataFromFIFO(bool forceLoad) {
-    if(selectedSensor != HP) {
-        MPU6050_MPU9150 * mpu = gyros[selectedSensor].mpu;
+    Gyro &g = gyros[selectedSensor];
+    MPU6050_MPU9150 *mpu = g.mpu;
+    if (!mpu || !g.fifoBuffer) return false;
 
+    if (g.hasDataReady && !forceLoad) return false;
 
-        if(!gyros[selectedSensor].hasDataReady || forceLoad) {
-            fifoCount = mpu->getFIFOCount();
-            uint8_t *fifoBuffer = gyros[selectedSensor].fifoBuffer; // FIFO storage buffer
-            int packetSize = packetSizeS; 
+    // -----------------------------------------------------------------------
+    // DMP path (default for MPU6050 and for MPU9250 if DMP init succeeded)
+    // -----------------------------------------------------------------------
+    if (g.dmpReady) {
+        fifoCount = mpu->getFIFOCount();
+        uint8_t *fifoBuffer = g.fifoBuffer;
+        const uint16_t packetSize = (g.dmpPacketSize != 0) ? g.dmpPacketSize : packetSizeS;
 
-
-            if (fifoCount >= packetSize && fifoCount <= 1024 && fifoCount != 0 ) {
-                // wait for correct available data length, should be a VERY short wait
-                while (fifoCount >= packetSize) {
-                    mpu->getFIFOBytes(fifoBuffer, packetSize);
-                    fifoCount -= packetSize;
-                }
-                Quaternion sensorQ;
-                uint8_t res = mpu->dmpGetQuaternion(&sensorQ,fifoBuffer);
-                sensorQ.normalize();
-                if (selectedSensor == HG) {
-
-                  Quaternion rotatedQ = Quaternion(sensorQ.w, -sensorQ.y, -sensorQ.x, sensorQ.z);
-                  rotatedQ.normalize();
-
-                  // Save rotated quaternion
-                  if (gyros[selectedSensor].q == nullptr) {
-                    gyros[selectedSensor].q = new Quaternion();
-                  }
-                  gyros[selectedSensor].q->w = rotatedQ.w;
-                  gyros[selectedSensor].q->x = rotatedQ.x;
-                  gyros[selectedSensor].q->y = rotatedQ.y;
-                  gyros[selectedSensor].q->z = rotatedQ.z;
-                  q.w = gyros[selectedSensor].q->w;
-                  q.x = gyros[selectedSensor].q->x;
-                  q.y = gyros[selectedSensor].q->y;
-                  q.z = gyros[selectedSensor].q->z;
-                  storeQuaternionInFIFO();
-
-                } else {
-                  if (gyros[selectedSensor].q == nullptr) {
-                    gyros[selectedSensor].q = new Quaternion();
-                  }
-                  gyros[selectedSensor].q->w = sensorQ.w;
-                  gyros[selectedSensor].q->x = sensorQ.x;
-                  gyros[selectedSensor].q->y = sensorQ.y;
-                  gyros[selectedSensor].q->z = sensorQ.z;
-                }
-
-                //mpu.resetFIFO();
-                gyros[selectedSensor].hasDataReady=true;
-                return true;
+        if (fifoCount >= packetSize && fifoCount <= 1024 && fifoCount != 0) {
+            // Drain FIFO, keep only the newest packet.
+            while (fifoCount >= packetSize) {
+                mpu->getFIFOBytes(fifoBuffer, packetSize);
+                fifoCount -= packetSize;
             }
+
+            Quaternion sensorQ;
+            (void)mpu->dmpGetQuaternion(&sensorQ, fifoBuffer);
+            sensorQ.normalize();
+
+            // Raw gyro/accel straight from the FIFO packet.
+            mpu->dmpGetGyro(g.rawGyro, fifoBuffer);
+            mpu->dmpGetAccel(g.rawAccel, fifoBuffer);
+
+            Quaternion outQ = sensorQ;
+            if (selectedSensor == wristSensor) {
+                // Wrist IMU is mounted with swapped axes.
+                outQ = Quaternion(sensorQ.w, -sensorQ.y, -sensorQ.x, sensorQ.z);
+                outQ.normalize();
+            }
+
+            if (g.q == nullptr) g.q = new Quaternion();
+            g.q->w = outQ.w;
+            g.q->x = outQ.x;
+            g.q->y = outQ.y;
+            g.q->z = outQ.z;
+
+            // Keep the FIFO buffer quaternion bytes consistent with the rotated wrist quaternion
+            // (fifoToPacket()/visualizer read from fifoBuffer[0..13]).
+            if (selectedSensor == wristSensor) {
+                q = outQ;
+                storeQuaternionInFIFO();
+            }
+
+            g.hasDataReady = true;
+            g.alreadySentData = false;
+            return true;
         }
-    } else {
-        forceLoad = true;
-     
-          loadMPU9150Data(gyros[selectedSensor].mpu);
-          gyros[selectedSensor].hasDataReady=true;
-          gyros[selectedSensor].alreadySentData=false;
-          return true;
-        // }
+        return false;
     }
-    return false;
+
+    // -----------------------------------------------------------------------
+    // Fallback path (used when DMP init failed; primarily for MPU9250).
+    // Uses raw accel+gyro registers + simple drift correction.
+    // -----------------------------------------------------------------------
+    int16_t ax, ay, az, gx, gy, gz;
+    mpu->getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+    g.rawAccel[0] = ax; g.rawAccel[1] = ay; g.rawAccel[2] = az;
+    g.rawGyro[0]  = gx; g.rawGyro[1]  = gy; g.rawGyro[2]  = gz;
+
+    if (g.q == nullptr) g.q = new Quaternion();
+    q = *g.q; // restore per-sensor state
+    updateQuaternion(gx, gy, gz);
+    correctDriftWithAccel(ax, ay, az);
+
+    // Save state and expose quaternion through fifoBuffer so existing packet/visualization code still works.
+    *g.q = q;
+    storeQuaternionInFIFO();
+
+    g.hasDataReady = true;
+    g.alreadySentData = false;
+    return true;
 }
 
 void writePacket() {

@@ -219,9 +219,9 @@ static inline bool gagIsToggleCommand(const char* cmdRaw) {
 }
 
 static inline gag::Sensor mapGagSensorToRecog(uint8_t gagIdx) {
-  // Your sensor order: 0..4 = fingers (TU..EU), 5 = wrist (HG)
+  // Your sensor order: 0..4 = fingers (TU..EU), wristSensor = WRIST
+  if (gagIdx == (uint8_t)wristSensor) return gag::Sensor::WRIST;
   switch (gagIdx) {
-    case 5: return gag::Sensor::WRIST;
     case 0: return gag::Sensor::THUMB;
     case 1: return gag::Sensor::INDEX;
     case 2: return gag::Sensor::MIDDLE;
@@ -233,9 +233,9 @@ static inline gag::Sensor mapGagSensorToRecog(uint8_t gagIdx) {
 
 static inline uint8_t mapRecogMaskToGagMask(uint8_t libMask) {
   // Library order bits: 0=WRIST,1=THUMB,2=INDEX,3=MIDDLE,4=RING,5=LITTLE
-  // Project order bits: 0=TU,1=SU,2=FU,3=MU,4=EU,5=HG
+  // Project order bits: 0=TU,1=SU,2=FU,3=MU,4=EU, (wristSensor)=WRIST
   uint8_t m = 0;
-  if (libMask & (1u << 0)) m |= (1u << 5);
+  if (libMask & (1u << 0)) m |= (1u << (uint8_t)wristSensor);
   if (libMask & (1u << 1)) m |= (1u << 0);
   if (libMask & (1u << 2)) m |= (1u << 1);
   if (libMask & (1u << 3)) m |= (1u << 2);
@@ -274,10 +274,108 @@ return;
   #endif
 }
 
+
+// -----------------------------------------------------------------------------
+// Direct MPU6050 accelerometer read (bypasses DMP/FIFO parsing)
+// Uses ACCEL_XOUT_* registers (0x3B..0x40) per the MPU-60X0 register map.
+// -----------------------------------------------------------------------------
+// Wrist sensor is expected to be an MPU6050. (The code will try 0x68 then 0x69.)
+static uint8_t g_wrist_i2c_addr = MPU6050_MPU9150_ADDRESS_AD0_LOW;
+
+static inline bool gag_i2c_read_bytes(uint8_t addr, uint8_t reg, uint8_t* dst, size_t len) {
+  Wire.beginTransmission(addr);
+  Wire.write(reg);
+  if (Wire.endTransmission(false) != 0) return false;
+
+  const size_t n = Wire.requestFrom((int)addr, (int)len, (int)true);
+  if (n != len) return false;
+
+  for (size_t i = 0; i < len; ++i) {
+    if (!Wire.available()) return false;
+    dst[i] = (uint8_t)Wire.read();
+  }
+  return true;
+}
+
+static inline bool gag_i2c_read_byte(uint8_t addr, uint8_t reg, uint8_t& out) {
+  return gag_i2c_read_bytes(addr, reg, &out, 1);
+}
+
+static inline float gag_mpu6050_lsb_per_g_from_accel_cfg(uint8_t accelCfg) {
+  // ACCEL_CONFIG (0x1C): AFS_SEL[1:0] are bits 4:3
+  const uint8_t afs = (accelCfg >> 3) & 0x03;
+  switch (afs) {
+    case 0: return 16384.0f; // ±2g
+    case 1: return  8192.0f; // ±4g
+    case 2: return  4096.0f; // ±8g
+    case 3: return  2048.0f; // ±16g
+    default: return 16384.0f;
+  }
+}
+
+// Reads wrist accel in "g". Returns false if I2C read fails.
+//
+// If applyAxisFix=true, remaps (x,y,z) -> (-y,-x,z) to match the wrist quaternion remap
+// used in loadDataFromFIFO() for HG.
+static inline bool gag_read_wrist_accel_g(VizAccel& out, bool applyAxisFix = true) {
+  uint8_t buf[6];
+
+  uint8_t addr = g_wrist_i2c_addr;
+  // if (!gag_i2c_read_bytes(addr, MPU6050_MPU9150_RA_ACCEL_XOUT_H, buf, sizeof(buf))) {
+  //   // Try alternate MPU address once (AD0 high).
+  //   addr = (addr == MPU6050_MPU9150_ADDRESS_AD0_LOW) ? MPU6050_MPU9150_ADDRESS_AD0_HIGH
+  //                                                    : MPU6050_MPU9150_ADDRESS_AD0_LOW;
+
+  //   if (!gag_i2c_read_bytes(addr, MPU6050_MPU9150_RA_ACCEL_XOUT_H, buf, sizeof(buf))) {
+  //     return false;
+  //   }
+  //   g_wrist_i2c_addr = addr;
+  // }
+  // 
+  // if (!gag_i2c_read_bytes(addr, 0x35, buf, sizeof(buf))) {
+    // MPU6050_MPU9150_RA_GYRO_XOUT_H
+    // MPU6050_MPU9150_RA_ACCEL_XOUT_H
+  if (!gag_i2c_read_bytes(addr, MPU6050_MPU9150_RA_ACCEL_XOUT_H, buf, sizeof(buf))) {
+      return false;
+  }
+
+  const int16_t axRaw = (int16_t)((uint16_t)buf[0] << 8 | buf[1]);
+  const int16_t ayRaw = (int16_t)((uint16_t)buf[2] << 8 | buf[3]);
+  const int16_t azRaw = (int16_t)((uint16_t)buf[4] << 8 | buf[5]);
+
+  // const int16_t axRaw = (int16_t)((uint16_t)buf[6] << 8 | buf[7]);
+  // const int16_t ayRaw = (int16_t)((uint16_t)buf[8] << 8 | buf[9]);
+  // const int16_t azRaw = (int16_t)((uint16_t)buf[10] << 8 | buf[11]);
+
+  uint8_t accelCfg = 0;
+  (void)gag_i2c_read_byte(addr, MPU6050_MPU9150_RA_ACCEL_CONFIG, accelCfg);
+  const float lsbPerG = gag_mpu6050_lsb_per_g_from_accel_cfg(accelCfg);
+
+  const float ax = (float)axRaw / lsbPerG;
+  const float ay = (float)ayRaw / lsbPerG;
+  const float az = (float)azRaw / lsbPerG;
+
+  if (applyAxisFix) {
+    out.x = -ay;
+    out.y = -ax;
+    out.z =  az;
+  } else {
+    out.x = ax;
+    out.y = ay;
+    out.z = az;
+  }
+  return true;
+}
+
+
 static inline void feedRecognizerFromSelectedSensor() {
   if (!gyros[selectedSensor].q) return;
 
   const uint8_t idx = (uint8_t)selectedSensor;
+
+  // The recognizer has only 6 logical sensors: WRIST + 5 fingers.
+  // If you have two palm/wrist IMUs wired (e.g. HG + HP), ignore the extra one.
+  if (idx > 4 && idx != (uint8_t)wristSensor) return;
   const uint32_t now = millis();
   gag::Quaternion q(
     (float)gyros[selectedSensor].q->w,
@@ -292,64 +390,36 @@ static inline void feedRecognizerFromSelectedSensor() {
 
   // Wrist-only: also feed accelerometer samples to the recognizer and visualization.
   // NOTE: units are expressed in "g" based on a 16384 LSB/g assumption (MPU6050 default).
-  if (idx == 5) { // project wrist index (HG)
-    int16_t accRaw[3] = {0,0,0};
-    // Extract from the most recent DMP packet.
-    if (gyros[selectedSensor].mpu) {
-      gyros[selectedSensor].mpu->dmpGetAccel(accRaw, gyros[selectedSensor].fifoBuffer);
-    }
+
+  // Wrist-only: also feed accelerometer samples to the recognizer and visualization.
+  // NOTE: we use the accel decoded for the same IMU sample we just processed.
+  // Wrist-only accel: use the IMU selected as wristSensor.
+  if (idx == (uint8_t)wristSensor) {
+    // Raw accel is populated in loadDataFromFIFO():
+    //   - from the FIFO packet when DMP is enabled
+    //   - from registers (getMotion6) when DMP init fails
+    const int16_t axRaw = gyros[idx].rawAccel[0];
+    const int16_t ayRaw = gyros[idx].rawAccel[1];
+    const int16_t azRaw = gyros[idx].rawAccel[2];
+
+    // Assumes AFS_SEL=0 (±2g): 16384 LSB/g.
     const float invG = 1.0f / 16384.0f;
-    gag::AccelData a((float)accRaw[0] * invG, (float)accRaw[1] * invG, (float)accRaw[2] * invG);
+    VizAccel aViz{0.0f, 0.0f, 0.0f};
+
+    // Match wrist axis fix used elsewhere: (x,y,z) -> (-y,-x,z)
+    aViz.x = -(float)ayRaw * invG;
+    aViz.y = -(float)axRaw * invG;
+    aViz.z =  (float)azRaw * invG;
+
+    gag::AccelData a(aViz.x, aViz.y, aViz.z);
     g_recog.processSample(s, gag::RecogData::fromAccel(a), now);
 
     #ifdef USE_VISUALIZATION
-      viz_set_wrist_accel(a.x, a.y, a.z);
-
-// packetSizeS
-      // for (int d = 0; d < packetSizeS; d++) {
-      //   uint8_t val = gyros[selectedSensor].fifoBuffer[d];
-      //   Serial.print(val);
-      //   if (val < 100) {
-
-      //   }
-      //   Serial.print("\t");
-      // }
-      // Serial.println("");
-
-      // Optional: magnetometer-based yaw cube ('m') if getMotion9 is available.
-      int16_t ax, ay, az, gx, gy, gz, mx, my, mz;
-      gyros[selectedSensor].mpu->getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
-      // Very basic validity check.
-      if (!(mx == 0 && my == 0 && mz == 0)) {
-        const float axg = (float)ax * invG;
-        const float ayg = (float)ay * invG;
-        const float azg = (float)az * invG;
-
-        // Roll/pitch from accel.
-        const float roll  = atan2f(ayg, azg);
-        const float pitch = atan2f(-axg, sqrtf(ayg*ayg + azg*azg));
-
-        const float cr = cosf(roll),  sr = sinf(roll);
-        const float cp = cosf(pitch), sp = sinf(pitch);
-
-        // Tilt-compensate mag.
-        const float mxf = (float)mx;
-        const float myf = (float)my;
-        const float mzf = (float)mz;
-
-        const float mx2 = mxf * cp + mzf * sp;
-        const float my2 = mxf * sr * sp + myf * cr - mzf * sr * cp;
-        const float heading = atan2f(-my2, mx2);
-
-        VizQuaternion qm;
-        qm.w = cosf(0.5f * heading);
-        qm.x = 0.0f;
-        qm.y = 0.0f;
-        qm.z = sinf(0.5f * heading);
-        viz_set_wrist_mag_quat(qm);
-      }
+      viz_set_wrist_accel(aViz.x, aViz.y, aViz.z);
     #endif
   }
+
+
 }
 
 static void gag_setup_my_gestures(gag::Recognizer& recog) {
@@ -755,7 +825,7 @@ if (millis() - last > 500) {
     bool handledGestureLine = false;
   if (timeNow - last > 500) {
     last = millis();
-    Serial.printf("heap=%u\n", (unsigned)ESP.getFreeHeap());
+    // Serial.printf("heap=%u\n", (unsigned)ESP.getFreeHeap());
   }
    #if USE_GAG_RECOG
         if (MASTER_SERIAL_NAME.available() > 0) {

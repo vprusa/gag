@@ -1765,9 +1765,32 @@ uint8_t MPU6050_MPU9150::dmpGetAccel(int16_t *data, const uint8_t* packet) {
     // TODO: accommodate different arrangements of sent data (ONLY default supported now)
     if (packet == 0) packet = dmpPacketBuffer;
     if(!isMPU9150){
+        // data[0] = (packet[28] << 8) | packet[29];
+        // data[1] = (packet[32] << 8) | packet[33];
+        // data[2] = (packet[36] << 8) | packet[37];
+
+
+        // data[0] = (packet[40] << 8) | packet[41];
+        // data[1] = (packet[44] << 8) | packet[45];
+        // data[2] = (packet[48] << 8) | packet[49];
+
+        // data[0] = (packet[0] << 8) | packet[1];
+        // data[1] = (packet[4] << 8) | packet[5];
+        // data[2] = (packet[8] << 8) | packet[9];
+
+        // data[0] = (packet[4] << 8) | packet[5];
+        // data[1] = (packet[8] << 8) | packet[9];
+        // data[2] = (packet[12] << 8) | packet[13];
+
+        // Default DMP packet layout (MotionApps v4.1):
+        // [0..15] quaternion, [16..27] gyro, [28..39] accel
         data[0] = (packet[28] << 8) | packet[29];
         data[1] = (packet[32] << 8) | packet[33];
         data[2] = (packet[36] << 8) | packet[37];
+
+        // data[0] = (packet[34] << 8) + packet[35];
+        // data[1] = (packet[38] << 8) + packet[39];
+        // data[2] = (packet[42] << 8) + packet[43];
     } else {
         data[0] = (packet[34] << 8) + packet[35];
         data[1] = (packet[38] << 8) + packet[39];

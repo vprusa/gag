@@ -169,7 +169,11 @@ void MPU6050_MPU9150::initialize() {
  * @return True if connection is valid, false otherwise
  */
 bool MPU6050_MPU9150::testConnection() {
-    return getDeviceID() == 0x34;// || getDeviceID() == 0x74;;
+    // getDeviceID() returns the 6-bit WHO_AM_I value (WHO_AM_I[6:1]).
+    //  - MPU6050/MPU9150: WHO_AM_I = 0x68 => 0x34
+    //  - MPU6500/MPU9250: WHO_AM_I = 0x70/0x71 => 0x38
+    const uint8_t id = getDeviceID();
+    return (id == 0x34) || (id == 0x38);
 }
 
 // AUX_VDDIO register (InvenSense demo code calls this RA_*G_OFFS_TC)

@@ -85,13 +85,12 @@
 #endif
 #ifdef ESP32_RIGHT
 
-// #define SENSORS_COUNT 7
-#define SENSORS_COUNT 6
-// SENSORs <0,5>
+// 5x finger IMUs (TU..EU) + 2x wrist/palm IMUs (HG + HP)
+#define SENSORS_COUNT 7
+// SENSORs <0,6>
 #define FIRST_SENSOR 0
-// or set LAST_SENSOR to 5
-// #define LAST_SENSOR 6
-#define LAST_SENSOR 5
+// LAST_SENSOR is the highest sensor index in your enum
+#define LAST_SENSOR 6
 // time for internal interrupt to trigger in loop - working up to 50 ms but freezes may occure - so reset MPU's FIFO more ften (20ms each?)
 #define SWITCH_SENSORS_MS 0
 
